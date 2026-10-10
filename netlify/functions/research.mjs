@@ -30,7 +30,7 @@ async function getResearchAccess(req) {
   const anon = (process.env.SUPABASE_ANON_KEY || '').trim();
   const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!base || !anon || !service) return { error: 'Research accounts are not configured yet.', status: 503 };
-  const token = (req.headers.get('authorization') || '').match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return { error: 'Sign in to use AI research. Free accounts include 3 reports per month.', status: 401 };
   const userResponse = await fetch(base + '/auth/v1/user', { headers: { apikey: anon, authorization: 'Bearer ' + token } });
   if (!userResponse.ok) return { error: 'Your session expired. Please sign in again.', status: 401 };
