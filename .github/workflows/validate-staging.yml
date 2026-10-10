@@ -26,7 +26,18 @@ jobs:
           test -f netlify/functions/create-portal.mjs
           test -f netlify/functions/billing-status.mjs
           test -f netlify/functions/stripe-webhook.mjs
+          test -f netlify/functions/create-request.mjs
+          test -f netlify/functions/list-requests.mjs
+          test -f netlify/functions/admin-requests.mjs
+          test -f supabase/research-usage.sql
+          test -f supabase/customer-requests.sql
+          test -f privacy.html
+          test -f terms.html
+          test -f support.html
+          test -f admin.html
           grep -q 'Subscribe — $29.99 CAD/month' index.html
           grep -q 'auth.signInWithPassword' index.html
           grep -q 'billing-status' index.html
+          grep -q 'create-request' index.html
+          grep -q 'TORQWISE_ADMIN_USER_IDS' netlify/functions/admin-requests.mjs
           echo "Required integration files and UI hooks are present."
