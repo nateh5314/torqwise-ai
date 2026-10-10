@@ -11,6 +11,7 @@ const read = (path) => {
 const html = read("index.html");
 const research = read("netlify/functions/research.mjs");
 const config = read("netlify/functions/config.mjs");
+const quotaRefund = read("supabase/migrations/20261010060000_torqwise_refund_question.sql");
 const netlify = read("netlify.toml");
 const pkgText = read("package.json");
 let pkg = {};
@@ -38,6 +39,9 @@ const required = [
   [html, "Bearer session header", "headers['Authorization']='Bearer '+session['access_token']"],
   [research, "server-side user verification", "/auth/v1/user"],
   [research, "database quota function", "torqwise_consume_question"],
+  [research, "quota rollback call", "torqwise_refund_question"],
+  [quotaRefund, "server-only quota refund RPC", "grant execute on function public.torqwise_refund_question(uuid, text, date) to service_role"],
+  [quotaRefund, "quota refund does not go negative", "greatest(question_count - 1, 0)"],
   [research, "question-limit rejection", "if (!quota.allowed)"],
   [config, "public Supabase config", "SUPABASE_PUBLISHABLE_KEY"],
   [netlify, "Netlify function directory", 'functions = "netlify/functions"'],
@@ -53,3 +57,4 @@ console.log("- Inline JavaScript syntax checked");
 console.log("- Netlify function syntax checked");
 console.log("- Account, session, and quota wiring checked");
 console.log("- Public config secret exposure checked");
+console.log("- Failed-research quota rollback wiring checked");
