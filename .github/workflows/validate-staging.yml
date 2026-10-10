@@ -67,6 +67,9 @@ jobs:
           test -f netlify/functions/create-request.mjs
           test -f netlify/functions/list-requests.mjs
           test -f netlify/functions/admin-requests.mjs
+          test -f netlify/functions/admin-finance.mjs
+          test -f supabase/business-expenses.sql
+          test -f tests/admin-finance.test.mjs
           test -f supabase/research-usage.sql
           test -f supabase/customer-requests.sql
           test -f supabase/account-history.sql
@@ -94,5 +97,7 @@ jobs:
           grep -q 'timingSafeEqual' netlify/functions/stripe-webhook.mjs
           grep -q 'STRIPE_WEBHOOK_SECRET' netlify/functions/stripe-webhook.mjs
           grep -q 'admins.includes(user.id)' netlify/functions/admin-requests.mjs
+          grep -q 'admins.includes(user.id)' netlify/functions/admin-finance.mjs
+          grep -q 'business_expenses' netlify/functions/admin-finance.mjs
           grep -q 'X-Frame-Options' netlify.toml
           echo "Research authentication, usage checks, webhook signature validation, admin authorization, and baseline headers are present."
