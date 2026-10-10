@@ -7,7 +7,7 @@ export default async () => {
       headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
     });
   }
-  return new Response(JSON.stringify({ configured: true, url, anonKey }), {
+  return new Response(JSON.stringify({ configured: true, url, anonKey, supportEmail: (process.env.SUPPORT_EMAIL || "").trim() }), {
     status: 200,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
