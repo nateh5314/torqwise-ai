@@ -50,7 +50,13 @@ function configure({ matching = true } = {}) {
     const target = String(url);
     calls.push({ url: target, options });
     if (target.includes("/rest/v1/customer_requests?") && (!options.method || options.method === "GET")) {
-      return response(matching ? [{ request_code: requestCode, quoted_price: 15, payment_status: "pending" }] : []);
+      const sessionMatches = target.includes("stripe_checkout_session_id=eq." + encodeURIComponent(sessionId));
+      return response(matching && sessionMatches ? [{
+        request_code: requestCode,
+        quoted_price: 15,
+        payment_status: "pending",
+        stripe_checkout_session_id: sessionId,
+      }] : []);
     }
     if (target.includes("/rest/v1/customer_requests?") && options.method === "PATCH") {
       return response([{ request_code: requestCode, payment_status: "paid" }]);
@@ -100,6 +106,16 @@ test("does not mark a request paid when the amount or currency differs", async (
 test("ignores a signed event that does not match a stored checkout session", async () => {
   const calls = configure({ matching: false });
   const result = await handler(signedRequest(paymentEvent()));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { received: true, ignored: true });
+  assert.equal(calls.some(c => c.options.method === "PATCH"), false);
+});
+
+test("does not mark a request paid when the event belongs to a different checkout session", async () => {
+  const calls = configure();
+  const event = paymentEvent();
+  event.data.object.id = "cs_someone_else";
+  const result = await handler(signedRequest(event));
   assert.equal(result.status, 200);
   assert.deepEqual(await result.json(), { received: true, ignored: true });
   assert.equal(calls.some(c => c.options.method === "PATCH"), false);
