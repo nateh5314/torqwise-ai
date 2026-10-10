@@ -27,7 +27,7 @@ function tooManyRequests(key) {
 }
 async function getResearchAccess(req) {
   const base = (process.env.SUPABASE_URL || '').trim();
-  const anon = (process.env.SUPABASE_ANON_KEY || '').trim();
+  const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '').trim();
   const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!base || !anon || !service) return { error: 'Research accounts are not configured yet.', status: 503 };
   const token = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1];
@@ -127,11 +127,11 @@ export default async (req) => {
         max_output_tokens: 1800,
         store: false,
       }),
-      signal: AbortSignal.timeout(55000),
+      signal: AbortSignal.timeout(38000),
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
-    return json({ error: "Could not reach the AI research service. Please retry shortly." }, 502);
+    return json({ error: err?.name === "TimeoutError" ? "AI research timed out while waiting for the research provider. Please retry with a narrower question." : "Could not reach the AI research service. Please retry shortly." }, err?.name === "TimeoutError" ? 504 : 502);
   }
   let payload;
   try { payload = await upstream.json(); } catch { return json({ error: "The AI service returned an unreadable response." }, 502); }
