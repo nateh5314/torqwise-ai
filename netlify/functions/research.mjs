@@ -166,5 +166,5 @@ export default async (req) => {
   }
   const answer = extractText(payload);
   if (!answer) return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
-  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini" });
+  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", quota: { used: quota.used, limit: quota.limit, remaining: quota.remaining, periodType: quota.period_type, periodStart: quota.period_start } });
 };
