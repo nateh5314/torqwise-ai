@@ -45,7 +45,8 @@ Keep the existing black/red identity and prioritize simple top-level navigation:
 - [ ] Run the updated `supabase/customer-requests.sql` so `payment_status`, `stripe_checkout_session_id`, and `paid_at` columns exist.
 - [ ] In Stripe test mode, submit a fixed-price request and confirm the checkout amount is set server-side in CAD, not accepted from browser input.
 - [ ] Confirm a user cannot create checkout for another account's request or a custom quote.
-- [ ] Confirm cancel/failure does not mark a request paid and a successful test payment is marked paid only after the verified Stripe webhook.
+- [ ] Confirm a request cannot be paid until the operator sets status to `Awaiting customer`; if Resend is configured, verify the customer gets the ready-for-payment email.
+- [ ] Confirm cancel/failure does not mark a request paid and a successful test payment is marked paid only after the verified Stripe webhook; a verified payment should move the request into `In progress`.
 - [ ] Confirm request history shows unpaid/pending/paid status and the user can retry an expired checkout without duplicating an open session.
 
 ### Account history and continuity
