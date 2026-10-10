@@ -33,9 +33,11 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 3. Subscribe to `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`.
 4. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
 5. Use Stripe test cards only; do not enable live mode.
+6. For one-time service payments, verify the request's server-stored price is used, users cannot pay for another user's request, a pending session is reused, cancelled checkout does not mark the request paid, and only a verified `checkout.session.completed` event with `mode=payment` and `payment_status=paid` marks the request paid.
 
 ## Endpoints in this branch
 - `POST /.netlify/functions/create-checkout`: verifies the Supabase access token and creates a hosted Stripe Checkout subscription session.
+- `POST /.netlify/functions/create-service-checkout`: verifies the signed-in user owns the request, applies the server-side CAD price for fixed-scope research, and creates/reuses a hosted one-time Stripe Checkout session.
 - `POST /.netlify/functions/create-portal`: verifies the signed-in user and creates a Stripe customer portal session for an existing subscription.
 - `GET /.netlify/functions/public-config`: returns only the public Supabase URL and anon key for the browser; it never returns secret keys.
 - `POST /.netlify/functions/create-request`: validates the signed-in account and stores a customer research request.
@@ -52,6 +54,7 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 
 ## Important limitations before public launch
 - The staging site now includes draft Privacy Policy, Terms of Service, and Support pages. Confirm legal business identity, monitored contact address, refund terms, and privacy wording before public launch. The staging HTML wires the account modal to Supabase sign-up/sign-in, shows the CA$29.99/month Pro subscription option, checks the signed-in user's subscription status, and offers the Stripe customer portal when Pro is active. This wiring is not yet production-verified.
+- Fixed-price service requests can use a separate one-time Stripe Checkout flow. The signed webhook marks a request paid only after Stripe reports a completed, paid checkout session. Custom/business research remains quote-first. This is code-ready but still requires provider configuration and end-to-end test-mode verification.
 - Customer request submission and history are wired to persistent Supabase storage. Optional request notification emails are supported through Resend environment variables, and `/admin.html` provides a restricted request-status dashboard. Set `SUPPORT_EMAIL`, configure the sender, and add the operator's Supabase user UUID to `TORQWISE_ADMIN_USER_IDS` before launch.
 - The AI research endpoint now checks the signed-in user's subscription and enforces a three-report monthly free allowance using `research_usage`. This is a basic count-based quota, not an atomic quota reservation under concurrent requests.
 - Before enabling live payments, the operator must complete the account configuration, verify that the Stripe price is the intended CA$29.99 recurring plan, set up the billing portal, confirm refund/cancellation terms, and replace or approve the draft legal pages. The site code does not replace these account-level decisions.
