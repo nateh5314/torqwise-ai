@@ -1,6 +1,6 @@
 const MAX_FIELD = 1800;
 const WINDOW_MS = 10 * 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 8;
+const MAX_REQUESTS_PER_WINDOW = 30;
 const recentRequests = new Map();
 
 function json(body, status = 200) {
