@@ -11,6 +11,10 @@ const read = (path) => {
 const html = read("index.html");
 const research = read("netlify/functions/research.mjs");
 const config = read("netlify/functions/config.mjs");
+const checkout = read("netlify/functions/stripe-checkout.mjs");
+const portal = read("netlify/functions/stripe-portal.mjs");
+const stripeWebhook = read("netlify/functions/stripe-webhook.mjs");
+
 const quotaCore = read("supabase/migrations/20261010050000_torqwise_core_usage.sql");
 const quotaRefund = read("supabase/migrations/20261010060000_torqwise_refund_question.sql");
 const quotaReservations = read("supabase/migrations/20261010070000_torqwise_quota_reservations.sql");
@@ -37,10 +41,6 @@ for (const [path, source] of [
   const checked = spawnSync(process.execPath, ["--check", new URL("../" + path, import.meta.url).pathname], { encoding: "utf8" });
   if (checked.status !== 0) fail(path + " syntax check failed: " + (checked.stderr || checked.stdout || "unknown error"));
 }
-
-const checkout = read("netlify/functions/stripe-checkout.mjs");
-const portal = read("netlify/functions/stripe-portal.mjs");
-const stripeWebhook = read("netlify/functions/stripe-webhook.mjs");
 
 const required = [
   [html, "Supabase sign-up", "torqSupabase.auth.signUp"],
