@@ -29,7 +29,7 @@ export default async (req) => {
       request_code: code, user_id: user.id, service: serviceId, label: services[serviceId][0],
       quoted_price: services[serviceId][1], status: "Request received", customer_email: user.email,
       customer_type: clean(body.customerType, 40), vehicle, details,
-      deadline: /^\d{4}-\d{2}-\d{2}$/.test(clean(body.deadline, 10)) ? clean(body.deadline, 10) : null
+      preferred_timeline: clean(body.deadline, 80) || "Flexible"
     };
     const saved = await fetch(base + "/rest/v1/customer_requests", {
       method: "POST",
