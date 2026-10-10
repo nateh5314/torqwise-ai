@@ -147,15 +147,21 @@ export default async (req) => {
     return json({ error: err?.name === "TimeoutError" ? "AI research timed out while waiting for the research provider. Please retry with a narrower question." : "Could not reach the AI research service. Please retry shortly." }, err?.name === "TimeoutError" ? 504 : 502);
   }
   let payload;
-  try { payload = await upstream.json(); } catch { return json({ error: "The AI service returned an unreadable response." }, 502); }
+  try { payload = await upstream.json(); } catch {
+    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+    return json({ error: "The AI service returned an unreadable response." }, 502);
+  }
   if (!upstream.ok) {
+    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     console.error("TORQWISE OpenAI API error:", upstream.status, payload?.error?.code || "unknown");
     if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website." }, 502);
     if (upstream.status === 429) return json({ error: "The AI service is rate-limited or out of available API credit. Check API billing and usage." }, 429);
     return json({ error: "The AI service returned an error. Check API usage and Netlify function logs." }, 502);
   }
   const answer = extractText(payload);
-  if (!answer) return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
-  try { await saveResearchUsage(access.userId); } catch (e) { console.error("Research usage save failed:", e?.message || "unknown"); return json({ error: "The research answer was generated, but usage could not be saved. Please contact support before retrying." }, 503); }
-  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, remaining: access.isPro ? null : Math.max(0, access.remaining - 1) });
+  if (!answer) {
+    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+    return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
+  }
+  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, remaining: access.isPro ? null : access.remaining });
 };
