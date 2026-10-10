@@ -1,0 +1,98 @@
+name: Validate TORQWISE staging
+on:
+  pull_request:
+  push:
+    branches:
+      - staging/subscriptions-auth
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run API regression tests
+        run: node --test tests/*.test.mjs
+      - name: Check Netlify function syntax
+        run: |
+          for file in netlify/functions/*.mjs; do
+            echo "Checking $file"
+            node --check "$file"
+          done
+      - name: Check inline browser JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          import re, pathlib, subprocess, tempfile
+          pages = ["index.html", "admin.html", "support.html"]
+          with tempfile.TemporaryDirectory() as directory:
+              for page in pages:
+                  html = pathlib.Path(page).read_text()
+                  scripts = re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script\s*>", html, re.IGNORECASE)
+                  for number, script in enumerate(scripts):
+                      if not script.strip():
+                          continue
+                      path = pathlib.Path(directory) / f"{pathlib.Path(page).stem}-{number}.js"
+                      path.write_text(script)
+                      print(f"Checking inline JavaScript: {page} script {number}")
+                      subprocess.run(["node", "--check", str(path)], check=True)
+          PY
+      - name: Check page anchors and marketplace hooks
+        run: |
+          python3 - <<'PY'
+          import re, pathlib
+          html = pathlib.Path("index.html").read_text()
+          ids = re.findall(r'id="([^"]+)"', html)
+          duplicates = sorted({item for item in ids if ids.count(item) > 1})
+          assert not duplicates, f"Duplicate HTML IDs: {duplicates}"
+          id_set = set(ids)
+          anchors = re.findall(r'href="#([^"]+)"', html)
+          broken = sorted({item for item in anchors if item not in id_set})
+          assert not broken, f"Broken in-page anchors: {broken}"
+          for required in ["parts-market", "marketSearchForm", "marketCart", "marketAiButton", "marketExportButton", "research-hub", "diagnostics", "vin-lookup"]:
+              assert required in id_set, f"Missing expected page feature: {required}"
+          print("Page anchors and parts marketplace UI hooks are valid.")
+          for required in ["function diagResearchCase(id)", "function diagFindParts(id)", "Research this case with AI", "Explore related parts"]:
+              assert required in html, f"Missing diagnostic-to-research/parts workflow: {required}"
+          print("Diagnostic-to-AI-research and diagnostic-to-parts handoffs are present.")
+          PY
+      - name: Check required billing integration files
+        run: |
+          test -f supabase/subscriptions.sql
+          test -f netlify/functions/public-config.mjs
+          test -f netlify/functions/create-checkout.mjs
+          test -f netlify/functions/create-portal.mjs
+          test -f netlify/functions/billing-status.mjs
+          test -f netlify/functions/stripe-webhook.mjs
+          test -f netlify/functions/create-request.mjs
+          test -f netlify/functions/list-requests.mjs
+          test -f netlify/functions/admin-requests.mjs
+          test -f supabase/research-usage.sql
+          test -f supabase/customer-requests.sql
+          test -f supabase/account-history.sql
+          test -f netlify/functions/account-history.mjs
+          grep -q 'accountHistoryList' index.html
+          grep -q 'torqSaveAccountHistory' index.html
+          grep -q 'account-history' index.html
+          grep -q 'account_history' netlify/functions/account-history.mjs
+          grep -q 'user_id=eq.' netlify/functions/account-history.mjs
+          test -f privacy.html
+          test -f terms.html
+          test -f support.html
+          test -f admin.html
+          test -f LAUNCH-CHECKLIST.md
+          grep -q 'Subscribe — $29.99 CAD/month' index.html
+          grep -q 'auth.signInWithPassword' index.html
+          grep -q 'billing-status' index.html
+          grep -q 'create-request' index.html
+          grep -q 'TORQWISE_ADMIN_USER_IDS' netlify/functions/admin-requests.mjs
+          echo "Required integration files and UI hooks are present."
+      - name: Check security-critical server-side gates
+        run: |
+          grep -q 'Bearer' netlify/functions/research.mjs
+          grep -q 'research_usage' netlify/functions/research.mjs
+          grep -q 'timingSafeEqual' netlify/functions/stripe-webhook.mjs
+          grep -q 'STRIPE_WEBHOOK_SECRET' netlify/functions/stripe-webhook.mjs
+          grep -q 'admins.includes(user.id)' netlify/functions/admin-requests.mjs
+          grep -q 'X-Frame-Options' netlify.toml
+          echo "Research authentication, usage checks, webhook signature validation, admin authorization, and baseline headers are present."

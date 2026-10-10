@@ -1,6 +1,6 @@
 const MAX_FIELD = 1800;
 const WINDOW_MS = 10 * 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 8;
+const MAX_REQUESTS_PER_WINDOW = 30;
 const recentRequests = new Map();
 
 function json(body, status = 200) {
@@ -24,6 +24,35 @@ function tooManyRequests(key) {
   if (!item || now - item.start > WINDOW_MS) item = { start: now, count: 0 };
   item.count += 1; recentRequests.set(key, item);
   return item.count > MAX_REQUESTS_PER_WINDOW;
+}
+async function getResearchAccess(req) {
+  const base = (process.env.SUPABASE_URL || '').trim();
+  const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '').trim();
+  const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!base || !anon || !service) return { error: 'Research accounts are not configured yet.', status: 503 };
+  const token = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) return { error: 'Sign in to use AI research. Free accounts include 3 reports per month.', status: 401 };
+  const userResponse = await fetch(base + '/auth/v1/user', { headers: { apikey: anon, authorization: 'Bearer ' + token } });
+  if (!userResponse.ok) return { error: 'Your session expired. Please sign in again.', status: 401 };
+  let user;
+  try { user = await userResponse.json(); } catch { return { error: 'Your session could not be verified. Please sign in again.', status: 401 }; }
+  if (!user || typeof user.id !== 'string' || !user.id) return { error: 'Your session could not be verified. Please sign in again.', status: 401 };
+  const headers = { apikey: service, authorization: 'Bearer ' + service };
+  const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status&order=updated_at.desc&limit=1', { headers });
+  if (!subsResponse.ok) throw new Error('Subscription lookup failed');
+  const subs = await subsResponse.json();
+  if (subs.some(row => ['active', 'trialing'].includes(row.status))) return { userId: user.id, isPro: true, remaining: null };
+  const start = new Date(); start.setUTCDate(1); start.setUTCHours(0, 0, 0, 0);
+  const usageResponse = await fetch(base + '/rest/v1/research_usage?user_id=eq.' + encodeURIComponent(user.id) + '&created_at=gte.' + encodeURIComponent(start.toISOString()) + '&select=id', { headers: { apikey: service, authorization: 'Bearer ' + service, Prefer: 'count=exact', Range: '0-0' } });
+  if (!usageResponse.ok) throw new Error('Usage lookup failed');
+  const used = Number((usageResponse.headers.get('content-range') || '*/0').split('/').pop()) || 0;
+  if (used >= 3) return { error: 'You have used your 3 free research reports this month. Upgrade to Pro Technician for $29.99 CAD/month to continue.', status: 402, remaining: 0 };
+  return { userId: user.id, isPro: false, remaining: 3 - used };
+}
+async function saveResearchUsage(userId) {
+  const base = (process.env.SUPABASE_URL || '').trim(); const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const response = await fetch(base + '/rest/v1/research_usage', { method: 'POST', headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ user_id: userId }) });
+  if (!response.ok) throw new Error('Usage insert failed');
 }
 function extractText(response) {
   const parts = [];
@@ -58,6 +87,9 @@ function extractSources(response) {
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST to submit a research question." }, 405);
   if (!process.env.OPENAI_API_KEY) return json({ error: "The server is missing OPENAI_API_KEY. Add it in Netlify environment variables and redeploy." }, 503);
+  let access;
+  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); return json({ error: "Could not verify your research allowance. Please try again shortly." }, 503); }
+  if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
   if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
 
   let body;
@@ -97,11 +129,11 @@ export default async (req) => {
         max_output_tokens: 1800,
         store: false,
       }),
-      signal: AbortSignal.timeout(55000),
+      signal: AbortSignal.timeout(38000),
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
-    return json({ error: "Could not reach the AI research service. Please retry shortly." }, 502);
+    return json({ error: err?.name === "TimeoutError" ? "AI research timed out while waiting for the research provider. Please retry with a narrower question." : "Could not reach the AI research service. Please retry shortly." }, err?.name === "TimeoutError" ? 504 : 502);
   }
   let payload;
   try { payload = await upstream.json(); } catch { return json({ error: "The AI service returned an unreadable response." }, 502); }
@@ -113,5 +145,6 @@ export default async (req) => {
   }
   const answer = extractText(payload);
   if (!answer) return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
-  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini" });
+  try { await saveResearchUsage(access.userId); } catch (e) { console.error("Research usage save failed:", e?.message || "unknown"); return json({ error: "The research answer was generated, but usage could not be saved. Please contact support before retrying." }, 503); }
+  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, remaining: access.isPro ? null : Math.max(0, access.remaining - 1) });
 };
