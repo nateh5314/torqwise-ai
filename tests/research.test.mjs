@@ -87,11 +87,11 @@ test("requires atomic quota reservation before calling the AI provider", async (
   assert.ok(!calls.some(c => c.url.includes("/rest/v1/research_usage?")));
 });
 
-test("blocks exhausted daily allowance without calling the AI provider", async () => {
+test("blocks exhausted monthly allowance without calling the AI provider", async () => {
   const calls = configure({ reservation: response({ allowed: false, remaining: 0 }) });
   const result = await handler(request());
   assert.equal(result.status, 402);
-  assert.match((await result.json()).error, /3 free AI research reports for today/);
+  assert.match((await result.json()).error, /3 free AI research reports this month/);
   assert.ok(!calls.some(c => c.url === "https://api.openai.com/v1/responses"));
 });
 
