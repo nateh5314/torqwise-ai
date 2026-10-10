@@ -97,11 +97,6 @@ function extractSources(response) {
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST to submit a research question." }, 405);
   if (!process.env.OPENAI_API_KEY) return json({ error: "The server is missing OPENAI_API_KEY. Add it in Netlify environment variables and redeploy." }, 503);
-  let access;
-  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); return json({ error: "Could not verify your research allowance. Please try again shortly." }, 503); }
-  if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
-  if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
-
   let body;
   try { body = await req.json(); } catch { return json({ error: "The request body must be valid JSON." }, 400); }
   const asset = clean(body.asset, 240);
@@ -109,6 +104,11 @@ export default async (req) => {
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
+
+  if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
+  let access;
+  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); return json({ error: "Could not verify your research allowance. Please try again shortly." }, 503); }
+  if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
     service: "service procedures and manual availability",
