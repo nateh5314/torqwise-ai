@@ -12,7 +12,7 @@ TORQWISE is a mobile-friendly automotive/heavy-equipment research and diagnostic
 - Parts marketplace beta: supplier search shortcuts, a local parts shortlist, removal/export, and a handoff into AI parts research
 - Account history API for saved research reports, diagnostic cases, job contexts, and parts investigations (requires Supabase setup and sign-in)
 - Supabase account sign-in, persistent research requests, and request history (requires configuration)
-- Pro Technician subscription flow and restricted operator dashboard (requires configuration)
+- Pro Technician subscription flow and restricted operator dashboard (requires configuration; see [ADMIN-DASHBOARD.md](ADMIN-DASHBOARD.md) for setup, permissions, and current scope)
 
 The marketplace is currently a research and comparison shortlist. It does **not** yet provide verified live pricing/inventory, guaranteed fitment, a universal supplier cart, or direct checkout. See [MARKETPLACE-ROADMAP.md](MARKETPLACE-ROADMAP.md) for the staged plan.
 
