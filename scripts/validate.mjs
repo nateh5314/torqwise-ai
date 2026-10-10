@@ -11,6 +11,7 @@ const read = (path) => {
 const html = read("index.html");
 const research = read("netlify/functions/research.mjs");
 const config = read("netlify/functions/config.mjs");
+const quotaCore = read("supabase/migrations/20261010050000_torqwise_core_usage.sql");
 const quotaRefund = read("supabase/migrations/20261010060000_torqwise_refund_question.sql");
 const netlify = read("netlify.toml");
 const pkgText = read("package.json");
@@ -40,6 +41,12 @@ const required = [
   [research, "server-side user verification", "/auth/v1/user"],
   [research, "database quota function", "torqwise_consume_question"],
   [research, "quota rollback call", "torqwise_refund_question"],
+  [quotaCore, "usage table migration", "create table if not exists public.torqwise_usage"],
+  [quotaCore, "subscription table migration", "create table if not exists public.torqwise_subscriptions"],
+  [quotaCore, "free tier quota", "v_limit := 3"],
+  [quotaCore, "Driver tier quota", "then 100"],
+  [quotaCore, "Pro tier quota", "then 400"],
+  [quotaCore, "server-only quota consume RPC", "grant execute on function public.torqwise_consume_question(uuid, text) to service_role"],
   [quotaRefund, "server-only quota refund RPC", "grant execute on function public.torqwise_refund_question(uuid, text, date) to service_role"],
   [quotaRefund, "quota refund does not go negative", "greatest(question_count - 1, 0)"],
   [research, "question-limit rejection", "if (!quota.allowed)"],
