@@ -12,13 +12,12 @@ async function dbUpsert(url,service,row){
 }
 export default async function handler(req){
  if(req.method!=="POST")return reply({error:"Use POST."},405);
- const secret=process.env.STRIPE_WEBHOOK_SECRET,url=process.env.SUPABASE_URL,service=process.env.SUPABASE_SECRET_KEY;
+ const secret=process.env.STRIPE_WEBHOOK_SECRET,url=process.env.SUPABASE_URL,service=process.env.SUPABASE_SECRET_KEY,configuredPrice=process.env.STRIPE_PRICE_PRO;
  if(!secret||!url||!service||!process.env.STRIPE_SECRET_KEY||!configuredPrice)return reply({error:"Webhook is not configured."},503);
  let raw;try{raw=await req.text()}catch{return reply({error:"Invalid request body."},400)}
  if(!validSignature(raw,req.headers.get("stripe-signature"),secret))return reply({error:"Invalid Stripe signature."},400);
  let event;try{event=JSON.parse(raw)}catch{return reply({error:"Invalid event JSON."},400)}
  const obj=event.data?.object||{};
- const configuredPrice=process.env.STRIPE_PRICE_PRO;
  try{
   if(event.type==="checkout.session.completed"){
    if(obj.mode!=="subscription")return reply({received:true});
