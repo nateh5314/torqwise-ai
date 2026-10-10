@@ -35,15 +35,27 @@ for (const [path, source] of [
   if (checked.status !== 0) fail(path + " syntax check failed: " + (checked.stderr || checked.stdout || "unknown error"));
 }
 
+const checkout = read("netlify/functions/stripe-checkout.mjs");
+const portal = read("netlify/functions/stripe-portal.mjs");
+const stripeWebhook = read("netlify/functions/stripe-webhook.mjs");
+
 const required = [
   [html, "Supabase sign-up", "torqSupabase.auth.signUp"],
   [html, "Supabase password sign-in", "torqSupabase.auth.signInWithPassword"],
   [html, "Bearer session header", "headers['Authorization']='Bearer '+session['access_token']"],
   [research, "server-side user verification", "/auth/v1/user"],
+  [checkout, "checkout verifies signed-in user", "/auth/v1/user"],
+  [checkout, "checkout uses configured Stripe price", "STRIPE_PRICE_PRO"],
+  [checkout, "checkout creates subscription mode", 'form.set("mode","subscription")'],
+  [portal, "billing portal verifies user", "/auth/v1/user"],
+  [stripeWebhook, "webhook validates Stripe signature", "stripe-signature"],
+  [stripeWebhook, "webhook handles subscription changes", "customer.subscription.updated"],
+  [stripeWebhook, "webhook handles failed invoices", "invoice.payment_failed"],
   [html, "subscription pricing section", 'id="subscriptions"'],
   [html, "Free plan daily allowance", "3 AI research questions per day"],
   [html, "Pro subscription price in CAD", "$29.99 <small>CAD · per month</small>"],
-  [html, "subscription checkout not falsely presented as active", "Checkout is not connected yet"],
+  [html, "subscription checkout is clearly test-mode", "Subscribe to Pro (test mode)"],
+  [html, "Pro checkout uses authenticated server endpoint", "/.netlify/functions/stripe-checkout"],
   [research, "reservation-based quota consume RPC", "torqwise_consume_question_v2"],
   [research, "reservation-based quota refund RPC", "torqwise_refund_question_v2"],
   [research, "reservation ID passed to refund", "p_reservation_id: quota.reservation_id"],
