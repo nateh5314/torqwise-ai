@@ -11,6 +11,9 @@ Set these on the **staging Netlify site**, with Functions/runtime scope:
 - `STRIPE_PRO_PRICE_ID` (a recurring monthly Stripe Price ID for CA$29.99)
 - `STRIPE_WEBHOOK_SECRET` (signing secret for the staging webhook)
 - `SITE_URL` (the exact HTTPS origin of the staging website)
+- `RESEND_API_KEY` (optional; enables request notification emails)
+- `SUPPORT_EMAIL` (optional; operator inbox for new request notifications)
+- `EMAIL_FROM` (optional; verified sender address for request notifications)
 
 Never put secret keys in HTML, commit them to Git, or send them in chat/screenshots.
 
@@ -19,6 +22,7 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 2. Run `supabase/subscriptions.sql`, `supabase/research-usage.sql`, and `supabase/customer-requests.sql`.
 3. Confirm email/password authentication is enabled and email confirmation settings are suitable for testing.
 4. Keep the service-role key server-side only.
+5. Add the final site origin to Supabase Auth's allowed redirect URLs for email confirmation and password reset.
 
 ## Stripe test mode
 1. In Stripe test mode, create a recurring monthly price of CAD 29.99 and copy its Price ID into `STRIPE_PRO_PRICE_ID`.
