@@ -42,17 +42,27 @@ async function getResearchAccess(req) {
   if (!subsResponse.ok) throw new Error('Subscription lookup failed');
   const subs = await subsResponse.json();
   if (subs.some(row => ['active', 'trialing'].includes(row.status))) return { userId: user.id, isPro: true, remaining: null };
-  const start = new Date(); start.setUTCDate(1); start.setUTCHours(0, 0, 0, 0);
-  const usageResponse = await fetch(base + '/rest/v1/research_usage?user_id=eq.' + encodeURIComponent(user.id) + '&created_at=gte.' + encodeURIComponent(start.toISOString()) + '&select=id', { headers: { apikey: service, authorization: 'Bearer ' + service, Prefer: 'count=exact', Range: '0-0' } });
-  if (!usageResponse.ok) throw new Error('Usage lookup failed');
-  const used = Number((usageResponse.headers.get('content-range') || '*/0').split('/').pop()) || 0;
-  if (used >= 3) return { error: 'You have used your 3 free research reports this month. Upgrade to Pro Technician for $29.99 CAD/month to continue.', status: 402, remaining: 0 };
-  return { userId: user.id, isPro: false, remaining: 3 - used };
+  const reserveResponse = await fetch(base + '/rest/v1/rpc/reserve_research_usage', {
+    method: 'POST',
+    headers: { apikey: service, authorization: 'Bearer ' + service, 'content-type': 'application/json' },
+    body: JSON.stringify({ p_user_id: user.id, p_daily_limit: 3 }),
+  });
+  if (!reserveResponse.ok) throw new Error('Usage reservation failed; apply supabase/research-usage.sql before enabling AI research');
+  const reservation = await reserveResponse.json();
+  if (!reservation || reservation.allowed !== true || !Number.isSafeInteger(reservation.usage_id)) {
+    return { error: 'You have used your 3 free AI research reports for today. Your allowance resets at midnight UTC. Upgrade to Pro Technician for $29.99 CAD/month for continued research.', status: 402, remaining: 0 };
+  }
+  return { userId: user.id, isPro: false, remaining: Number(reservation.remaining), usageId: reservation.usage_id };
 }
-async function saveResearchUsage(userId) {
+async function releaseResearchUsage(userId, usageId) {
+  if (!userId || !Number.isSafeInteger(usageId)) return;
   const base = (process.env.SUPABASE_URL || '').trim(); const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  const response = await fetch(base + '/rest/v1/research_usage', { method: 'POST', headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ user_id: userId }) });
-  if (!response.ok) throw new Error('Usage insert failed');
+  const response = await fetch(base + '/rest/v1/rpc/release_research_usage', {
+    method: 'POST',
+    headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json' },
+    body: JSON.stringify({ p_user_id: userId, p_usage_id: usageId }),
+  });
+  if (!response.ok) throw new Error('Usage reservation release failed');
 }
 function extractText(response) {
   const parts = [];
@@ -133,6 +143,7 @@ export default async (req) => {
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
+    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: err?.name === "TimeoutError" ? "AI research timed out while waiting for the research provider. Please retry with a narrower question." : "Could not reach the AI research service. Please retry shortly." }, err?.name === "TimeoutError" ? 504 : 502);
   }
   let payload;
