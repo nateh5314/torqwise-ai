@@ -31,6 +31,23 @@ export default async req => {
     if (!result.ok) throw new Error("Could not update request status");
     const rows = await result.json();
     if (!rows.length) return json({ error: "Request not found." }, 404);
+    if (body.status === "Awaiting customer" && env("RESEND_API_KEY") && env("EMAIL_FROM") && env("SITE_URL") && rows[0].customer_email) {
+      try {
+        const request = rows[0];
+        const amount = request.quoted_price == null ? "a quote to be confirmed" : "CA$" + Number(request.quoted_price).toFixed(2);
+        const email = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { authorization: "Bearer " + env("RESEND_API_KEY"), "content-type": "application/json" },
+          body: JSON.stringify({
+            from: env("EMAIL_FROM"),
+            to: [request.customer_email],
+            subject: "Your TORQWISE research request is ready for review",
+            text: "Your TORQWISE request " + code + " has been reviewed and is ready for the next step.\n\nService: " + (request.label || request.service) + "\nPrice: " + amount + "\n\nSign in to your TORQWISE account at " + env("SITE_URL").replace(/\\/$/, "") + "/#account to review the request and use secure checkout when available. Custom research remains quote-first. If the scope or price does not look right, contact support before paying."
+          })
+        });
+        if (!email.ok) console.error("Customer ready-for-payment email failed:", email.status);
+      } catch (e) { console.error("Customer ready-for-payment email failed:", e?.message || "unknown"); }
+    }
     return json({ request: rows[0] });
   } catch (e) {
     console.error("Operator request management failed:", e?.message || "unknown");
