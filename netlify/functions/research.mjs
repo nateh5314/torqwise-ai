@@ -187,10 +187,11 @@ export default async (req) => {
     return json({ error: "The AI service returned an unreadable response. Your question allowance has been restored if the quota service is available." }, 502);
   }
   if (!upstream.ok) {
+    await refundQuota({ supabaseUrl, secretKey, userId: user.id, quota });
     console.error("TORQWISE OpenAI API error:", upstream.status, payload?.error?.code || "unknown");
-    if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website." }, 502);
-    if (upstream.status === 429) return json({ error: "The AI service is rate-limited or out of available API credit. Check API billing and usage." }, 429);
-    return json({ error: "The AI service returned an error. Check API usage and Netlify function logs." }, 502);
+    if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website. Your question allowance has been restored if the quota service is available." }, 502);
+    if (upstream.status === 429) return json({ error: "The AI service is rate-limited or out of available API credit. Your question allowance has been restored if the quota service is available; check API billing and usage." }, 429);
+    return json({ error: "The AI service returned an error. Your question allowance has been restored if the quota service is available. Check API usage and Netlify function logs." }, 502);
   }
   const answer = extractText(payload);
   if (!answer) {
