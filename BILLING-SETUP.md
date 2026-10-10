@@ -2,7 +2,11 @@
 
 The repository now contains the website, account integration, server-side research entitlement, subscription billing endpoints, customer request storage, operator request management, and draft legal/support pages. Publishing still requires connecting the repository to Netlify and configuring the operator-owned Supabase, Stripe, and email accounts. Do not enable live charges until the legal/business details and billing settings are correct.
 
-## Required Supabase migrations\n\nBefore enabling AI research, run `supabase/research-usage.sql` in the Supabase SQL Editor. This creates the private usage table and the atomic daily reservation/release functions used by the server. The endpoint fails closed if this migration is missing; do not bypass that check. Free accounts are limited to 3 successful AI research reports per calendar month. Pro access is determined server-side from the subscription table.\n\n## Required Netlify environment variables
+## Required Supabase migrations
+
+Before enabling AI research, run `supabase/research-usage.sql` in the Supabase SQL Editor. This creates the private usage table and the atomic monthly reservation/release functions used by the server. The endpoint fails closed if this migration is missing; do not bypass that check. Free accounts are limited to 3 successful AI research reports per calendar month. Pro access is determined server-side from the subscription table.
+
+## Required Netlify environment variables
 Set these on the Netlify site, with Functions/runtime scope. Start with Stripe test mode; switch to live credentials only when you are ready to accept real payments:
 - `OPENAI_API_KEY` (required for AI research; secret, server-side only)
 - `OPENAI_MODEL` (optional; defaults to `gpt-5-mini`)
