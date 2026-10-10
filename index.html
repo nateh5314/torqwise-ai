@@ -348,7 +348,7 @@ async function torqAskAI(){
   const response=await fetch('/.netlify/functions/research',{method:'POST',headers,body:JSON.stringify(c)});
   let data={};try{data=await response.json()}catch(_){}
   if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));
-  torqRenderAiResult(data);status.textContent='Research finished. Open the source links and confirm exact applicability before acting.';status.classList.add('success');
+  torqRenderAiResult(data);status.textContent=data.quota?('Research finished. '+data.quota.remaining+' of '+data.quota.limit+' AI research questions remaining this '+(data.quota.periodType==='daily'?'day':'month')+'. Open the source links and confirm exact applicability before acting.'):'Research finished. Open the source links and confirm exact applicability before acting.';status.classList.add('success');
  }catch(err){status.textContent='AI research could not complete: '+(err.message||'unknown error')+'. Your existing offline diagnostic tools still work.';}
  finally{btn.disabled=false;btn.textContent='Ask TORQWISE AI · researched answer';}
 }
