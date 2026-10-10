@@ -92,6 +92,37 @@ test("rejects malformed JSON and invalid save payloads", async () => {
   assert.equal(invalid.status, 400);
 });
 
+test("rejects an auth response without a verified user ID", async () => {
+  const calls = configure({ rest: () => response([]) });
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url) === base + "/auth/v1/user") return response({ email: "missing-id@example.com" });
+    return response([]);
+  };
+  const result = await handler(request("GET"));
+  assert.equal(result.status, 401);
+  assert.equal((await result.json()).error, "Your session could not be verified. Please sign in again.");
+  assert.equal(calls.length, 1);
+});
+
+test("bounds oversized arbitrary metadata before writing history", async () => {
+  let saved;
+  configure({ rest: (url, options) => {
+    if (url.includes("/rest/v1/account_history")) {
+      saved = JSON.parse(options.body);
+      return response([{ id: 9, ...saved }], 201);
+    }
+    return response([]);
+  } });
+  const result = await handler(request("POST", "/", {
+    kind: "research",
+    title: "Test research",
+    metadata: { huge: "x".repeat(6000) },
+  }));
+  assert.equal(result.status, 201);
+  assert.deepEqual(saved.metadata, { note: "Extra metadata omitted because it exceeded the storage limit." });
+});
+
 test("saves supported records with only HTTP(S) source links", async () => {
   let saved;
   configure({ rest: (url, options) => {
