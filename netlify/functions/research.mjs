@@ -64,6 +64,27 @@ async function releaseResearchUsage(userId, usageId) {
   });
   if (!response.ok) throw new Error('Usage reservation release failed');
 }
+async function recordResearchUsage({userId,usageId,model,payload}) {
+  const base=(process.env.SUPABASE_URL||"").trim(), key=(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
+  if(!base||!key||!userId)return;
+  const usage=payload?.usage||{};
+  const record={
+    user_id:userId,
+    model:clean(model,120)||null,
+    input_tokens:Number.isSafeInteger(usage.input_tokens)?usage.input_tokens:null,
+    output_tokens:Number.isSafeInteger(usage.output_tokens)?usage.output_tokens:null,
+    completed_at:new Date().toISOString(),
+    status:"completed"
+  };
+  const headers={apikey:key,authorization:"Bearer "+key,"content-type":"application/json",prefer:"return=minimal"};
+  let response;
+  if(Number.isSafeInteger(usageId)){
+    response=await fetch(base+"/rest/v1/research_usage?id=eq."+usageId+"&user_id=eq."+encodeURIComponent(userId),{method:"PATCH",headers,body:JSON.stringify(record)});
+  }else{
+    response=await fetch(base+"/rest/v1/research_usage",{method:"POST",headers,body:JSON.stringify(record)});
+  }
+  if(!response.ok)throw new Error("Could not save AI usage metrics");
+}
 function extractText(response) {
   const parts = [];
   for (const item of response.output || []) {
@@ -163,5 +184,8 @@ export default async (req) => {
     try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
   }
-  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, remaining: access.isPro ? null : access.remaining });
+  const usedModel=payload.model || process.env.OPENAI_MODEL || "gpt-5-mini";
+  try { await recordResearchUsage({userId:access.userId,usageId:access.usageId,model:usedModel,payload}); }
+  catch (err) { console.error("TORQWISE usage metrics could not be saved:",err?.message||"unknown"); }
+  return json({ answer, sources: extractSources(payload), model: usedModel, isPro: access.isPro, remaining: access.isPro ? null : access.remaining });
 };
