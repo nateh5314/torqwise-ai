@@ -14,7 +14,9 @@ export default async (req) => {
   try {
     const auth = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
     if (!auth.ok) return json({ error: "Your session expired. Please sign in again." }, 401);
-    const user = await auth.json();
+    let user;
+    try { user = await auth.json(); } catch { return json({ error: "Your session could not be verified. Please sign in again." }, 401); }
+    if (!user || typeof user.id !== "string" || !user.id) return json({ error: "Your session could not be verified. Please sign in again." }, 401);
     const result = await fetch(base + "/rest/v1/customer_requests?user_id=eq." + encodeURIComponent(user.id) + "&select=request_code,service,label,quoted_price,payment_status,paid_at,status,customer_email,customer_type,vehicle,details,deadline,preferred_timeline,created_at&order=created_at.desc&limit=100", {
       headers: { apikey: service, authorization: "Bearer " + service }
     });
