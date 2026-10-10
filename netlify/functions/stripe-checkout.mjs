@@ -1,3 +1,8 @@
+function resolveSiteUrl(){
+ const candidates=[process.env.DEPLOY_PRIME_URL,process.env.SITE_URL,process.env.URL,"https://torqwiseauto.netlify.app"];
+ for(const value of candidates){try{const u=new URL(value);if(u.protocol==="https:"&&(u.hostname==="torqwiseauto.netlify.app"||u.hostname.endsWith("--torqwiseauto.netlify.app")))return u.origin;}catch{}}
+ return "https://torqwiseauto.netlify.app";
+}
 function reply(body,status=200){return new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}})}
 async function userFromRequest(req,url,key){
  const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
@@ -8,7 +13,7 @@ async function userFromRequest(req,url,key){
 export default async function handler(req){
  if(req.method!=="POST")return reply({error:"Use POST."},405);
  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_PUBLISHABLE_KEY,service=process.env.SUPABASE_SECRET_KEY;
- const stripe=process.env.STRIPE_SECRET_KEY,price=process.env.STRIPE_PRICE_PRO,site=process.env.URL||"https://torqwiseauto.netlify.app";
+ const stripe=process.env.STRIPE_SECRET_KEY,price=process.env.STRIPE_PRICE_PRO,site=resolveSiteUrl();
  if(!url||!key||!service||!stripe||!price)return reply({error:"Subscription checkout is not configured yet."},503);
  let user; try{user=await userFromRequest(req,url,key)}catch{return reply({error:"Could not verify your session."},503)}
  if(!user)return reply({error:"Sign in before starting a subscription."},401);
