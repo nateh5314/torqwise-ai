@@ -6,7 +6,7 @@ const dbHeaders = (key, extra = {}) => ({ apikey: key, authorization: "Bearer " 
 async function auth(req) {
   const base = env("SUPABASE_URL"), anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), key = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!base || !anon || !key) return { error: "Account history storage is not configured yet.", status: 503 };
-  const token = (req.headers.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return { error: "Sign in to access your saved history.", status: 401 };
   const r = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
   if (!r.ok) return { error: "Your session expired. Please sign in again.", status: 401 };
@@ -38,7 +38,7 @@ export default async (req) => {
     let b; try { b = await req.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
     const kind = clean(b.kind, 20), title = clean(b.title, 240);
     if (!kinds.has(kind) || !title) return json({ error: "A valid history type and title are required." }, 400);
-    const sources = Array.isArray(b.sources) ? b.sources.slice(0, 20).map(s => ({ title: clean(s?.title, 240), url: /^https?:\\/\\//i.test(clean(s?.url, 1200)) ? clean(s.url, 1200) : "" })).filter(s => s.url) : [];
+    const sources = Array.isArray(b.sources) ? b.sources.slice(0, 20).map(s => ({ title: clean(s?.title, 240), url: /^https?:\/\//i.test(clean(s?.url, 1200)) ? clean(s.url, 1200) : "" })).filter(s => s.url) : [];
     const row = { user_id: user.id, kind, title, asset: clean(b.asset, 240) || null, serial: clean(b.serial, 100) || null, topic: clean(b.topic, 40) || null, prompt: clean(b.prompt, 6000) || null, result: clean(b.result, 18000) || null, sources, metadata: b.metadata && typeof b.metadata === "object" && !Array.isArray(b.metadata) ? b.metadata : {} };
     const r = await fetch(base + "/rest/v1/account_history", { method: "POST", headers: dbHeaders(key, { "content-type": "application/json", Prefer: "return=representation" }), body: JSON.stringify(row) });
     if (!r.ok) throw new Error("history save failed");
