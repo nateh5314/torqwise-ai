@@ -58,6 +58,7 @@ function extractSources(response) {
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST to submit a research question." }, 405);
   if (!process.env.OPENAI_API_KEY) return json({ error: "The server is missing OPENAI_API_KEY. Add it in Netlify environment variables and redeploy." }, 503);
+  if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
   const supabaseUrl = process.env.SUPABASE_URL;
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   const secretKey = process.env.SUPABASE_SECRET_KEY;
@@ -111,7 +112,6 @@ export default async (req) => {
       quota: { used: quota.used, limit: quota.limit, remaining: quota.remaining, periodType: quota.period_type, periodStart: quota.period_start },
     }, 429);
   }
-  if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
 
   let body;
   try { body = await req.json(); } catch { return json({ error: "The request body must be valid JSON." }, 400); }
