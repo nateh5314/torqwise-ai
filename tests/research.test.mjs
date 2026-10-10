@@ -27,9 +27,9 @@ function configure({ userResponse = response({ id: "user-123" }) } = {}) {
 function request({ token = "valid-token", body = { asset: "2018 pickup", question: "P0300" }, method = "POST" } = {}) {
   const headers = {};
   if (token) headers.authorization = "Bearer " + token;
-  if (body !== undefined) headers["content-type"] = "application/json";
+  if (body !== null && body !== undefined) headers["content-type"] = "application/json";
   return new Request("https://torqwise.example/.netlify/functions/research", {
-    method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+    method, headers, body: body === null || body === undefined ? undefined : JSON.stringify(body),
   });
 }
 test.afterEach(() => {
@@ -40,7 +40,7 @@ test.afterEach(() => {
 
 test("rejects unsupported methods before calling providers", async () => {
   const calls = configure();
-  const result = await handler(request({ method: "GET", body: undefined }));
+  const result = await handler(request({ method: "GET", body: null }));
   assert.equal(result.status, 405);
   assert.equal(calls.length, 0);
 });
