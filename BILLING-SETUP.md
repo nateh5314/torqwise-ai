@@ -16,7 +16,7 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 
 ## Supabase
 1. Open the staging Supabase project SQL Editor.
-2. Run `supabase/subscriptions.sql` and `supabase/research-usage.sql`.
+2. Run `supabase/subscriptions.sql`, `supabase/research-usage.sql`, and `supabase/customer-requests.sql`.
 3. Confirm email/password authentication is enabled and email confirmation settings are suitable for testing.
 4. Keep the service-role key server-side only.
 
@@ -31,13 +31,15 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 - `POST /.netlify/functions/create-checkout`: verifies the Supabase access token and creates a hosted Stripe Checkout subscription session.
 - `POST /.netlify/functions/create-portal`: verifies the signed-in user and creates a Stripe customer portal session for an existing subscription.
 - `GET /.netlify/functions/public-config`: returns only the public Supabase URL and anon key for the browser; it never returns secret keys.
+- `POST /.netlify/functions/create-request`: validates the signed-in account and stores a customer research request.
+- `GET /.netlify/functions/list-requests`: returns only the signed-in customer's saved request history.
 - `GET /.netlify/functions/billing-status`: verifies the user and returns that user's subscription state.
 - `POST /.netlify/functions/stripe-webhook`: verifies Stripe's timestamped HMAC signature before syncing subscription events.
 
 ## Important limitations before public launch
 - The staging HTML now wires the account modal to Supabase sign-up/sign-in, shows the CA$29.99/month Pro subscription option, checks the signed-in user's subscription status, and offers the Stripe customer portal when Pro is active. This wiring is not yet production-verified.
-- Customer order/request history is still local to the browser; shared, durable customer records are not implemented.
-- Pro access is not yet enforced server-side for the AI research endpoint. Do not advertise protected features as gated or grant access based on the checkout return URL alone.
+- Customer request submission and history are wired to persistent Supabase storage. Automated email notifications and an operator/admin dashboard for fulfilling requests are not yet implemented.
+- The AI research endpoint now checks the signed-in user's subscription and enforces a three-report monthly free allowance using `research_usage`. This is a basic count-based quota, not an atomic quota reservation under concurrent requests.
 - Do not take real payments until the UI uses real Supabase sign-in, checkout redirects are connected, the webhook and subscription status are tested, Pro access is enforced server-side for protected usage, and cancellation/refund/support/legal pages are ready.
 - The existing AI research endpoint currently uses a best-effort in-memory rate limit, which is not suitable for a public paid product by itself.
 - A successful checkout redirect is not proof of payment. Grant access only after a verified webhook updates the subscription record.
