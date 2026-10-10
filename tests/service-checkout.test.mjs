@@ -14,7 +14,7 @@ function response(body, status = 200) {
     headers: { "content-type": "application/json" },
   });
 }
-function configure({ requestRow = {
+function configure({ authResponse = response({ id: userId, email: "mechanic@example.com" }), requestRow = {
   request_code: requestCode,
   user_id: userId,
   service: "parts",
@@ -35,7 +35,7 @@ function configure({ requestRow = {
   globalThis.fetch = async (url, options = {}) => {
     const target = String(url);
     calls.push({ url: target, options });
-    if (target === base + "/auth/v1/user") return response({ id: userId, email: "mechanic@example.com" });
+    if (target === base + "/auth/v1/user") return authResponse;
     if (target.includes("/rest/v1/customer_requests?") && (!options.method || options.method === "GET")) {
       return response(requestRow ? [requestRow] : []);
     }
@@ -71,6 +71,15 @@ test("rejects unsupported methods and unauthenticated requests", async () => {
   assert.equal((await handler(request("GET"))).status, 405);
   assert.equal((await handler(request("POST", { requestCode }, ""))).status, 401);
   assert.equal(calls.length, 0);
+});
+
+test("rejects a successful auth response without a user ID before querying requests", async () => {
+  const calls = configure({ authResponse: response({ email: "missing-id@example.com" }) });
+  const result = await handler(request("POST", { requestCode }));
+  assert.equal(result.status, 401);
+  assert.equal((await result.json()).error, "Your session is invalid or expired. Sign in again.");
+  assert.equal(calls.filter(c => c.url.includes("/rest/v1/customer_requests?")).length, 0);
+  assert.equal(calls.filter(c => c.url.includes("/v1/checkout/sessions")).length, 0);
 });
 
 test("requires a valid request code", async () => {
