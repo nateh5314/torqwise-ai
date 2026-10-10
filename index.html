@@ -376,16 +376,17 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
     let card=byId('torqProSubscription');
     if(!card){
       const section=document.createElement('section');section.className='section';section.id='torqProSubscription';
-      section.innerHTML='<div class="wrap"><div class="card"><div class="eyebrow">TORQWISE PRO TECHNICIAN</div><h2>Unlock Pro Technician</h2><p class="sub">Advanced automotive research tools and technician-focused workflows.</p><div class="price">$29.99 <small>CAD · monthly</small></div><p id="torqProStatus" class="muted"></p><button id="torqProButton">Subscribe to Pro Technician</button><p class="tiny">Secure payment through Stripe Checkout. You can cancel according to the subscription terms.</p></div></div>';
+      section.innerHTML='<div class="wrap"><div class="card"><div class="eyebrow">TORQWISE PRO TECHNICIAN</div><h2>Unlock Pro Technician</h2><p class="sub">Advanced automotive research tools and technician-focused workflows.</p><div class="price">$29.99 <small>CAD · monthly</small></div><p id="torqProStatus" class="muted"></p><button id="torqProButton">Subscribe to Pro Technician</button><button id="torqPortalButton" class="secondary" style="display:none;margin-top:8px">Manage subscription</button><p id="torqPortalStatus" class="tiny"></p><p class="tiny">Secure payment through Stripe Checkout. You can cancel according to the subscription terms.</p></div></div>';
       const account=byId('account'); account?.parentNode.insertBefore(section,account.nextSibling);card=section;
     }
-    const status=byId('torqProStatus'),button=byId('torqProButton');
+    const status=byId('torqProStatus'),button=byId('torqProButton'),portal=byId('torqPortalButton'),portalStatus=byId('torqPortalStatus');
     if(!status||!button)return;
+    if(portal){portal.style.display=pro?'block':'none';portal.onclick=async()=>{if(!currentUser)return;portal.disabled=true;portal.textContent='Opening secure portal…';if(portalStatus)portalStatus.textContent='';try{const session=(await client.auth.getSession()).data.session;const r=await fetch('/.netlify/functions/create-portal',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({})});const d=await r.json();if(!r.ok||!d.url)throw new Error(d.error||'Could not open subscription management.');location.assign(d.url);}catch(e){if(portalStatus)portalStatus.textContent=e.message||'Could not open subscription management.';portal.disabled=false;portal.textContent='Try managing subscription again';}};}
     status.textContent=pro?'Your Pro subscription is active.':currentUser?'Sign in verified. Start your subscription securely below.':'Create an account or sign in to start your subscription.';
     button.textContent=pro?'Pro Technician active':'Subscribe — $29.99 CAD/month';
     button.onclick=async()=>{
       if(!currentUser){window.openAuth('signin');return;}
-      if(pro){status.textContent='Your Pro subscription is active.';return;}
+      if(pro){status.textContent='Your Pro subscription is active. Use Manage subscription to update or cancel billing.';return;}
       button.disabled=true;button.textContent='Initiating secure checkout…';
       try{
         const session=(await client.auth.getSession()).data.session;
