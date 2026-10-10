@@ -37,7 +37,7 @@ test("health endpoint verifies usage table and reports whether quota function is
   globalThis.fetch=async(url,options={})=>{
     calls.push({url:String(url),options});
     if(String(url).includes("/rest/v1/research_usage?"))return new Response("[]",{status:200});
-    if(String(url).endsWith("/rest/v1/rpc/reserve_research_usage"))return new Response("",{status:204});
+    if(String(url).endsWith("/rest/v1/rpc/reserve_research_usage"))return new Response(null,{status:204});
     throw new Error("Unexpected URL "+url);
   };
   const response=await handler();
