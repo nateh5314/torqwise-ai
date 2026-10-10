@@ -21,6 +21,7 @@ function configure({ requestRow = {
   label: "Parts Research",
   quoted_price: 15,
   payment_status: "unpaid",
+  status: "Awaiting customer",
   stripe_checkout_session_id: null,
 }, stripeSession = { id: "cs_test_1", url: "https://checkout.stripe.example/session" } } = {}) {
   Object.assign(process.env, {
@@ -96,18 +97,28 @@ test("uses the server-side CAD price and scopes lookup to the signed-in user", a
 });
 
 test("blocks quote-first, paid, and inconsistent-price requests", async () => {
-  configure({ requestRow: { request_code: requestCode, user_id: userId, service: "business", quoted_price: null, payment_status: "unpaid" } });
+  configure({ requestRow: { request_code: requestCode, user_id: userId, service: "business", quoted_price: null, payment_status: "unpaid", status: "Awaiting customer" } });
   assert.equal((await handler(request("POST", { requestCode }))).status, 409);
-  configure({ requestRow: { request_code: requestCode, user_id: userId, service: "parts", quoted_price: 15, payment_status: "paid" } });
+  configure({ requestRow: { request_code: requestCode, user_id: userId, service: "parts", quoted_price: 15, payment_status: "paid", status: "Awaiting customer" } });
   assert.equal((await handler(request("POST", { requestCode }))).status, 409);
-  configure({ requestRow: { request_code: requestCode, user_id: userId, service: "parts", quoted_price: 25, payment_status: "unpaid" } });
+  configure({ requestRow: { request_code: requestCode, user_id: userId, service: "parts", quoted_price: 25, payment_status: "unpaid", status: "Awaiting customer" } });
   assert.equal((await handler(request("POST", { requestCode }))).status, 409);
 });
 
 test("reuses an existing open Stripe checkout session", async () => {
-  const calls = configure({ requestRow: { request_code: requestCode, user_id: userId, service: "parts", quoted_price: 15, payment_status: "pending", stripe_checkout_session_id: "cs_old" } });
+  const calls = configure({ requestRow: { request_code: requestCode, user_id: userId, service: "parts", quoted_price: 15, payment_status: "pending", status: "Awaiting customer", stripe_checkout_session_id: "cs_old" } });
   const result = await handler(request("POST", { requestCode }));
   assert.equal(result.status, 200);
   assert.deepEqual(await result.json(), { url: "https://checkout.stripe.example/old", reused: true });
   assert.equal(calls.some(c => c.url === "https://api.stripe.com/v1/checkout/sessions" && c.options.method === "POST"), false);
+});
+
+test("requires operator review before collecting payment", async () => {
+  configure({ requestRow: {
+    request_code: requestCode, user_id: userId, service: "parts", quoted_price: 15,
+    payment_status: "unpaid", status: "Request received", stripe_checkout_session_id: null,
+  } });
+  const result = await handler(request("POST", { requestCode }));
+  assert.equal(result.status, 409);
+  assert.match((await result.json()).error, /reviewed and marked ready for payment/i);
 });
