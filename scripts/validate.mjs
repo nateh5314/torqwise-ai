@@ -47,6 +47,9 @@ const required = [
   [netlify, "Netlify function directory", 'functions = "netlify/functions"'],
 ];
 for (const [source, label, needle] of required) if (!source.includes(needle)) fail("Missing " + label + ".");
+const upstreamErrorBlock = research.slice(research.indexOf("if (!upstream.ok)"), research.indexOf("const answer = extractText(payload)"));
+if (!upstreamErrorBlock.includes("await refundQuota")) fail("Upstream HTTP errors must attempt to restore the consumed question allowance.");
+if (!research.includes('await refundQuota({ supabaseUrl, secretKey, userId: user.id, quota });')) fail("Research transport/parse failures must attempt quota restoration.");
 if (config.includes("SUPABASE_SECRET_KEY")) fail("Public config endpoint must not expose the Supabase secret key.");
 if (!/id="authPassword"[^>]*minlength="8"/.test(html)) fail("Account password field should require at least 8 characters.");
 if (!pkg.scripts || pkg.scripts.test !== "node scripts/validate.mjs") fail("package.json test script is not configured.");
