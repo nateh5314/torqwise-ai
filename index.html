@@ -355,7 +355,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       setTimeout(()=>byId('authModal').classList.add('hidden'),700);
     }catch(err){msg.textContent=err.message||'Sign-in failed. Please try again.';}
   };
-  document.addEventListener('submit',function(e){if(e.target===byId('authForm'))window.__torqwiseSecureSubmit(e);},true);
+  document.addEventListener('submit',function(e){if(e.target===byId('authForm')){e.preventDefault();e.stopImmediatePropagation();window.__torqwiseSecureSubmit(e);}},true);
   window.__torqwiseGetToken=async function(){if(!client)return {};const session=(await client.auth.getSession()).data.session;return session?{authorization:'Bearer '+session.access_token}:{}};
   window.resetTorqPassword=async function(){try{if(!client)throw new Error('Account service is not configured yet.');const email=byId('authEmail').value.trim().toLowerCase();if(!email)throw new Error('Enter your account email above first.');const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/#account'});if(error)throw error;const msg=byId('authMessage');msg.classList.remove('hidden');msg.textContent='If that account exists, a password-reset email has been sent. Check your inbox and spam folder.';}catch(e){const msg=byId('authMessage');msg.classList.remove('hidden');msg.textContent=e.message||'Could not request a password reset.';}};
   window.signout=async function(){if(client)await client.auth.signOut();currentUser=null;pro=false;try{const d=JSON.parse(localStorage.getItem('torqwise_demo_v1')||'{}');d.profile=null;d.orders=[];localStorage.setItem('torqwise_demo_v1',JSON.stringify(d));}catch{}refreshAccountUI();if(typeof window.render==='function')window.render();};
