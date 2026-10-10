@@ -16,7 +16,7 @@ export default async req => {
     if (!admins.includes(user.id)) return json({ error: "You are not authorized to access the operator dashboard." }, 403);
     const headers = { apikey: service, authorization: "Bearer " + service, "content-type": "application/json" };
     if (req.method === "GET") {
-      const result = await fetch(base + "/rest/v1/customer_requests?select=request_code,service,label,quoted_price,payment_status,paid_at,status,customer_email,customer_type,vehicle,details,deadline,created_at&order=created_at.desc&limit=250", { headers });
+      const result = await fetch(base + "/rest/v1/customer_requests?select=request_code,service,label,quoted_price,payment_status,paid_at,status,customer_email,customer_type,vehicle,details,deadline,preferred_timeline,created_at&order=created_at.desc&limit=250", { headers });
       if (!result.ok) throw new Error("Could not load requests");
       return json({ requests: await result.json() });
     }
