@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "TORQWISE Automotive & Equipment Research",
+  "short_name": "TORQWISE",
+  "description": "A unified automotive and heavy-equipment research workspace.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101113",
+  "theme_color": "#111214",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
