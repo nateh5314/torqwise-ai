@@ -1,6 +1,6 @@
 export default async () => {
   const url = (process.env.SUPABASE_URL || "").trim();
-  const anonKey = (process.env.SUPABASE_ANON_KEY || "").trim();
+  const anonKey = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "").trim();
   if (!url || !anonKey) {
     return new Response(JSON.stringify({ configured: false }), {
       status: 503,
