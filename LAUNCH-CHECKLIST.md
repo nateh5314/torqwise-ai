@@ -17,6 +17,36 @@ This repository branch is the prepared release candidate. Keep the existing live
 - Privacy, terms, and support pages
 - Baseline hosting security headers
 
+## Product direction: one mechanic workspace
+
+The marketplace is a major priority, but diagnostics remain a core product pillar and must continue to improve alongside parts search. The intended workflow is asset identification → symptoms/fault codes → guided tests and source-backed research → repair case → compatible parts comparison.
+
+Keep the existing black/red identity and prioritize simple top-level navigation: Diagnose, Research, Parts, and My Garage / Saved Jobs. Reuse vehicle/equipment context across tools; distinguish confirmed findings from hypotheses and unverified parts candidates.
+
+## Focused functional test checklist
+
+### Diagnostics and technical research
+- [ ] VIN decoder handles a valid test VIN, invalid input, network failure, and empty results gracefully.
+- [ ] Each diagnostic starter opens the correct code/symptom content and gives useful next steps without presenting a suspected cause as a confirmed failure.
+- [ ] Research inputs accept vehicle/equipment context and a specific question; errors and usage limits are clear.
+- [ ] Safety-critical repair guidance calls for authoritative service information and appropriate precautions.
+- [ ] Navigation between Diagnose, Research, and Parts preserves relevant vehicle/equipment context where implemented.
+
+### Parts marketplace
+- [ ] Search works with a part name/number and vehicle/equipment context.
+- [ ] Supplier links open the intended supplier search and preserve useful query terms.
+- [ ] Shortlist add/remove/export works, including empty and duplicate cases.
+- [ ] The AI research handoff carries the selected part and relevant vehicle context.
+- [ ] Results clearly distinguish supplier-search links from verified live data.
+- [ ] Do not claim a part fits, is in stock, or has a current price unless the data source supports that claim.
+
+### General usability and release safety
+- [ ] Test mobile navigation, keyboard access, readable errors, and narrow-screen layouts.
+- [ ] Check console/network failures and ensure the core page remains usable if optional services are unavailable.
+- [ ] Test account, research quota, and billing flows with test credentials and Stripe test mode before accepting real charges.
+- [ ] Confirm no secret credentials are included in client-side files or commits.
+- [ ] Run automated checks and manually test the deployed Netlify site before announcing launch.
+
 ## Before connecting or publishing
 
 - Confirm the intended Netlify site and deployment branch. The repository deploys from the root (`publish = "."`) and includes Netlify Functions; do not use a static-only drag-and-drop upload.
