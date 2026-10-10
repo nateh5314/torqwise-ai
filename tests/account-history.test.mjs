@@ -131,3 +131,17 @@ test("requires a valid delete target and scopes deletion to the verified user", 
   assert.match(deleteUrl, /id=eq\.12/);
   assert.match(deleteUrl, /user_id=eq\.user-123/);
 });
+
+
+test("clear-all deletes only the verified user's cloud history", async () => {
+  let deleteUrl = "";
+  configure({ rest: (url, options) => {
+    if (options.method === "DELETE") deleteUrl = url;
+    return response([]);
+  } });
+  const result = await handler(request("DELETE", "/", { clearAll: true }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { deleted: "all" });
+  assert.match(deleteUrl, /user_id=eq\\.user-123/);
+  assert.doesNotMatch(deleteUrl, /id=eq/);
+});
