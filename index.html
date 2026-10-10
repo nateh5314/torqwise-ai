@@ -81,10 +81,12 @@
    <div id="researchLinks" class="research-results" aria-live="polite"></div>
   </div>
   <div class="card">
-   <div class="diag-label">Your shop notebook · This browser only</div><h3 style="margin-top:8px">Saved job contexts</h3>
-   <p class="sub">Save the machine, concern and research topic so you can pick up where you left off on this device. Cloud sync and secure accounts are not connected yet.</p>
+   <div class="diag-label">Your shop notebook</div><h3 style="margin-top:8px">Saved job contexts</h3>
+   <p class="sub">Local drafts stay on this device. Signed-in account history can keep research reports, diagnostic cases, and parts investigations together across sessions.</p>
    <div id="savedResearchCases"><div class="empty">No saved job contexts yet.</div></div>
-   <button type="button" class="secondary" onclick="torqExportCases()" style="margin-top:12px">Export saved cases</button>
+   <div id="accountHistoryStatus" class="notice" role="status">Sign in to enable cloud history for this account.</div>
+   <div id="accountHistoryList"><div class="empty">Your saved account history will appear here after sign-in.</div></div>
+   <div class="formbuttons"><button type="button" class="secondary" onclick="torqExportCases()">Export local job contexts</button><button type="button" class="secondary" onclick="torqLoadAccountHistory(true)">Refresh account history</button></div>
   </div>
  </div>
 </div></section>
@@ -300,7 +302,7 @@ function diagResearchCase(id){
  if(status){status.textContent='Diagnostic case prepared for AI research. Review the vehicle details and case question, then select Ask TORQWISE AI.';status.classList.remove('hidden')}
 }
 function diagReadHistory(){try{return JSON.parse(localStorage.getItem('torqwise_diag_history_v1'))||[]}catch(e){return[]}}
-function diagSaveCase(id){const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPTOMS[id],item={id:'D-'+Date.now().toString().slice(-8),title:code?code.code+' — '+code.title:sym?sym.title:id,vehicle:diagVehicle(),created:new Date().toISOString(),kind:code?'code':'symptom'};const h=diagReadHistory();h.unshift(item);localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(h.slice(0,25)));diagRenderHistory();const out=document.getElementById('diagOutput');const msg=document.createElement('p');msg.className='notice';msg.textContent='Case saved in this browser only.';out.querySelector('.diag-detail')?.appendChild(msg)}
+function diagSaveCase(id){const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPTOMS[id],item={id:'D-'+Date.now().toString().slice(-8),title:code?code.code+' — '+code.title:sym?sym.title:id,vehicle:diagVehicle(),created:new Date().toISOString(),kind:code?'code':'symptom'};const h=diagReadHistory();h.unshift(item);localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(h.slice(0,25)));diagRenderHistory();const out=document.getElementById('diagOutput');const msg=document.createElement('p');msg.className='notice';msg.textContent='Case saved locally. If signed in, it is also being saved to account history.';out.querySelector('.diag-detail')?.appendChild(msg);const checks=code?code.checks:sym?sym.first:[];torqSaveAccountHistory({kind:'diagnostic',title:item.title,asset:item.vehicle,prompt:code?code.summary:sym?sym.urgency:'Diagnostic case',result:(code?code.checks:sym?sym.first:[]).join('\\n'),metadata:{code:code?.code||null,symptomId:sym?id:null,causes:code?code.causes:sym?sym.causes:[],checks}});}
 function diagRenderHistory(){const h=diagReadHistory(),el=document.getElementById('diagHistory');if(!h.length){el.innerHTML='<div class="empty">No saved cases yet.</div>';return}el.innerHTML=h.map(x=>'<div class="order"><div class="orderhead"><span>'+escapeHtml(x.title)+'</span><span class="status">Saved locally</span></div><p>'+escapeHtml(x.vehicle)+' · '+new Date(x.created).toLocaleString()+'</p></div>').join('')}
 function diagClearHistory(){if(!confirm('Clear saved diagnostic cases from this browser?'))return;localStorage.removeItem('torqwise_diag_history_v1');diagRenderHistory()}
 document.getElementById('diagSearchForm').addEventListener('submit',e=>{e.preventDefault();diagRunSearch(document.getElementById('diagQuery').value)});diagRenderHistory();
@@ -327,7 +329,7 @@ async function torqAskAI(){
  const c=torqGetContext();if(!c.asset&&!c.question){alert('Enter a vehicle/equipment name or a question first.');return;}
  const btn=document.getElementById('torqAiButton'),status=document.getElementById('torqAiStatus'),host=document.getElementById('torqAiOutput');
  btn.disabled=true;btn.textContent='Researching…';status.classList.remove('success');status.textContent='Searching current web sources and preparing a sourced research report. This can take a little while.';host.style.display='none';host.innerHTML='';
- const researchController=new AbortController();const researchTimeout=setTimeout(()=>researchController.abort(),42000);try{const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify(c),signal:researchController.signal});let data={};try{data=await response.json()}catch(_){}if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));torqRenderAiResult(data);status.textContent='Research finished. Open the source links and confirm exact applicability before acting.'+(data.isPro?' Pro Technician is active.':Number.isFinite(data.remaining)?' Free research reports remaining this month: '+data.remaining+'.':'');status.classList.add('success');}
+ const researchController=new AbortController();const researchTimeout=setTimeout(()=>researchController.abort(),42000);try{const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify(c),signal:researchController.signal});let data={};try{data=await response.json()}catch(_){}if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));torqRenderAiResult(data);torqSaveAccountHistory({kind:c.topic==='diagnostic'?'diagnostic':c.topic==='parts'?'parts':'research',title:(c.asset||'General research')+' — '+(c.question||c.topic||'Research report'),asset:c.asset,serial:c.serial,topic:c.topic,prompt:c.question,result:data.answer,sources:data.sources||[],metadata:{model:data.model||'',savedFrom:'ai-research'}});status.textContent='Research finished. Open the source links and confirm exact applicability before acting.'+(data.isPro?' Pro Technician is active.':Number.isFinite(data.remaining)?' Free research reports remaining this month: '+data.remaining+'.':'');status.classList.add('success');}
  catch(err){const message=err.message||'unknown error';status.textContent=(err.name==='AbortError'?'AI research timed out after 42 seconds. Try a narrower question or check the backend deployment.':'AI research could not complete: '+message+'. Check the deployment and server-function logs, then try again. Your existing offline diagnostic tools still work.');if(/sign in to use AI research|session expired/i.test(message)&&typeof window.openAuth==='function'){status.textContent='Sign in to use AI research. Free accounts include 3 reports per month.';window.openAuth('signin')}else if(/used your 3 free research reports/i.test(message)){document.getElementById('torqProSubscription')?.scrollIntoView({behavior:'smooth',block:'center'})}}
  finally{clearTimeout(researchTimeout);btn.disabled=false;btn.textContent='Ask TORQWISE AI · researched answer';}
 }
@@ -349,7 +351,48 @@ function torqResearch(){
 }
 function torqEscape(s){return String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function torqLoadCases(){try{return JSON.parse(localStorage.getItem(TORQ_CASES_KEY)||'[]')}catch(e){return []}}
-function torqSaveCase(){const c=torqGetContext();if(!c.asset&&!c.question){alert('Add a vehicle/equipment or question before saving.');return;}const cases=torqLoadCases();cases.unshift({...c,id:Date.now(),savedAt:new Date().toLocaleString()});localStorage.setItem(TORQ_CASES_KEY,JSON.stringify(cases.slice(0,100)));torqRenderCases();}
+async function torqSaveAccountHistory(entry){
+ const status=document.getElementById('accountHistoryStatus');
+ try{
+  if(!window.__torqwiseGetToken){if(status){status.textContent='Cloud history is waiting for account setup. Local saves still work.';status.classList.remove('success')}return}
+  const headers=await window.__torqwiseGetToken();
+  if(!headers.authorization){if(status){status.textContent='Sign in to sync saved work to your account. Local saves remain on this device.';status.classList.remove('success')}return}
+  const response=await fetch('/.netlify/functions/account-history',{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(entry)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'Could not save account history.');
+  if(status){status.textContent='Saved to your account history.';status.classList.add('success')}
+  torqLoadAccountHistory(false);
+ }catch(e){if(status){status.textContent=(e.message||'Account history is temporarily unavailable.')+' Local saves remain on this device.';status.classList.remove('success')}}
+}
+async function torqLoadAccountHistory(showMessage=false){
+ const status=document.getElementById('accountHistoryStatus'),host=document.getElementById('accountHistoryList');
+ if(!host)return;
+ try{
+  const headers=window.__torqwiseGetToken?await window.__torqwiseGetToken():{};
+  if(!headers.authorization){host.innerHTML='<div class="empty">Sign in to see saved history across sessions.</div>';if(status){status.textContent='Cloud history is available after sign-in. Local drafts stay on this device.';status.classList.remove('success')}return}
+  if(showMessage&&status){status.textContent='Loading account history…';status.classList.remove('success')}
+  const response=await fetch('/.netlify/functions/account-history?limit=50',{headers,cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'Could not load account history.');
+  const entries=Array.isArray(data.entries)?data.entries:[];
+  host.innerHTML='';
+  if(!entries.length)host.innerHTML='<div class="empty">No cloud history yet. Save a job context, diagnostic case, or AI research report while signed in.</div>';
+  entries.forEach(entry=>{
+   const card=document.createElement('article');card.className='saved-case';
+   const title=document.createElement('strong');title.textContent=entry.title||'Saved work';card.appendChild(title);
+   const meta=document.createElement('small');meta.textContent=(entry.kind||'history').toUpperCase()+' · '+(entry.created_at?new Date(entry.created_at).toLocaleString():'Saved');card.appendChild(meta);
+   if(entry.asset){const asset=document.createElement('p');asset.textContent='Vehicle/equipment: '+entry.asset;card.appendChild(asset)}
+   if(entry.prompt){const prompt=document.createElement('p');prompt.textContent=entry.prompt;card.appendChild(prompt)}
+   if(entry.result){const result=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Open saved findings / test plan';result.appendChild(summary);const body=document.createElement('p');body.style.whiteSpace='pre-wrap';body.textContent=entry.result;result.appendChild(body);card.appendChild(result)}
+   if(Array.isArray(entry.sources)&&entry.sources.length){const sources=document.createElement('div');sources.className='formbuttons';entry.sources.slice(0,8).forEach(src=>{if(!src.url)return;const link=document.createElement('a');link.href=src.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=src.title||src.url;link.className='btn secondary';link.style.fontSize='11px';link.style.padding='6px 9px';sources.appendChild(link)});card.appendChild(sources)}
+   const actions=document.createElement('div');actions.className='formbuttons';
+   const reopen=document.createElement('button');reopen.type='button';reopen.className='secondary';reopen.textContent='Reuse context';reopen.onclick=()=>{document.getElementById('researchAsset').value=entry.asset||'';document.getElementById('researchSerial').value=entry.serial||'';document.getElementById('researchTopic').value=entry.topic||'general';document.getElementById('researchQuestion').value=entry.prompt||entry.title||'';document.getElementById('research-hub').scrollIntoView({behavior:'smooth',block:'start'})};actions.appendChild(reopen);
+   const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='Delete';remove.onclick=async()=>{if(!confirm('Delete this saved item from your account history?'))return;try{const h=await window.__torqwiseGetToken();const r=await fetch('/.netlify/functions/account-history',{method:'DELETE',headers:{'content-type':'application/json',...h},body:JSON.stringify({id:entry.id})});if(!r.ok)throw new Error('Delete failed.');await torqLoadAccountHistory(true)}catch(e){if(status)status.textContent=e.message||'Could not delete history item.'}};actions.appendChild(remove);card.appendChild(actions);host.appendChild(card);
+  });
+  if(status){status.textContent='Cloud history loaded: '+entries.length+' recent item'+(entries.length===1?'':'s')+'.';status.classList.add('success')}
+ }catch(e){if(status){status.textContent=(e.message||'Account history could not load.')+' Local drafts remain available.';status.classList.remove('success')}host.innerHTML='<div class="empty">Account history could not load. Retry when the account service is available.</div>'}
+}
+function torqSaveCase(){const c=torqGetContext();if(!c.asset&&!c.question){alert('Add a vehicle/equipment or question before saving.');return;}const cases=torqLoadCases();cases.unshift({...c,id:Date.now(),savedAt:new Date().toLocaleString()});localStorage.setItem(TORQ_CASES_KEY,JSON.stringify(cases.slice(0,100)));torqRenderCases();torqSaveAccountHistory({kind:c.topic==='diagnostic'?'diagnostic':c.topic==='parts'?'parts':'job',title:(c.asset||'General job')+' — '+(c.question||c.topic||'Saved job context'),asset:c.asset,serial:c.serial,topic:c.topic,prompt:c.question,metadata:{savedFrom:'manual-job-context'}});}
 function torqRenderCases(){const host=document.getElementById('savedResearchCases');if(!host)return;const cases=torqLoadCases();if(!cases.length){host.innerHTML='<div class="empty">No saved job contexts yet.</div>';return;}host.innerHTML=cases.map(c=>'<div class="saved-case"><strong>'+torqEscape(c.asset||'Unspecified vehicle')+'</strong><small>'+torqEscape(c.savedAt)+' · '+torqEscape(c.topic)+'</small><p>'+torqEscape(c.question||'No question entered')+'</p><div class="formbuttons"><button type="button" class="secondary" onclick="torqOpenCase('+c.id+')">Open</button><button type="button" class="secondary" onclick="torqDeleteCase('+c.id+')">Delete</button></div></div>').join('');}
 function torqOpenCase(id){const c=torqLoadCases().find(x=>x.id===id);if(!c)return;document.getElementById('researchAsset').value=c.asset||'';document.getElementById('researchSerial').value=c.serial||'';document.getElementById('researchTopic').value=c.topic||'general';document.getElementById('researchQuestion').value=c.question||'';document.getElementById('research-hub').scrollIntoView({behavior:'smooth'});}
 function torqDeleteCase(id){localStorage.setItem(TORQ_CASES_KEY,JSON.stringify(torqLoadCases().filter(c=>c.id!==id)));torqRenderCases();}
@@ -444,7 +487,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       if(r.ok){const d=await r.json();pro=!!d.isPro;}else pro=false;
     }catch{pro=false;}
     updateSubscriptionUI();
-    if(currentUser)await loadCustomerRequests();
+    if(currentUser){await loadCustomerRequests();await torqLoadAccountHistory(false);}else{const h=document.getElementById('accountHistoryList');if(h)h.innerHTML='<div class="empty">Sign in to see saved history across sessions.</div>';}
   }
   function updateSubscriptionUI(){
     let card=byId('torqProSubscription');
