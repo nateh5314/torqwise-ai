@@ -63,7 +63,7 @@ begin
     v_status := 'free';
   end if;
 
-  if v_plan in ('driver', 'pro') and v_status = 'active' and (v_period_end is null or v_period_end > now()) then
+  if v_plan in ('driver', 'pro') and v_status = 'active' and v_period_end is not null and v_period_end > now() then
     v_period_type := 'monthly';
     -- Paid quota periods are keyed to the UTC calendar month.
     v_period_start := date_trunc('month', now() at time zone 'UTC')::date;
