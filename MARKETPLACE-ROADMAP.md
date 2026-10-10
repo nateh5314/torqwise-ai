@@ -4,6 +4,38 @@
 
 Make TORQWISE the fastest trusted workflow for identifying a repair need, finding the correct part, comparing real purchasing options, and getting the part ordered. The long-term experience should feel like an Expedia-style comparison engine, but fitment accuracy and shop-grade trust matter more than showing the most listings.
 
+## Product architecture: one platform, not separate tools
+
+The parts marketplace is a major priority, but diagnostics and repair research remain equally important pillars. TORQWISE should connect the workflow from the first symptom to a verified repair plan and compatible parts.
+
+### Connected mechanic workflow
+
+1. **Identify the asset:** VIN, year/make/model/engine, or equipment make/model/serial number.
+2. **Describe the problem:** diagnostic trouble code, symptom, test result, noise, warning light, or repair question.
+3. **Diagnose and research:** guided test sequences, likely causes ranked by evidence, wiring/technical references where legally available, specifications, and clear safety warnings.
+4. **Build a repair case:** record symptoms, tests, measurements, confirmed findings, and next steps. Clearly distinguish a possible cause from a confirmed failure.
+5. **Find compatible parts:** search OEM and aftermarket numbers, new/remanufactured/used options where legally sourced, supersessions and cross-references, then compare authorized supplier offers.
+6. **Save and continue:** keep the asset, diagnostic case, research, parts shortlist, and supplier links together when account storage is configured.
+
+### Navigation and usability principles
+
+- Preserve the existing charcoal/black and red visual identity.
+- Keep top-level navigation focused: **Diagnose**, **Research**, **Parts**, and **My Garage / Saved Jobs**.
+- Allow users to start from a fault code, symptom, VIN, part number, or equipment model.
+- Reuse vehicle/equipment details across all tools instead of repeatedly asking for the same information.
+- Show simple explanations by default, with an optional advanced technician view.
+- Reveal complex options when needed; do not cram every function onto the home screen.
+- Keep the site responsive, fast, keyboard-accessible, and usable on a phone in a workshop.
+- Never claim a part definitely fits or a component definitely failed unless the evidence supports that claim.
+- Show sources, confidence/verification status, and data freshness for critical diagnostic and parts information.
+
+### Product pillars
+
+1. **Diagnostics:** DTC lookup, symptom-led troubleshooting, guided tests, complex multi-code cases, evidence capture, and repair verification.
+2. **Technical research:** service information and specifications from authorized sources, wiring/connector references where licensed, service bulletins, procedures, and citations.
+3. **Parts intelligence:** new and used offers where permitted, fitment, cross-references, supersessions, delivered-cost comparison, and supplier handoff.
+4. **Garage and shop workspace:** saved vehicles/equipment, repair history, work notes, parts lists, maintenance reminders, and eventually team/fleet workflows.
+
 ## What is in the current beta
 
 - Part/job description, vehicle or equipment details, and delivery region fields
@@ -17,7 +49,7 @@ This is a research/shortlist feature only. It does not scrape retailer pages, gu
 
 ### Stage 1 — Useful launch feature
 
-- Keep the current black/red design and the existing VIN, diagnostic, and AI research tools.
+- Keep the current black/red design and continue improving VIN decoding, guided diagnostics, symptom-based troubleshooting, and AI research alongside marketplace development.
 - Make part searches reuse the vehicle context already entered in the research workspace.
 - Provide clear source links and distinguish verified information from unconfirmed candidates.
 - Collect feedback from a small number of technicians before expanding the workflow.
