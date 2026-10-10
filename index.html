@@ -305,6 +305,9 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       const {data}=await client.auth.getSession();
       currentUser=data.session?.user||null;
       ready=true;
+      const accountNotice=byId('accountPanel')?.querySelector('.notice'); if(accountNotice)accountNotice.style.display='none';
+      const authNotice=byId('authModal')?.querySelector('.notice'); if(authNotice)authNotice.textContent='Your password is securely handled by Supabase. Use a unique password and confirm your email if prompted.';
+      const pwLabel=byId('passwordField')?.querySelector('label'); if(pwLabel)pwLabel.textContent='Password';
       client.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;refreshAccountUI();});
       await refreshAccountUI();
       const q=new URLSearchParams(location.search);
@@ -316,6 +319,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
     const panel=byId('accountPanel'); if(!panel||byId('productionSetupNotice'))return;
     const n=document.createElement('div');n.id='productionSetupNotice';n.className='notice';n.textContent='Secure account setup is being connected. '+message;panel.prepend(n);
   }
+  window.switchAuthMode=function(){window.openAuth(window.__torqAuthMode==='signup'?'signin':'signup');};
   window.openAuth=function(mode){
     if(!client){addSetupNotice('Account service is not configured yet.');return;}
     window.__torqAuthMode=mode;
