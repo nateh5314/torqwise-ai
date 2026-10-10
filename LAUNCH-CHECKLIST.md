@@ -40,6 +40,12 @@ Keep the existing black/red identity and prioritize simple top-level navigation:
 - [ ] Results clearly distinguish supplier-search links from verified live data.
 - [ ] Do not claim a part fits, is in stock, or has a current price unless the data source supports that claim.
 
+### Account history and continuity
+- [ ] Run `supabase/account-history.sql` in the intended Supabase project before testing cloud history.
+- [ ] Confirm a signed-in user can save an AI report, diagnostic case, and job context and see them after a fresh sign-in/session.
+- [ ] Confirm one account cannot retrieve or delete another account's history; test entry deletion and keep local drafts working if cloud history is unavailable.
+- [ ] Confirm saved source links reopen correctly and long reports remain readable on mobile.
+
 ### General usability and release safety
 - [ ] Test mobile navigation, keyboard access, readable errors, and narrow-screen layouts.
 - [ ] Check console/network failures and ensure the core page remains usable if optional services are unavailable.
@@ -56,7 +62,7 @@ Keep the existing black/red identity and prioritize simple top-level navigation:
 ## Operator-owned configuration required before public use
 
 1. Connect this GitHub repository to the Netlify site so Netlify deploys the functions as well as the static website. A drag-and-drop static upload alone is not sufficient for these server functions.
-2. Configure the Supabase project and run the three SQL files under `supabase/`.
+2. Configure the Supabase project and run the SQL files under `supabase/`, including `account-history.sql` so signed-in users can sync saved research, diagnostic cases, and parts investigations.
 3. Add the environment variables listed in `BILLING-SETUP.md` in Netlify. Keep all secret keys server-side.
 4. Add the site's exact HTTPS origin to Supabase Auth redirect URLs.
 5. Create the recurring CA$29.99 CAD Stripe price, configure the Stripe webhook and customer portal, and use test-mode keys until ready for real charges.
