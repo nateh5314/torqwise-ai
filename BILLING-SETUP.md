@@ -22,7 +22,7 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 
 ## Supabase
 1. Open the staging Supabase project SQL Editor.
-2. Run `supabase/subscriptions.sql`, `supabase/research-usage.sql`, and `supabase/customer-requests.sql`.
+2. Run `supabase/subscriptions.sql`, `supabase/research-usage.sql`, `supabase/customer-requests.sql`, and `supabase/account-history.sql`. The last script creates the per-account saved research, diagnostic, parts, and job history table.
 3. Confirm email/password authentication is enabled and email confirmation settings are suitable for testing.
 4. Keep the service-role key server-side only.
 5. Add the final site origin to Supabase Auth's allowed redirect URLs for email confirmation and password reset.
@@ -42,7 +42,13 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 - `GET /.netlify/functions/list-requests`: returns only the signed-in customer's saved request history.
 - `GET/PATCH /.netlify/functions/admin-requests`: operator-only request management, restricted to `TORQWISE_ADMIN_USER_IDS`.
 - `GET /.netlify/functions/billing-status`: verifies the user and returns that user's subscription state.
+- `GET/POST/DELETE /.netlify/functions/account-history`: verifies the Supabase session and lists, saves, or deletes only the signed-in user's saved research, diagnostic, parts, and job history.
 - `POST /.netlify/functions/stripe-webhook`: verifies Stripe's timestamped HMAC signature before syncing subscription events.
+
+## Account history setup and verification
+- Run `supabase/account-history.sql` before testing the saved-history panel; the feature returns a configuration/storage error until its table exists.
+- The API uses the server-side service-role key only after verifying the caller's bearer token, and scopes database reads/deletes to that verified user ID. Keep the service-role key out of browser code.
+- The staging CI runs regression tests for authentication requirements, per-user filtering, save validation, safe source URLs, and delete scoping. These are API tests, not a substitute for testing the deployed Supabase project and mobile UI.
 
 ## Important limitations before public launch
 - The staging site now includes draft Privacy Policy, Terms of Service, and Support pages. Confirm legal business identity, monitored contact address, refund terms, and privacy wording before public launch. The staging HTML wires the account modal to Supabase sign-up/sign-in, shows the CA$29.99/month Pro subscription option, checks the signed-in user's subscription status, and offers the Stripe customer portal when Pro is active. This wiring is not yet production-verified.
