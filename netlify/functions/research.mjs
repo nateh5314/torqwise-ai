@@ -90,7 +90,7 @@ export default async (req) => {
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
-  const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\\/+$/, "");
+  const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   if (!supabaseUrl || !publishableKey || !secretKey) {
