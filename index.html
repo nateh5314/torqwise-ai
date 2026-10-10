@@ -446,7 +446,22 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
   }
   function addSetupNotice(message){
     const panel=byId('accountPanel'); if(!panel||byId('productionSetupNotice'))return;
-    const n=document.createElement('div');n.id='productionSetupNotice';n.className='notice';n.textContent='Secure account setup is unavailable. Demo accounts are disabled. '+message;panel.prepend(n);
+    const n=document.createElement('div');n.id='productionSetupNotice';n.className='notice';
+    const copy=document.createElement('p');copy.textContent='Secure accounts are not connected to this deployment, so demo accounts are disabled. '+message;
+    const check=document.createElement('button');check.type='button';check.className='secondary';check.textContent='Check setup status';
+    const result=document.createElement('p');result.setAttribute('aria-live','polite');
+    check.addEventListener('click',async()=>{check.disabled=true;check.textContent='Checking…';result.textContent='Checking server configuration…';
+      try{const r=await fetch('/.netlify/functions/health',{cache:'no-store'});const d=await r.json();
+        const missing=Object.entries(d.environment||{}).filter(([,ok])=>!ok).map(([key])=>({supabaseUrl:'SUPABASE_URL',supabaseAnonKey:'SUPABASE_ANON_KEY',supabaseServiceRoleKey:'SUPABASE_SERVICE_ROLE_KEY',openaiApiKey:'OPENAI_API_KEY'}[key]||key));
+        const problems=[];if(missing.length)problems.push('Missing Netlify variables: '+missing.join(', ')+'.');
+        if(d.checks?.usageTable==='missing_migration'||d.checks?.quotaFunction==='missing_migration')problems.push('The AI usage migration is missing. Run supabase/research-usage.sql in the connected Supabase SQL Editor.');
+        else if(d.checks?.usageTable!=='ready')problems.push('The research_usage table is not ready or cannot be reached.');
+        if(d.checks?.quotaFunction==='unreachable')problems.push('The AI quota function could not be reached.');
+        result.textContent=problems.length?problems.join(' '):(d.environment?.openaiApiKey&&d.environment?.supabaseUrl&&d.environment?.supabaseAnonKey&&d.environment?.supabaseServiceRoleKey?'Required environment variables are present and the usage table is reachable. If sign-in or AI still fails, check Supabase Auth settings and the Netlify function logs.':'Some setup is still incomplete.');
+      }catch{result.textContent='Could not reach the setup check. Confirm this preview is deployed and inspect Netlify function logs.'}
+      finally{check.disabled=false;check.textContent='Check setup status';}
+    });
+    n.append(copy,check,result);panel.prepend(n);
   }
   window.switchAuthMode=function(){window.openAuth(window.__torqAuthMode==='signup'?'signin':'signup');};
   window.openSecureAuth=function(mode){
