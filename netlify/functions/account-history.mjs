@@ -10,7 +10,10 @@ async function auth(req) {
   if (!token) return { error: "Sign in to access your saved history.", status: 401 };
   const r = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
   if (!r.ok) return { error: "Your session expired. Please sign in again.", status: 401 };
-  return { base, key, user: await r.json() };
+  let user;
+  try { user = await r.json(); } catch { return { error: "Your session could not be verified. Please sign in again.", status: 401 }; }
+  if (!user || typeof user.id !== "string" || !user.id) return { error: "Your session could not be verified. Please sign in again.", status: 401 };
+  return { base, key, user };
 }
 export default async (req) => {
   if (!["GET", "POST", "DELETE"].includes(req.method)) return json({ error: "Use GET, POST, or DELETE." }, 405);
@@ -39,7 +42,13 @@ export default async (req) => {
     const kind = clean(b.kind, 20), title = clean(b.title, 240);
     if (!kinds.has(kind) || !title) return json({ error: "A valid history type and title are required." }, 400);
     const sources = Array.isArray(b.sources) ? b.sources.slice(0, 20).map(s => ({ title: clean(s?.title, 240), url: /^https?:\/\//i.test(clean(s?.url, 1200)) ? clean(s.url, 1200) : "" })).filter(s => s.url) : [];
-    const row = { user_id: user.id, kind, title, asset: clean(b.asset, 240) || null, serial: clean(b.serial, 100) || null, topic: clean(b.topic, 40) || null, prompt: clean(b.prompt, 6000) || null, result: clean(b.result, 18000) || null, sources, metadata: b.metadata && typeof b.metadata === "object" && !Array.isArray(b.metadata) ? b.metadata : {} };
+    let metadata = b.metadata && typeof b.metadata === "object" && !Array.isArray(b.metadata) ? b.metadata : {};
+    // Keep arbitrary client metadata bounded so saved history cannot become an
+    // unbounded storage payload. Core fields are normalized separately above.
+    try {
+      if (JSON.stringify(metadata).length > 4000) metadata = { note: "Extra metadata omitted because it exceeded the storage limit." };
+    } catch { metadata = {}; }
+    const row = { user_id: user.id, kind, title, asset: clean(b.asset, 240) || null, serial: clean(b.serial, 100) || null, topic: clean(b.topic, 40) || null, prompt: clean(b.prompt, 6000) || null, result: clean(b.result, 18000) || null, sources, metadata };
     const r = await fetch(base + "/rest/v1/account_history", { method: "POST", headers: dbHeaders(key, { "content-type": "application/json", Prefer: "return=representation" }), body: JSON.stringify(row) });
     if (!r.ok) throw new Error("history save failed");
     return json({ entry: (await r.json())[0] }, 201);
