@@ -10,6 +10,7 @@ This repository branch is the prepared release candidate. Keep the existing live
 - Supabase account creation, sign-in, and password-reset request flow
 - Free AI research allowance (3 reports per calendar month) and server-side Pro entitlement checks
 - Pro Technician subscription checkout at CA$29.99/month
+- Fixed-price one-time checkout flow for Parts Research (CA$15), Estimate Comparison (CA$25), and Used Vehicle Research (CA$30); custom research remains quote-first
 - Verified Stripe webhook processing and Stripe customer portal endpoint
 - Persistent customer research requests and customer request history
 - Restricted operator dashboard at `/admin.html`
@@ -39,6 +40,13 @@ Keep the existing black/red identity and prioritize simple top-level navigation:
 - [ ] The AI research handoff carries the selected part and relevant vehicle context.
 - [ ] Results clearly distinguish supplier-search links from verified live data.
 - [ ] Do not claim a part fits, is in stock, or has a current price unless the data source supports that claim.
+
+### Paid research requests
+- [ ] Run the updated `supabase/customer-requests.sql` so `payment_status`, `stripe_checkout_session_id`, and `paid_at` columns exist.
+- [ ] In Stripe test mode, submit a fixed-price request and confirm the checkout amount is set server-side in CAD, not accepted from browser input.
+- [ ] Confirm a user cannot create checkout for another account's request or a custom quote.
+- [ ] Confirm cancel/failure does not mark a request paid and a successful test payment is marked paid only after the verified Stripe webhook.
+- [ ] Confirm request history shows unpaid/pending/paid status and the user can retry an expired checkout without duplicating an open session.
 
 ### Account history and continuity
 - [ ] Run `supabase/account-history.sql` in the intended Supabase project before testing cloud history.
