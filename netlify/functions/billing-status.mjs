@@ -16,7 +16,7 @@ export default async (req) => {
     const ur = await fetch(url + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
     if (!ur.ok) return json({ error: "Your session is invalid or expired." }, 401);
     const user = await ur.json();
-    const sr = await fetch(url + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) + "&select=status,current_period_end,cancel_at_period_end,price_id&limit=1", {
+    const sr = await fetch(url + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) + "&select=status,current_period_end,cancel_at_period_end,price_id&order=updated_at.desc&limit=1", {
       headers: { apikey: service, authorization: "Bearer " + service }
     });
     if (!sr.ok) throw new Error("subscription query failed");
