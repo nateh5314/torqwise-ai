@@ -70,11 +70,14 @@ export default async (req) => {
       const url = env("SUPABASE_URL"), key = env("SUPABASE_SERVICE_ROLE_KEY");
       if (!url || !key) throw new Error("Supabase webhook configuration missing");
       const headers = { apikey: key, authorization: "Bearer " + key, "content-type": "application/json" };
-      const query = "request_code=eq." + encodeURIComponent(requestCode) + "&user_id=eq." + encodeURIComponent(userId) + "&stripe_checkout_session_id=eq." + encodeURIComponent(String(obj.id || "")) + "&select=request_code,quoted_price,payment_status&limit=1";
+      const query = "request_code=eq." + encodeURIComponent(requestCode) + "&user_id=eq." + encodeURIComponent(userId) + "&stripe_checkout_session_id=eq." + encodeURIComponent(String(obj.id || "")) + "&select=request_code,quoted_price,payment_status,status&limit=1";
       const lookup = await fetch(url + "/rest/v1/customer_requests?" + query, { headers });
       if (!lookup.ok) throw new Error("Supabase service payment lookup failed");
       const matches = await lookup.json();
       if (!matches.length) return json({ received: true, ignored: true });
+      // Stripe may retry a successfully processed event. Do not reset a request
+      // that has already been marked paid or progressed by the operator.
+      if (matches[0].payment_status === "paid") return json({ received: true, already_paid: true });
       const expectedAmount = Math.round(Number(matches[0].quoted_price) * 100);
       if (!Number.isFinite(expectedAmount) || obj.amount_total !== expectedAmount || String(obj.currency).toLowerCase() !== "cad") {
         console.error("Service payment amount/currency did not match the saved request:", requestCode);
