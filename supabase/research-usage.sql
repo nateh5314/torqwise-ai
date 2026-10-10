@@ -2,9 +2,20 @@
 create table if not exists public.research_usage (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  model text,
+  input_tokens integer check (input_tokens is null or input_tokens >= 0),
+  output_tokens integer check (output_tokens is null or output_tokens >= 0),
+  completed_at timestamptz,
+  status text not null default 'reserved' check (status in ('reserved','completed'))
 );
 create index if not exists research_usage_user_created_idx on public.research_usage(user_id, created_at desc);
+-- Safe to re-run against an existing table created by an earlier version of this migration.
+alter table public.research_usage add column if not exists model text;
+alter table public.research_usage add column if not exists input_tokens integer check (input_tokens is null or input_tokens >= 0);
+alter table public.research_usage add column if not exists output_tokens integer check (output_tokens is null or output_tokens >= 0);
+alter table public.research_usage add column if not exists completed_at timestamptz;
+alter table public.research_usage add column if not exists status text not null default 'reserved' check (status in ('reserved','completed'));
 alter table public.research_usage enable row level security;
 revoke all on public.research_usage from anon, authenticated;
 
