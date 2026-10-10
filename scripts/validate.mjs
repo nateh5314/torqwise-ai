@@ -34,9 +34,9 @@ for (let i = 0; i < inlineScripts.length; i++) {
 for (const [path, source] of [
   ["netlify/functions/research.mjs", research],
   ["netlify/functions/config.mjs", config],
-  ["netlify/functions/stripe-checkout.mjs", checkout],
-  ["netlify/functions/stripe-portal.mjs", portal],
-  ["netlify/functions/stripe-webhook.mjs", stripeWebhook],
+  ["netlify/functions/stripe-checkout.mjs", read("netlify/functions/stripe-checkout.mjs")],
+  ["netlify/functions/stripe-portal.mjs", read("netlify/functions/stripe-portal.mjs")],
+  ["netlify/functions/stripe-webhook.mjs", read("netlify/functions/stripe-webhook.mjs")],
 ]) {
   const checked = spawnSync(process.execPath, ["--check", new URL("../" + path, import.meta.url).pathname], { encoding: "utf8" });
   if (checked.status !== 0) fail(path + " syntax check failed: " + (checked.stderr || checked.stdout || "unknown error"));
