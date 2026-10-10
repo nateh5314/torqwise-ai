@@ -371,6 +371,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       if(r.ok){const d=await r.json();pro=!!d.isPro;}else pro=false;
     }catch{pro=false;}
     updateSubscriptionUI();
+    if(currentUser)await loadCustomerRequests();
   }
   function updateSubscriptionUI(){
     let card=byId('torqProSubscription');
@@ -396,6 +397,43 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       }catch(err){status.textContent=err.message||'Could not start checkout.';button.disabled=false;button.textContent='Try subscription checkout again';}
     };
   }
+  async function loadCustomerRequests(){
+    if(!client||!currentUser)return;
+    try{
+      const session=(await client.auth.getSession()).data.session;if(!session)return;
+      const r=await fetch('/.netlify/functions/list-requests',{headers:{authorization:'Bearer '+session.access_token},cache:'no-store'});
+      if(!r.ok)return;
+      const data=await r.json(),local=JSON.parse(localStorage.getItem('torqwise_demo_v1')||'{}');
+      local.profile={...(local.profile||{}),name:currentUser.user_metadata?.full_name||currentUser.email,email:currentUser.email};
+      local.orders=Array.isArray(data.requests)?data.requests:[];
+      localStorage.setItem('torqwise_demo_v1',JSON.stringify(local));
+      if(typeof window.render==='function')window.render();
+    }catch(e){console.warn('Could not refresh customer request history:',e?.message||'unknown');}
+  }
+  document.addEventListener('submit',async function(e){
+    if(e.target!==byId('requestForm'))return;
+    e.preventDefault();e.stopImmediatePropagation();
+    const message=byId('requestMessage');message.classList.remove('hidden');message.classList.remove('success');
+    if(!client||!currentUser){message.textContent='Create an account or sign in before submitting a trackable customer request.';window.openAuth('signup');return;}
+    const fields={
+      service:byId('service').value,
+      customerType:byId('customerType').value,
+      vehicle:[byId('year').value,byId('make').value,byId('model').value,byId('engine').value].filter(Boolean).join(' '),
+      details:byId('details').value.trim(),
+      deadline:byId('deadline').value
+    };
+    if(!fields.vehicle||!fields.details){message.textContent='Enter the vehicle/equipment details and describe the request.';return;}
+    const submit=e.target.querySelector('button[type="submit"]');if(submit){submit.disabled=true;submit.textContent='Saving request…';}
+    try{
+      const session=(await client.auth.getSession()).data.session;
+      const r=await fetch('/.netlify/functions/create-request',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify(fields)});
+      const data=await r.json();if(!r.ok||!data.request)throw new Error(data.error||'Request could not be saved.');
+      const local=JSON.parse(localStorage.getItem('torqwise_demo_v1')||'{}');local.profile={...(local.profile||{}),name:currentUser.user_metadata?.full_name||currentUser.email,email:currentUser.email};local.orders=Array.isArray(local.orders)?local.orders:[];local.orders.unshift(data.request);localStorage.setItem('torqwise_demo_v1',JSON.stringify(local));
+      message.classList.add('success');message.textContent='Request saved to your account: '+data.request.id+'. This is a request only; no payment has been taken. A quoted price is subject to confirmation.';
+      if(typeof window.render==='function')window.render();
+    }catch(err){message.textContent=err.message||'Request could not be saved.';}
+    finally{if(submit){submit.disabled=false;submit.textContent='Submit research request';}}
+  },true);
   window.addEventListener('load',initProductionAuth);
 })();
 </script>
