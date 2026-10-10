@@ -20,12 +20,13 @@ The private operator console is served at `/admin.html`. It uses the same Supaba
 - Keeps payment status read-only; never mark an order paid manually in the dashboard.
 - Adds a private Income & expenses view: totals recorded paid custom-research income, manually entered business expenses, and a simple tracked net figure.
 - Lets the operator record categorized expenses (including software/AI and hosting), dates, and notes, and remove mistaken entries.
+- Filters the loaded finance ledger by month and exports the currently selected income/expense records as CSV for use in a spreadsheet.
 
 ## Enable the finance ledger
 
 After the admin dashboard change is deployed, run `supabase/business-expenses.sql` once in the correct Supabase project's SQL Editor. The finance endpoint uses the same `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `TORQWISE_ADMIN_USER_IDS` variables and verifies the operator UUID server-side before accessing financial records. Do not put the service-role key in the browser or share it in chat.
 
-**Important limitations:** paid custom-research orders are currently the only automatically counted income source. Membership subscription revenue, Stripe fees, refunds, AI API costs, and hosting costs are not automatically reconciled yet; enter expenses manually and keep receipts. The net figure is only the difference between loaded paid requests and recorded expenses, not formal accounting profit or a tax report. The endpoint currently loads the most recent 1,000 paid requests and 500 expenses, so old records may require a future reporting/pagination upgrade.
+**Important limitations:** paid custom-research orders are currently the only automatically counted income source. Membership subscription revenue, Stripe fees, refunds, AI API costs, and hosting costs are not automatically reconciled yet; enter expenses manually and keep receipts. The net figure is only the difference between loaded paid requests and recorded expenses, not formal accounting profit or a tax report. CSV export contains the selected, currently loaded records and should not be treated as a complete ledger until subscription revenue and other costs are reconciled. The endpoint currently loads the most recent 1,000 paid requests and 500 expenses, so old records may require a future reporting/pagination upgrade.
 
 ## Customer data and payment safety
 
