@@ -1,39 +1,52 @@
-# TORQWISE AI Research Connector (staging package)
+# TORQWISE — Automotive & Equipment Research
 
-This package adds a server-side OpenAI Responses API connection with web search to the TORQWISE research workspace. The API key is read only by the Netlify Function and is not shipped in the public website files.
+TORQWISE is a mobile-friendly automotive/heavy-equipment research and diagnostic website prototype. The current frontend is served from the repository root; it is **not** stored in a `public/` directory.
 
-## Important: deploy as a separate staging site first
+## Netlify deployment layout
 
-Do **not** drag the `public` folder over the existing live site. Your existing production site is not modified by this package. Netlify Functions need a build/deploy flow that processes `netlify/functions`; a plain static drag-and-drop deploy is not enough. Connect this folder to a new Git-based Netlify site (or deploy using Netlify CLI) so the function is built.
+The repository is structured for a Git-connected Netlify deployment:
 
-## Files
+- `index.html` — website entry point (repository root)
+- `manifest.webmanifest`, `icon.svg`, `sw.js` — app metadata, icon and static cache
+- `netlify.toml` — publishes the repository root and configures Netlify Functions
+- `netlify/functions/research.mjs` — server-side AI research endpoint
+- `package.json` — runtime metadata and dependencies
 
-- `public/` — website assets
-- `netlify/functions/research.mjs` — private server-side AI endpoint
-- `netlify.toml` — Netlify build configuration
+The Netlify configuration intentionally uses `publish = "."` and `functions = "netlify/functions"`. **Do not change the publish directory to `public` unless the site files are moved into that folder.** No frontend build step is currently required.
+
+## Deploy / recover the public site
+
+1. Open the existing Netlify site for TORQWISE. Avoid creating a replacement site or overwriting a working deploy unnecessarily.
+2. In the site's deploy settings, confirm it is connected to the intended GitHub repository and branch (`main`).
+3. Confirm the base directory is blank/repository root, the publish directory is `.`, and the functions directory is `netlify/functions` as defined in `netlify.toml`.
+4. Trigger a deploy and inspect the deploy log. If it fails, use the first actual error in the log; do not guess that a `public/` folder should exist.
+5. After deploy succeeds, open the public URL and test the homepage, navigation, VIN decoder, diagnostics, and research links.
+6. Test the AI research button separately. It requires `OPENAI_API_KEY` configured as a server-side Netlify environment variable and a successful function deploy. Never put the key in frontend code, screenshots, or Git.
+7. If a service-worker cache makes an old version appear, hard refresh the site or clear its site data before retesting.
 
 ## Environment variables
 
-In the **new staging site's** Netlify environment variables, add:
+- `OPENAI_API_KEY` — secret key used only by the Netlify Function.
+- `OPENAI_MODEL` — optional model override; the function has a default.
 
-- `OPENAI_API_KEY` — your secret API key; never add it to `public/` or commit it to Git.
-- Optional `OPENAI_MODEL` — defaults to `gpt-5-mini`.
+After changing function environment variables, trigger a new deploy. Confirm the variables are available to Functions/runtime.
 
-After adding/changing variables, trigger a new deploy. Confirm variable scope includes Functions/runtime. Do not share screenshots that reveal any key value.
+## What works vs. what is not production-ready
 
-## Safety and limitations
+The site contains offline diagnostic starter content, a VIN lookup flow, research links, and demo request/account interfaces. Browser-stored demo accounts and requests are local to that browser and are **not** secure customer accounts or cloud-synced records.
 
-- This is a first AI-connected research test, not a finished ALLDATA replacement. It uses public web search and can only cite sources the search tool returns. It does not unlock licensed OEM service manuals, factory wiring diagrams, or parts databases.
-- A small in-memory burst limit is included, but serverless memory can reset. Before public launch, add durable rate limiting and authentication/usage controls to prevent API-cost abuse. Keep this on a private/unlisted staging site during testing.
-- Do not use it as the only authority for safety-critical repairs, exact specifications, parts fitment, or diagnosis. Verify exact vehicle/equipment variant and source procedures.
-- Existing offline diagnostic starter content and local saved cases remain part of the site. Browser-saved cases are not cloud-synced.
+The AI endpoint uses public web search; it is not a replacement for paid OEM service databases, licensed wiring diagrams, or factory repair information. A small in-memory request limit is best-effort only and can reset in serverless environments.
 
-## First test
+Do not collect real customer passwords or sensitive information, accept real orders, or take payments until secure authentication, durable usage limits, customer data storage, verified payment handling, privacy/terms, refund policy, contact details, and applicable Canadian business/tax obligations are implemented and tested.
 
-1. Deploy this package to a **new** Netlify staging site using a Git repository or Netlify CLI.
-2. Add `OPENAI_API_KEY` to that new site's environment variables.
-3. Redeploy.
-4. Open the research hub and test a low-risk question, such as: `What public official sources should I check for recalls on a 2018 Ford F-150?`
-5. Verify that a response appears, source links open, and Netlify function logs show no key or private input values.
+## Pre-launch smoke test
 
-If deployment fails, inspect the build log and function logs; do not expose the API key while troubleshooting.
+- [ ] Public homepage loads over HTTPS on phone and laptop.
+- [ ] Navigation links jump to the right sections.
+- [ ] VIN flow handles empty, invalid and valid test VINs gracefully.
+- [ ] Diagnostic search: P0300, P0420 and P0171.
+- [ ] Symptom workflow: cranks but will not start.
+- [ ] Research links open in a new tab and don't claim an unverified result is confirmed.
+- [ ] Demo account/request copy clearly warns that it is browser-local.
+- [ ] AI endpoint succeeds with a low-risk question, or clearly reports that it is unavailable.
+- [ ] No API key is visible in the page source or browser requests.
