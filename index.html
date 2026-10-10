@@ -288,4 +288,111 @@ window.addEventListener('DOMContentLoaded',torqRenderCases);
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>
 
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* Production account + Pro subscription integration. Requires Netlify/Supabase/Stripe env configuration. */
+(function(){
+  let client=null, currentUser=null, pro=false, ready=false;
+  const byId=id=>document.getElementById(id);
+  async function initProductionAuth(){
+    try{
+      const r=await fetch('/.netlify/functions/public-config',{cache:'no-store'});
+      if(!r.ok) throw new Error('Account service is not configured yet.');
+      const cfg=await r.json();
+      if(!cfg.configured) throw new Error('Account service is not configured yet.');
+      client=window.supabase.createClient(cfg.url,cfg.anonKey);
+      const {data}=await client.auth.getSession();
+      currentUser=data.session?.user||null;
+      ready=true;
+      client.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;refreshAccountUI();});
+      await refreshAccountUI();
+      const q=new URLSearchParams(location.search);
+      if(q.get('billing')==='success'){alert('Checkout returned successfully. Your Pro access will appear after Stripe confirms the subscription.');history.replaceState({},'',location.pathname+location.hash);}
+      if(q.get('billing')==='cancelled'){alert('Checkout was cancelled. No subscription was started.');history.replaceState({},'',location.pathname+location.hash);}
+    }catch(e){console.warn('TORQWISE account setup:',e.message);addSetupNotice(e.message);}
+  }
+  function addSetupNotice(message){
+    const panel=byId('accountPanel'); if(!panel||byId('productionSetupNotice'))return;
+    const n=document.createElement('div');n.id='productionSetupNotice';n.className='notice';n.textContent='Secure account setup is being connected. '+message;panel.prepend(n);
+  }
+  window.openAuth=function(mode){
+    if(!client){addSetupNotice('Account service is not configured yet.');return;}
+    window.__torqAuthMode=mode;
+    const modal=byId('authModal'); if(!modal)return;
+    modal.classList.remove('hidden');
+    byId('authMessage').classList.add('hidden');
+    byId('authTitle').textContent=mode==='signup'?'Create your TORQWISE account':'Sign in to TORQWISE';
+    byId('authSubmit').textContent=mode==='signup'?'Create account':'Sign in';
+    byId('switchAuth').textContent=mode==='signup'?'Already have an account? Sign in':'New here? Create an account';
+    byId('authName').parentElement.classList.toggle('hidden',mode==='signin');
+    byId('authPassword').autocomplete=mode==='signup'?'new-password':'current-password';
+  };
+  document.addEventListener('submit',async function(e){
+    if(e.target!==byId('authForm'))return;
+    e.preventDefault();e.stopImmediatePropagation();
+    const msg=byId('authMessage');msg.classList.remove('hidden');msg.textContent='Working…';
+    try{
+      if(!client)throw new Error('Account service is not configured yet.');
+      const email=byId('authEmail').value.trim().toLowerCase(),password=byId('authPassword').value;
+      let result;
+      if(window.__torqAuthMode==='signup'){
+        result=await client.auth.signUp({email,password,options:{data:{full_name:byId('authName').value.trim()}}});
+        if(result.error)throw result.error;
+        msg.textContent=result.data.session?'Account created and signed in.':'Check your email to confirm your account, then sign in.';
+        if(!result.data.session)return;
+      }else{
+        result=await client.auth.signInWithPassword({email,password});
+        if(result.error)throw result.error;
+        msg.textContent='Signed in successfully.';
+      }
+      currentUser=result.data.user||result.data.session?.user||null;
+      await refreshAccountUI();
+      setTimeout(()=>byId('authModal').classList.add('hidden'),700);
+    }catch(err){msg.textContent=err.message||'Sign-in failed. Please try again.';}
+  },true);
+  window.signout=async function(){if(client)await client.auth.signOut();currentUser=null;pro=false;refreshAccountUI();};
+  async function refreshAccountUI(){
+    const identity=byId('accountIdentity'); if(!identity)return;
+    if(!ready||!client){identity.textContent='Secure customer accounts are being configured.';return;}
+    if(!currentUser){
+      identity.innerHTML='You are browsing as a guest. <button class="secondary" style="padding:6px 9px;font-size:11px" onclick="openAuth(\'signup\')">Create account</button> <button class="secondary" style="padding:6px 9px;font-size:11px" onclick="openAuth(\'signin\')">Sign in</button>';
+      updateSubscriptionUI();return;
+    }
+    identity.textContent='Signed in as '+currentUser.email+' ';
+    const out=document.createElement('button');out.className='secondary';out.style.cssText='padding:6px 9px;font-size:11px;margin:8px 0';out.textContent='Sign out';out.onclick=window.signout;identity.append(out);
+    try{
+      const session=(await client.auth.getSession()).data.session;
+      const r=await fetch('/.netlify/functions/billing-status',{headers:{authorization:'Bearer '+session.access_token},cache:'no-store'});
+      if(r.ok){const d=await r.json();pro=!!d.isPro;}else pro=false;
+    }catch{pro=false;}
+    updateSubscriptionUI();
+  }
+  function updateSubscriptionUI(){
+    let card=byId('torqProSubscription');
+    if(!card){
+      const section=document.createElement('section');section.className='section';section.id='torqProSubscription';
+      section.innerHTML='<div class="wrap"><div class="card"><div class="eyebrow">TORQWISE PRO TECHNICIAN</div><h2>Unlock Pro Technician</h2><p class="sub">Advanced automotive research tools and technician-focused workflows.</p><div class="price">$29.99 <small>CAD · monthly</small></div><p id="torqProStatus" class="muted"></p><button id="torqProButton">Subscribe to Pro Technician</button><p class="tiny">Secure payment through Stripe Checkout. You can cancel according to the subscription terms.</p></div></div>';
+      const account=byId('account'); account?.parentNode.insertBefore(section,account.nextSibling);card=section;
+    }
+    const status=byId('torqProStatus'),button=byId('torqProButton');
+    if(!status||!button)return;
+    status.textContent=pro?'Your Pro subscription is active.':currentUser?'Sign in verified. Start your subscription securely below.':'Create an account or sign in to start your subscription.';
+    button.textContent=pro?'Pro Technician active':'Subscribe — $29.99 CAD/month';
+    button.onclick=async()=>{
+      if(!currentUser){window.openAuth('signin');return;}
+      if(pro){status.textContent='Your Pro subscription is active.';return;}
+      button.disabled=true;button.textContent='Initiating secure checkout…';
+      try{
+        const session=(await client.auth.getSession()).data.session;
+        const r=await fetch('/.netlify/functions/create-checkout',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({})});
+        const data=await r.json();if(!r.ok||!data.url)throw new Error(data.error||'Checkout could not be started.');
+        location.assign(data.url);
+      }catch(err){status.textContent=err.message||'Could not start checkout.';button.disabled=false;button.textContent='Try subscription checkout again';}
+    };
+  }
+  window.addEventListener('load',initProductionAuth);
+})();
+</script>
+
 </body></html>
