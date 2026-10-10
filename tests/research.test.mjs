@@ -9,7 +9,7 @@ const base = "https://supabase.example";
 function response(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
-function configure({ userResponse = response({ id: "user-123" }) } = {}) {
+function configure({ userResponse = response({ id: "user-123" }), reservation = response({ allowed: true, remaining: 2, usage_id: 101 }), openaiResponse = response({ output: [{ type: "message", content: [{ type: "output_text", text: "Test research answer", annotations: [] }] }, { type: "web_search_call", action: { sources: [{ url: "https://example.com/source", title: "Example source" }] } }], model: "gpt-5-mini" }) } = {}) {
   Object.assign(process.env, {
     SUPABASE_URL: base,
     SUPABASE_ANON_KEY: "public-test-key",
