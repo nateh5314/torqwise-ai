@@ -485,4 +485,37 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
 })();
 </script>
 
+
+<script>
+/* TORQWISE marketplace beta: local shortlist plus supplier search links. */
+(function(){
+ const KEY='torqwise_parts_shortlist_v1';
+ const $=id=>document.getElementById(id);
+ const safe=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function read(){try{const d=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(d)?d:[]}catch(e){return[]}}
+ function write(items){localStorage.setItem(KEY,JSON.stringify(items.slice(0,50)));render()}
+ function query(){return {part:$('marketPart')?.value.trim()||'',vehicle:$('marketVehicle')?.value.trim()||'',region:$('marketRegion')?.value.trim()||'Canada'}}
+ function fullQuery(){const q=query();return [q.part,q.vehicle,q.region,'price'].filter(Boolean).join(' ')}
+ const sites={
+  shopping:q=>'https://www.google.com/search?tbm=shop&q='+encodeURIComponent(q),
+  rockauto:q=>'https://www.google.com/search?q='+encodeURIComponent('site:rockauto.com '+q),
+  napa:q=>'https://www.google.com/search?q='+encodeURIComponent('site:napaonline.com '+q),
+  canadiantire:q=>'https://www.google.com/search?q='+encodeURIComponent('site:canadiantire.ca '+q),
+  partsavatar:q=>'https://www.google.com/search?q='+encodeURIComponent('site:partsavatar.ca '+q),
+  amazon:q=>'https://www.amazon.ca/s?k='+encodeURIComponent(q)
+ };
+ function search(type){const q=fullQuery();if(!query().part){const m=$('marketMessage');m.classList.remove('hidden');m.textContent='Enter a part or job description first.';return}window.open((sites[type]||sites.shopping)(q),'_blank','noopener,noreferrer')}
+ function add(){const q=query(),m=$('marketMessage');if(!q.part){m.classList.remove('hidden');m.textContent='Enter a part or job description before adding it to your shortlist.';return}
+  const items=read();items.unshift({id:Date.now(),part:q.part,vehicle:q.vehicle,region:q.region,added:new Date().toISOString()});write(items);m.classList.remove('hidden');m.classList.add('success');m.textContent='Added to your shortlist on this device.'}
+ function render(){const host=$('marketCart');if(!host)return;const items=read();if(!items.length){host.innerHTML='<div class="empty">Your shortlist is empty. Search for a part and add it here.</div>';return}
+  host.innerHTML=items.map(i=>'<div class="market-item"><strong>'+safe(i.part)+'</strong><small>'+safe(i.vehicle||'Vehicle details not entered')+' · Delivery: '+safe(i.region||'Not specified')+'</small><div class="market-item-actions"><button type="button" data-open="'+i.id+'">Compare prices ↗</button><button type="button" class="secondary" data-remove="'+i.id+'">Remove</button></div></div>').join('');
+  host.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>{const i=read().find(x=>String(x.id)===b.dataset.open);if(i){$('marketPart').value=i.part;$('marketVehicle').value=i.vehicle;$('marketRegion').value=i.region;search('shopping')}}));
+  host.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>write(read().filter(x=>String(x.id)!==b.dataset.remove))))}
+ $('marketSearchForm')?.addEventListener('submit',e=>{e.preventDefault();search('shopping')});
+ $('marketSaveButton')?.addEventListener('click',add);
+ document.querySelectorAll('[data-market]').forEach(b=>b.addEventListener('click',()=>search(b.dataset.market)));
+ $('marketExportButton')?.addEventListener('click',()=>{const items=read(),m=$('marketMessage');if(!items.length){m.classList.remove('hidden');m.textContent='Add at least one part to export your shortlist.';return}const text=items.map((i,n)=>(n+1)+'. '+i.part+'\nVehicle/equipment: '+(i.vehicle||'Not specified')+'\nDelivery area: '+(i.region||'Not specified')).join('\n\n');const blob=new Blob([text],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-parts-shortlist.txt';a.click();URL.revokeObjectURL(url)});
+ render();
+})();
+</script>
 </body></html>
