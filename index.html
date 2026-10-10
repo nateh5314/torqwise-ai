@@ -106,13 +106,94 @@
 <footer class="footer"><div class="wrap footerrow"><div><strong style="color:#eee;letter-spacing:1px">TORQWISE</strong><div>Automotive Research · Canada</div></div><div><a href="#services">Services</a> · <a href="#request">Request research</a> · <a href="#disclaimer">Disclaimer</a></div><div>© <span id="yearNow"></span> TORQWISE. Working brand name — check business-name availability before launch.</div></div></footer>
 <div id="authModal" class="modalback hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle"><div class="modal"><div class="modalhead"><h3 id="authTitle">Create a demo account</h3><button class="close" onclick="closeAuth()" aria-label="Close">✕</button></div><div class="notice">Demo only: do not enter a password you use anywhere else. This prototype stores a demo profile locally, without secure authentication.</div><form id="authForm"><div class="field"><label for="authName">Name</label><input id="authName" autocomplete="name" placeholder="Your name"></div><div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div><div class="field" id="passwordField"><label for="authPassword">Demo password</label><input id="authPassword" type="password" autocomplete="off" minlength="4" required placeholder="Use a throwaway demo password"></div><button type="submit" id="authSubmit">Create demo account</button><button type="button" class="secondary" id="switchAuth" onclick="switchAuthMode()">Already have an account? Sign in</button></form><div id="authMessage" class="notice hidden"></div></div></div>
 <div id="infoModal" class="modalback hidden" role="dialog" aria-modal="true"><div class="modal"><div class="modalhead"><h3>Production payments</h3><button class="close" onclick="document.getElementById('infoModal').classList.add('hidden')">✕</button></div><p class="muted">This preview does not collect payments. To accept real payments safely:</p><ol class="muted"><li>Create a Stripe account and verify your business details.</li><li>Use Stripe Checkout hosted pages; never collect card numbers in this website.</li><li>Confirm the job scope and total price before creating a checkout session.</li><li>Use a server-side webhook to verify successful payment and update the order status.</li><li>Store customer accounts and orders in a database with access rules.</li></ol><p class="smallprint">See README.md and supabase/schema.sql in the project bundle for the production setup plan. Payment availability and fees depend on your provider and account eligibility.</p><button onclick="document.getElementById('infoModal').classList.add('hidden')">Got it</button></div></div>
-<script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
 const KEY='torqwise_demo_v1';let authMode='signup';const prices={parts:15,estimate:25,used:30,business:null};const labels={parts:'Parts Finder',estimate:'Estimate Comparison',used:'Used Vehicle Research',business:'Business / custom research'};function readData(){try{return JSON.parse(localStorage.getItem(KEY))||{profile:null,orders:[]}}catch(e){return{profile:null,orders:[]}}}function saveData(d){localStorage.setItem(KEY,JSON.stringify(d))}function money(v){return v==null?'Quote first':'$'+Number(v).toFixed(2)+' CAD'}function chooseService(s){document.getElementById('service').value=s;document.getElementById('request').scrollIntoView({behavior:'smooth'});setTimeout(()=>document.getElementById('year').focus({preventScroll:true}),450)}function resetRequest(){document.getElementById('requestForm').reset();document.getElementById('requestMessage').classList.add('hidden')}
 document.getElementById('requestForm').addEventListener('submit',e=>{e.preventDefault();const d=readData(),s=document.getElementById('service').value,email=document.getElementById('email').value.trim();const order={id:'TQ-'+Date.now().toString().slice(-7),service:s,label:labels[s],price:prices[s],status:'Request received',created:new Date().toISOString(),email,customerType:document.getElementById('customerType').value,vehicle:[document.getElementById('year').value,document.getElementById('make').value,document.getElementById('model').value,document.getElementById('engine').value].filter(Boolean).join(' '),details:document.getElementById('details').value.trim(),deadline:document.getElementById('deadline').value};d.orders.unshift(order);if(d.profile&&d.profile.email.toLowerCase()===email.toLowerCase())order.owner=d.profile.email;saveData(d);const m=document.getElementById('requestMessage');m.classList.remove('hidden');m.classList.add('success');m.textContent='Demo request created: '+order.id+'. '+(order.price==null?'A quote would be confirmed before checkout.':'Illustrative starting price: '+money(order.price)+'.')+' No email was sent and no payment was taken.';render();document.getElementById('account').scrollIntoView({behavior:'smooth'});});
-function openAuth(mode){authMode=mode;document.getElementById('authModal').classList.remove('hidden');document.getElementById('authMessage').classList.add('hidden');document.getElementById('authTitle').textContent=mode==='signup'?'Create a demo account':'Sign in to demo account';document.getElementById('authSubmit').textContent=mode==='signup'?'Create demo account':'Sign in';document.getElementById('switchAuth').textContent=mode==='signup'?'Already have an account? Sign in':'New here? Create an account';document.getElementById('authName').parentElement.classList.toggle('hidden',mode==='signin');document.getElementById('authPassword').required=true}function closeAuth(){document.getElementById('authModal').classList.add('hidden')}function switchAuthMode(){openAuth(authMode==='signup'?'signin':'signup')}
-document.getElementById('authForm').addEventListener('submit',e=>{e.preventDefault();const d=readData(),email=document.getElementById('authEmail').value.trim().toLowerCase(),pass=document.getElementById('authPassword').value;if(authMode==='signup'){if(d.profile&&d.profile.email.toLowerCase()===email){showAuthMsg('A demo profile with this email is already active in this browser. Try signing in.');return}d.profile={name:document.getElementById('authName').value.trim()||'Customer',email,created:new Date().toISOString()};d.demoPassword=pass;saveData(d);showAuthMsg('Demo account created in this browser. This is not secure production authentication.');}else{if(!d.profile||d.profile.email.toLowerCase()!==email||d.demoPassword!==pass){showAuthMsg('No matching demo profile was found in this browser. Create a demo account first.');return}showAuthMsg('Signed in to your local demo profile.');}setTimeout(()=>{closeAuth();render()},900)});function showAuthMsg(t){const m=document.getElementById('authMessage');m.textContent=t;m.classList.remove('hidden')}
-function render(){const d=readData(),identity=document.getElementById('accountIdentity'),list=document.getElementById('ordersList');identity.innerHTML=d.profile?'<strong>'+escapeHtml(d.profile.name)+'</strong><br><span class="tiny">'+escapeHtml(d.profile.email)+'</span> <button class="secondary" style="padding:6px 9px;font-size:11px;margin:8px 0" onclick="signout()">Sign out</button>':'You\'re browsing as a guest. <button class="secondary" style="padding:6px 9px;font-size:11px" onclick="openAuth(\'signup\')">Create account</button>';let orders=d.orders.filter(o=>!d.profile||!o.owner||o.owner===d.profile.email);if(!orders.length){list.innerHTML='<div class="empty">No requests yet. Submit a request above to see it here.</div>';return}list.innerHTML=orders.map(o=>'<div class="order"><div class="orderhead"><span>'+escapeHtml(o.label)+' · '+escapeHtml(o.id)+'</span><span class="status">'+escapeHtml(o.status)+'</span></div><p><strong>'+money(o.price)+'</strong> · '+new Date(o.created).toLocaleDateString()+'</p><p>'+escapeHtml(o.vehicle||'Vehicle details not supplied')+'</p><p>'+escapeHtml(o.details)+'</p><p class="tiny">Demo tracking only · no payment taken</p><button class="secondary" style="margin-top:10px;padding:8px 10px;font-size:12px" onclick="paymentInfo()">Checkout setup details</button></div>').join('')}
-function signout(){const d=readData();d.profile=null;d.demoPassword=null;saveData(d);render()}function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function paymentInfo(){document.getElementById('infoModal').classList.remove('hidden')}document.getElementById('yearNow').textContent=new Date().getFullYear();document.getElementById('authModal').addEventListener('click',e=>{if(e.target.id==='authModal')closeAuth()});render();
+let torqSupabase = null;
+let torqAuthReady = false;
+let torqAuthUser = null;
+let torqAuthSetupError = "";
+async function torqInitAuth(){
+  try{
+    const configResponse = await fetch('/.netlify/functions/config',{cache:'no-store'});
+    if(!configResponse.ok) throw new Error('Account service configuration is unavailable.');
+    const cfg = await configResponse.json();
+    if(!window.supabase || !cfg.url || !cfg.publishableKey) throw new Error('Secure account service is not ready yet.');
+    torqSupabase = window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    const {data,error} = await torqSupabase.auth.getSession();
+    if(error) throw error;
+    torqAuthUser = data.session?.user || null;
+    torqAuthReady = true;
+    const {data:sub} = torqSupabase.auth.onAuthStateChange((_event,session)=>{torqAuthUser=session?.user||null;render();});
+    window.torqAuthSubscription = sub.subscription;
+    render();
+  }catch(err){
+    torqAuthSetupError = err?.message || 'Secure account service is unavailable.';
+    const status = document.getElementById('authMessage');
+    if(status){status.textContent=torqAuthSetupError;status.classList.remove('hidden');}
+  }
+}
+function openAuth(mode){
+  authMode=mode;
+  document.getElementById('authModal').classList.remove('hidden');
+  document.getElementById('authMessage').classList.add('hidden');
+  document.getElementById('authTitle').textContent=mode==='signup'?'Create your TORQWISE account':'Sign in to TORQWISE';
+  document.getElementById('authSubmit').textContent=mode==='signup'?'Create account':'Sign in';
+  document.getElementById('switchAuth').textContent=mode==='signup'?'Already have an account? Sign in':'New here? Create an account';
+  document.getElementById('authName').parentElement.classList.toggle('hidden',mode==='signin');
+  document.getElementById('authPassword').required=true;
+}
+function closeAuth(){document.getElementById('authModal').classList.add('hidden')}
+function switchAuthMode(){openAuth(authMode==='signup'?'signin':'signup')}
+document.getElementById('authForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const submit=document.getElementById('authSubmit');
+  const email=document.getElementById('authEmail').value.trim().toLowerCase();
+  const password=document.getElementById('authPassword').value;
+  submit.disabled=true;
+  showAuthMsg('Connecting securely…');
+  try{
+    if(!torqSupabase) await torqInitAuth();
+    if(!torqSupabase) throw new Error(torqAuthSetupError||'Account service is not ready. Please try again shortly.');
+    let result;
+    if(authMode==='signup'){
+      result=await torqSupabase.auth.signUp({email,password,options:{data:{full_name:document.getElementById('authName').value.trim()||'TORQWISE customer'}}});
+      if(result.error) throw result.error;
+      if(result.data.session){
+        torqAuthUser=result.data.user;
+        showAuthMsg('Your account is ready. You are signed in.');
+        render();
+        setTimeout(closeAuth,700);
+      }else{
+        showAuthMsg('Check your email for the confirmation link, then return here to sign in.');
+      }
+    }else{
+      result=await torqSupabase.auth.signInWithPassword({email,password});
+      if(result.error) throw result.error;
+      torqAuthUser=result.data.user;
+      showAuthMsg('Signed in successfully.');
+      render();
+      setTimeout(closeAuth,500);
+    }
+  }catch(err){showAuthMsg(err?.message||'Could not complete sign-in. Please try again.');}
+  finally{submit.disabled=false;}
+});
+function showAuthMsg(t){const m=document.getElementById('authMessage');m.textContent=t;m.classList.remove('hidden')}
+function render(){
+ const d=readData(),identity=document.getElementById('accountIdentity'),list=document.getElementById('ordersList');
+ identity.innerHTML=torqAuthUser
+  ? '<strong>'+escapeHtml(torqAuthUser.user_metadata?.full_name||torqAuthUser.email||'TORQWISE customer')+'</strong><br><span class="tiny">'+escapeHtml(torqAuthUser.email||'')+'</span> <button class="secondary" style="padding:6px 9px;font-size:11px;margin:8px 0" onclick="signout()">Sign out</button><p class="tiny">Free plan · 3 AI research questions per day</p>'
+  : 'You\'re browsing as a guest. <button class="secondary" style="padding:6px 9px;font-size:11px" onclick="openAuth(\'signup\')">Create account</button>';
+ let orders=d.orders.filter(o=>!torqAuthUser||!o.owner||o.owner===torqAuthUser.email);
+ if(!orders.length){list.innerHTML='<div class="empty">No requests yet. Request tracking is currently saved only in this browser.</div>';return}
+ list.innerHTML=orders.map(o=>'<div class="order"><div class="orderhead"><span>'+escapeHtml(o.label)+' · '+escapeHtml(o.id)+'</span><span class="status">'+escapeHtml(o.status)+'</span></div><p><strong>'+money(o.price)+'</strong> · '+new Date(o.created).toLocaleDateString()+'</p><p>'+escapeHtml(o.vehicle||'Vehicle details not supplied')+'</p><p>'+escapeHtml(o.details)+'</p><p class="tiny">Demo tracking only · no payment taken</p><button class="secondary" style="margin-top:10px;padding:8px 10px;font-size:12px" onclick="paymentInfo()">Checkout setup details</button></div>').join('');
+}
+async function signout(){
+ if(torqSupabase){await torqSupabase.auth.signOut();}
+ torqAuthUser=null;render();
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function paymentInfo(){document.getElementById('infoModal').classList.remove('hidden')}document.getElementById('yearNow').textContent=new Date().getFullYear();document.getElementById('authModal').addEventListener('click',e=>{if(e.target.id==='authModal')closeAuth()});render();
+torqInitAuth();
 
 
 const DIAG_DB = [
