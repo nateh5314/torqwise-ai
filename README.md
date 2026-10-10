@@ -44,7 +44,7 @@ For the AI endpoint:
 - `OPENAI_API_KEY` — secret, server-side only
 - `OPENAI_MODEL` — optional model override; defaults to `gpt-5-mini`
 
-For accounts, cloud history, usage limits, customer requests, and subscriptions, see [BILLING-SETUP.md](BILLING-SETUP.md). Before enabling AI research, apply `supabase/research-usage.sql`; free accounts are limited to 3 successful AI research reports per UTC day through an atomic server-side reservation. Never commit secret keys or place them in browser code. Start with Stripe test mode; do not accept real payments until business identity, policies, billing, and order workflows are verified.
+For accounts, cloud history, usage limits, customer requests, and subscriptions, see [BILLING-SETUP.md](BILLING-SETUP.md). Before enabling AI research, apply `supabase/research-usage.sql`; free accounts are limited to 3 successful AI research reports per calendar month through an atomic server-side reservation. Never commit secret keys or place them in browser code. Start with Stripe test mode; do not accept real payments until business identity, policies, billing, and order workflows are verified.
 
 ## Validation and launch
 
