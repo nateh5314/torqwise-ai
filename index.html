@@ -85,6 +85,7 @@
    <p class="sub">Local drafts stay on this device. Signed-in account history can keep research reports, diagnostic cases, and parts investigations together across sessions.</p>
    <div id="savedResearchCases"><div class="empty">No saved job contexts yet.</div></div>
    <div id="accountHistoryStatus" class="notice" role="status">Sign in to enable cloud history for this account.</div>
+   <div class="formbuttons"><button type="button" class="secondary" id="clearAccountHistoryButton" onclick="torqClearAccountHistory()">Clear all cloud history</button></div>
    <div id="accountHistoryList"><div class="empty">Your saved account history will appear here after sign-in.</div></div>
    <div class="formbuttons"><button type="button" class="secondary" onclick="torqExportCases()">Export local job contexts</button><button type="button" class="secondary" onclick="torqLoadAccountHistory(true)">Refresh account history</button></div>
   </div>
@@ -363,6 +364,20 @@ async function torqSaveAccountHistory(entry){
   if(status){status.textContent='Saved to your account history.';status.classList.add('success')}
   torqLoadAccountHistory(false);
  }catch(e){if(status){status.textContent=(e.message||'Account history is temporarily unavailable.')+' Local saves remain on this device.';status.classList.remove('success')}}
+}
+async function torqClearAccountHistory(){
+ const status=document.getElementById('accountHistoryStatus');
+ if(!window.__torqwiseGetToken){if(status)status.textContent='Sign in to manage cloud history.';return}
+ if(!confirm('Permanently delete all saved TORQWISE cloud history for this account? This does not clear local drafts on this device.'))return;
+ try{
+  const headers=await window.__torqwiseGetToken();
+  if(!headers.authorization)throw new Error('Sign in to manage cloud history.');
+  const response=await fetch('/.netlify/functions/account-history',{method:'DELETE',headers:{'content-type':'application/json',...headers},body:JSON.stringify({clearAll:true})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'Could not clear cloud history.');
+  if(status){status.textContent='All cloud history for this account was deleted. Local drafts on this device were not changed.';status.classList.remove('success')}
+  await torqLoadAccountHistory(false);
+ }catch(e){if(status){status.textContent=e.message||'Could not clear cloud history.';status.classList.remove('success')}}
 }
 async function torqLoadAccountHistory(showMessage=false){
  const status=document.getElementById('accountHistoryStatus'),host=document.getElementById('accountHistoryList');
