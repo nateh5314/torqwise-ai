@@ -63,6 +63,28 @@ export default async (req) => {
         updated_at: new Date().toISOString(),
       });
       if (!r.ok) throw new Error("Supabase subscription upsert failed");
+    } else if (event.type === "checkout.session.completed" && obj.mode === "payment" && obj.payment_status === "paid") {
+      const requestCode = typeof obj.metadata?.request_code === "string" ? obj.metadata.request_code.trim() : "";
+      const userId = typeof obj.metadata?.supabase_user_id === "string" ? obj.metadata.supabase_user_id.trim() : "";
+      if (!requestCode || !userId) return json({ error: "Service checkout is missing request metadata." }, 400);
+      const url = env("SUPABASE_URL"), key = env("SUPABASE_SERVICE_ROLE_KEY");
+      if (!url || !key) throw new Error("Supabase webhook configuration missing");
+      const r = await fetch(url + "/rest/v1/customer_requests?request_code=eq." + encodeURIComponent(requestCode) + "&user_id=eq." + encodeURIComponent(userId), {
+        method: "PATCH",
+        headers: {
+          apikey: key,
+          authorization: "Bearer " + key,
+          "content-type": "application/json",
+          prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          payment_status: "paid",
+          paid_at: new Date().toISOString(),
+        }),
+      });
+      if (!r.ok) throw new Error("Supabase service payment update failed");
+      const rows = await r.json();
+      if (!rows.length) throw new Error("Paid service request was not found; retry webhook after request sync");
     } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
       const sub = obj;
       const userId = sub.metadata?.supabase_user_id;
