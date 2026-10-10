@@ -14,6 +14,10 @@ Set these in the staging site's Netlify environment variables, scoped to Functio
 - SUPABASE_URL — staging Supabase project URL.
 - SUPABASE_PUBLISHABLE_KEY — Supabase publishable/anon key used for session verification.
 - SUPABASE_SECRET_KEY — server-only Supabase secret/service-role key used for privileged quota RPC calls. Never expose it to the browser.
+- `STRIPE_SECRET_KEY` — Stripe **test-mode** secret key, server-side only.
+- `STRIPE_PRICE_PRO` — test-mode Price ID for the $29.99 CAD monthly TORQWISE Pro price.
+- `STRIPE_WEBHOOK_SECRET` — signing secret for the Stripe webhook endpoint `/.netlify/functions/stripe-webhook`.
+- `SITE_URL` — optional canonical site origin for checkout return URLs; defaults to the deployed Netlify URL.
 - Optional OPENAI_MODEL — defaults to gpt-5-mini.
 
 After changing variables, redeploy the staging site. Do not share screenshots that reveal secret values.
@@ -25,8 +29,18 @@ Apply the SQL migrations in timestamp order from supabase/migrations/ to the sta
 1. 20261010050000_torqwise_core_usage.sql — usage and subscription tables plus the original server-only quota RPC.
 2. 20261010060000_torqwise_refund_question.sql — legacy rollback function retained for compatibility.
 3. 20261010070000_torqwise_quota_reservations.sql — reservation-based consume/refund RPCs; the current research endpoint uses these v2 functions.
+4. 20261010080000_torqwise_stripe_subscriptions.sql — Stripe customer/subscription linkage fields used by billing webhooks and the customer portal.
 
-The current quota defaults are 3 questions/day for free accounts, 100/month for the Driver plan, and 400/month for Pro. Paid access is only recognized when the database subscription record is active and its current period has not expired. Billing/webhook synchronization is not implemented yet, so do not sell subscriptions or enable live payments.
+The current quota defaults are 3 questions/day for free accounts, 100/month for the Driver plan, and 400/month for Pro. Paid access is only recognized when the database subscription record is active and its current period has not expired. Stripe integration code is present on the development branch but is not active until staging environment variables, the test-mode webhook, and the matching staging database migration are configured and tested. Do not enable live payments.
+
+## Stripe test-mode setup
+
+1. Create the TORQWISE Pro recurring price in Stripe test mode at CAD $29.99/month and set its Price ID as `STRIPE_PRICE_PRO` in the staging Netlify site's runtime environment.
+2. Add a test-mode Stripe secret key as `STRIPE_SECRET_KEY` in Netlify. Never expose it in client code or chat.
+3. Create a Stripe webhook endpoint at `https://YOUR-STAGING-SITE/.netlify/functions/stripe-webhook` and subscribe to `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`. Add the webhook signing secret to Netlify as `STRIPE_WEBHOOK_SECRET`.
+4. Apply the migrations above to a dedicated staging Supabase project, including the Stripe linkage migration. Do not apply these to production without an explicit migration plan.
+5. Redeploy the staging site after setting variables. Sign in, use a Stripe test card, and verify the subscription row and Pro quota. Then test cancellation and a failed renewal/payment.
+6. Configure the Stripe customer portal in test mode if you want customers to manage/cancel subscriptions there.
 
 ## Test checklist
 
