@@ -58,10 +58,6 @@ jobs:
           grep -q 'billing-status' index.html
           grep -q 'create-request' index.html
           grep -q 'TORQWISE_ADMIN_USER_IDS' netlify/functions/admin-requests.mjs
-          grep -q 'auth.signInWithPassword' index.html
-          grep -q 'billing-status' index.html
-          grep -q 'create-request' index.html
-          grep -q 'TORQWISE_ADMIN_USER_IDS' netlify/functions/admin-requests.mjs
           echo "Required integration files and UI hooks are present."
       - name: Check security-critical server-side gates
         run: |
