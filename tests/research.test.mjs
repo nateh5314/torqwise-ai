@@ -9,7 +9,7 @@ const base = "https://supabase.example";
 function response(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
-function configure({ userResponse = response({ id: "user-123" }), reservation = response({ allowed: true, remaining: 2, usage_id: 101 }), openaiResponse = response({ output: [{ type: "message", content: [{ type: "output_text", text: "Test research answer", annotations: [] }] }, { type: "web_search_call", action: { sources: [{ url: "https://example.com/source", title: "Example source" }] } }], model: "gpt-5-mini" }) } = {}) {
+function configure({ userResponse = response({ id: "user-123" }), reservation = response({ allowed: true, remaining: 2, usage_id: 101 }), openaiResponse = response({ output: [{ type: "message", content: [{ type: "output_text", text: "Test research answer", annotations: [] }] }, { type: "web_search_call", action: { sources: [{ url: "https://example.com/source", title: "Example source" }] } }], model: "gpt-5-mini", usage: { input_tokens: 100, output_tokens: 40 } }) } = {}) {
   Object.assign(process.env, {
     SUPABASE_URL: base,
     SUPABASE_ANON_KEY: "public-test-key",
@@ -23,6 +23,7 @@ function configure({ userResponse = response({ id: "user-123" }), reservation = 
     if (String(url) === base + "/rest/v1/subscriptions?user_id=eq.user-123&select=status&order=updated_at.desc&limit=1") return response([]);
     if (String(url) === base + "/rest/v1/rpc/reserve_research_usage") return reservation;
     if (String(url) === base + "/rest/v1/rpc/release_research_usage") return response(true);
+    if (String(url).startsWith(base + "/rest/v1/research_usage?id=eq.101&user_id=eq.user-123") && options.method === "PATCH") return response({});
     if (String(url) === "https://api.openai.com/v1/responses") return openaiResponse;
     throw new Error("Unexpected fetch: " + String(url));
   };
@@ -77,6 +78,8 @@ test("rejects unreadable auth JSON instead of continuing with an invalid identit
 
 test("requires atomic quota reservation before calling the AI provider", async () => {
   const calls = configure();
+  process.env.TORQWISE_OPENAI_INPUT_USD_PER_MILLION = "0.15";
+  process.env.TORQWISE_OPENAI_OUTPUT_USD_PER_MILLION = "0.60";
   const result = await handler(request());
   assert.equal(result.status, 200);
   const data = await result.json();
@@ -84,7 +87,10 @@ test("requires atomic quota reservation before calling the AI provider", async (
   assert.equal(data.answer, "Test research answer");
   assert.ok(calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
   assert.ok(calls.some(c => c.url === "https://api.openai.com/v1/responses"));
-  assert.ok(!calls.some(c => c.url.includes("/rest/v1/research_usage?")));
+  const usageUpdate = calls.find(c => c.url.includes("/rest/v1/research_usage?id=eq.101") && c.options.method === "PATCH");
+  assert.ok(usageUpdate);
+  assert.equal(JSON.parse(usageUpdate.options.body).input_tokens, 100);
+  assert.equal(JSON.parse(usageUpdate.options.body).estimated_cost_usd, 0.000039);
 });
 
 test("blocks exhausted monthly allowance without calling the AI provider", async () => {
