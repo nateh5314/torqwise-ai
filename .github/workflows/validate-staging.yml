@@ -35,6 +35,7 @@ jobs:
           test -f terms.html
           test -f support.html
           test -f admin.html
+          test -f LAUNCH-CHECKLIST.md
           grep -q 'Subscribe — $29.99 CAD/month' index.html
           grep -q 'auth.signInWithPassword' index.html
           grep -q 'billing-status' index.html
