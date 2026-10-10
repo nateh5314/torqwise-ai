@@ -1,0 +1,32 @@
+name: Validate TORQWISE staging
+on:
+  pull_request:
+  push:
+    branches:
+      - staging/subscriptions-auth
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check Netlify function syntax
+        run: |
+          for file in netlify/functions/*.mjs; do
+            echo "Checking $file"
+            node --check "$file"
+          done
+      - name: Check required billing integration files
+        run: |
+          test -f supabase/subscriptions.sql
+          test -f netlify/functions/public-config.mjs
+          test -f netlify/functions/create-checkout.mjs
+          test -f netlify/functions/create-portal.mjs
+          test -f netlify/functions/billing-status.mjs
+          test -f netlify/functions/stripe-webhook.mjs
+          grep -q 'Subscribe — $29.99 CAD/month' index.html
+          grep -q 'auth.signInWithPassword' index.html
+          grep -q 'billing-status' index.html
+          echo "Required integration files and UI hooks are present."
