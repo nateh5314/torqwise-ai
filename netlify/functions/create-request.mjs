@@ -50,7 +50,7 @@ export default async (req) => {
             from: env("EMAIL_FROM"),
             to: [env("SUPPORT_EMAIL")],
             subject: "New TORQWISE research request " + code,
-            text: "A customer submitted a TORQWISE research request.\\n\\nRequest: " + code + "\\nService: " + services[serviceId][0] + "\\nCustomer: " + user.email + "\\nVehicle/equipment: " + vehicle + "\\nDetails: " + details + "\\nDeadline: " + (row.deadline || "Not specified") + "\\n\\nSign in to the connected Supabase dashboard to review the saved request."
+            text: "A customer submitted a TORQWISE research request.\\n\\nRequest: " + code + "\\nService: " + services[serviceId][0] + "\\nCustomer: " + user.email + "\\nVehicle/equipment: " + vehicle + "\\nDetails: " + details + "\\nDeadline: " + (row.preferred_timeline || "Flexible") + "\\n\\nSign in to the connected Supabase dashboard to review the saved request."
           })
         });
       } catch (e) { console.error("Request notification email failed:", e?.message || "unknown"); }
