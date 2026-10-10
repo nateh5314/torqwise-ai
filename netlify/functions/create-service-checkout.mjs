@@ -38,11 +38,12 @@ export default async req => {
   try {
     const user = await getUser(token);
     if (!user?.id || !user?.email) return json({ error: "Your session is invalid or expired. Sign in again." }, 401);
-    const result = await supabase("customer_requests?request_code=eq." + encodeURIComponent(code) + "&user_id=eq." + encodeURIComponent(user.id) + "&select=request_code,user_id,service,label,quoted_price,payment_status,stripe_checkout_session_id&limit=1");
+    const result = await supabase("customer_requests?request_code=eq." + encodeURIComponent(code) + "&user_id=eq." + encodeURIComponent(user.id) + "&select=request_code,user_id,service,label,quoted_price,payment_status,status,stripe_checkout_session_id&limit=1");
     if (!result.ok) throw new Error("Request lookup failed");
     const rows = await result.json(), request = rows[0];
     if (!request) return json({ error: "That research request was not found in your account." }, 404);
     if (request.payment_status === "paid") return json({ error: "This request is already marked as paid." }, 409);
+    if (request.status !== "Awaiting customer") return json({ error: "Your request must be reviewed and marked ready for payment before checkout. No payment has been taken." }, 409);
     const product = serviceCatalog[request.service];
     if (!product) return json({ error: "Custom research requires a confirmed quote before payment." }, 409);
     if (Number(request.quoted_price) !== product.amount / 100) return json({ error: "The saved price does not match the current service price. Contact support before paying." }, 409);
