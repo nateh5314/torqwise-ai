@@ -42,17 +42,27 @@ async function getResearchAccess(req) {
   if (!subsResponse.ok) throw new Error('Subscription lookup failed');
   const subs = await subsResponse.json();
   if (subs.some(row => ['active', 'trialing'].includes(row.status))) return { userId: user.id, isPro: true, remaining: null };
-  const start = new Date(); start.setUTCDate(1); start.setUTCHours(0, 0, 0, 0);
-  const usageResponse = await fetch(base + '/rest/v1/research_usage?user_id=eq.' + encodeURIComponent(user.id) + '&created_at=gte.' + encodeURIComponent(start.toISOString()) + '&select=id', { headers: { apikey: service, authorization: 'Bearer ' + service, Prefer: 'count=exact', Range: '0-0' } });
-  if (!usageResponse.ok) throw new Error('Usage lookup failed');
-  const used = Number((usageResponse.headers.get('content-range') || '*/0').split('/').pop()) || 0;
-  if (used >= 3) return { error: 'You have used your 3 free research reports this month. Upgrade to Pro Technician for $29.99 CAD/month to continue.', status: 402, remaining: 0 };
-  return { userId: user.id, isPro: false, remaining: 3 - used };
+  const reserveResponse = await fetch(base + '/rest/v1/rpc/reserve_research_usage', {
+    method: 'POST',
+    headers: { apikey: service, authorization: 'Bearer ' + service, 'content-type': 'application/json' },
+    body: JSON.stringify({ p_user_id: user.id, p_daily_limit: 3 }),
+  });
+  if (!reserveResponse.ok) throw new Error('Usage reservation failed; apply supabase/research-usage.sql before enabling AI research');
+  const reservation = await reserveResponse.json();
+  if (!reservation || reservation.allowed !== true || !Number.isSafeInteger(reservation.usage_id)) {
+    return { error: 'You have used your 3 free AI research reports for today. Your allowance resets at midnight UTC. Upgrade to Pro Technician for $29.99 CAD/month for continued research.', status: 402, remaining: 0 };
+  }
+  return { userId: user.id, isPro: false, remaining: Number(reservation.remaining), usageId: reservation.usage_id };
 }
-async function saveResearchUsage(userId) {
+async function releaseResearchUsage(userId, usageId) {
+  if (!userId || !Number.isSafeInteger(usageId)) return;
   const base = (process.env.SUPABASE_URL || '').trim(); const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  const response = await fetch(base + '/rest/v1/research_usage', { method: 'POST', headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ user_id: userId }) });
-  if (!response.ok) throw new Error('Usage insert failed');
+  const response = await fetch(base + '/rest/v1/rpc/release_research_usage', {
+    method: 'POST',
+    headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json' },
+    body: JSON.stringify({ p_user_id: userId, p_usage_id: usageId }),
+  });
+  if (!response.ok) throw new Error('Usage reservation release failed');
 }
 function extractText(response) {
   const parts = [];
@@ -87,11 +97,6 @@ function extractSources(response) {
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST to submit a research question." }, 405);
   if (!process.env.OPENAI_API_KEY) return json({ error: "The server is missing OPENAI_API_KEY. Add it in Netlify environment variables and redeploy." }, 503);
-  let access;
-  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); return json({ error: "Could not verify your research allowance. Please try again shortly." }, 503); }
-  if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
-  if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
-
   let body;
   try { body = await req.json(); } catch { return json({ error: "The request body must be valid JSON." }, 400); }
   const asset = clean(body.asset, 240);
@@ -99,6 +104,11 @@ export default async (req) => {
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
+
+  if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
+  let access;
+  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); return json({ error: "Could not verify your research allowance. Please try again shortly." }, 503); }
+  if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
     service: "service procedures and manual availability",
@@ -133,18 +143,25 @@ export default async (req) => {
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
+    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: err?.name === "TimeoutError" ? "AI research timed out while waiting for the research provider. Please retry with a narrower question." : "Could not reach the AI research service. Please retry shortly." }, err?.name === "TimeoutError" ? 504 : 502);
   }
   let payload;
-  try { payload = await upstream.json(); } catch { return json({ error: "The AI service returned an unreadable response." }, 502); }
+  try { payload = await upstream.json(); } catch {
+    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+    return json({ error: "The AI service returned an unreadable response." }, 502);
+  }
   if (!upstream.ok) {
+    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     console.error("TORQWISE OpenAI API error:", upstream.status, payload?.error?.code || "unknown");
     if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website." }, 502);
     if (upstream.status === 429) return json({ error: "The AI service is rate-limited or out of available API credit. Check API billing and usage." }, 429);
     return json({ error: "The AI service returned an error. Check API usage and Netlify function logs." }, 502);
   }
   const answer = extractText(payload);
-  if (!answer) return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
-  try { await saveResearchUsage(access.userId); } catch (e) { console.error("Research usage save failed:", e?.message || "unknown"); return json({ error: "The research answer was generated, but usage could not be saved. Please contact support before retrying." }, 503); }
-  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, remaining: access.isPro ? null : Math.max(0, access.remaining - 1) });
+  if (!answer) {
+    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+    return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
+  }
+  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, remaining: access.isPro ? null : access.remaining });
 };
