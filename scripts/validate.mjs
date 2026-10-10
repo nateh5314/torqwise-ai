@@ -18,6 +18,7 @@ const stripeWebhook = read("netlify/functions/stripe-webhook.mjs");
 const quotaCore = read("supabase/migrations/20261010050000_torqwise_core_usage.sql");
 const quotaRefund = read("supabase/migrations/20261010060000_torqwise_refund_question.sql");
 const quotaReservations = read("supabase/migrations/20261010070000_torqwise_quota_reservations.sql");
+const stripeSubscriptions = read("supabase/migrations/20261010080000_torqwise_stripe_subscriptions.sql");
 const netlify = read("netlify.toml");
 const pkgText = read("package.json");
 let pkg = {};
@@ -54,6 +55,11 @@ const required = [
   [stripeWebhook, "webhook validates Stripe signature", "stripe-signature"],
   [stripeWebhook, "webhook handles subscription changes", "customer.subscription.updated"],
   [stripeWebhook, "webhook handles failed invoices", "invoice.payment_failed"],
+  [stripeWebhook, "webhook requires configured Pro price", "STRIPE_PRICE_PRO"],
+  [stripeWebhook, "webhook verifies subscription price before granting Pro", "matchingPrice&&(sub.status"],
+  [checkout, "checkout prefers deploy preview return URL", "DEPLOY_PRIME_URL"],
+  [portal, "billing portal prefers deploy preview return URL", "DEPLOY_PRIME_URL"],
+  [stripeSubscriptions, "Stripe customer and subscription linkage migration", "stripe_subscription_id"],
   [html, "subscription pricing section", 'id="subscriptions"'],
   [html, "Free plan daily allowance", "3 AI research questions per day"],
   [html, "Pro subscription price in CAD", "$29.99 <small>CAD · per month</small>"],
