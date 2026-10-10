@@ -3,6 +3,18 @@ function json(body, status = 200) {
 }
 const env = name => (process.env[name] || "").trim();
 const categories = ["Software & AI","Hosting & tools","Marketing","Fees","Equipment","Travel","Professional services","Other"];
+async function fetchAllRows(base,path,headers){
+  const rows=[],pageSize=1000,maxPages=100;
+  for(let page=0;page<maxPages;page++){
+    const response=await fetch(base+path,{headers:{...headers,Range:(page*pageSize)+"-"+(page*pageSize+pageSize-1)}});
+    if(!response.ok) return {ok:false,status:response.status};
+    const batch=await response.json();
+    if(!Array.isArray(batch)) return {ok:false,status:502};
+    rows.push(...batch);
+    if(batch.length<pageSize)return {ok:true,rows};
+  }
+  return {ok:false,status:413};
+}
 export default async req => {
   if (!["GET","POST","DELETE"].includes(req.method)) return json({ error: "Use GET, POST, or DELETE." }, 405);
   const base=env("SUPABASE_URL"), anon=env("SUPABASE_ANON_KEY"), service=env("SUPABASE_SERVICE_ROLE_KEY");
@@ -17,15 +29,15 @@ export default async req => {
     if(!user||!admins.includes(user.id)) return json({error:"You are not authorized to access finance records."},403);
     const headers={apikey:service,authorization:"Bearer "+service,"content-type":"application/json"};
     if(req.method==="GET"){
-      const [incomeRes,expenseRes,usageRes]=await Promise.all([
-        fetch(base+"/rest/v1/customer_requests?select=request_code,label,quoted_price,paid_at,created_at,payment_status&payment_status=eq.paid&order=paid_at.desc&limit=1000",{headers}),
-        fetch(base+"/rest/v1/business_expenses?select=id,description,category,amount,expense_date,notes,created_at&order=expense_date.desc&limit=500",{headers}),
-        fetch(base+"/rest/v1/research_usage?select=id,created_at,model,input_tokens,output_tokens,estimated_cost_usd,completed_at,status&order=created_at.desc&limit=5000",{headers})
+      const [income,expenses,usage]=await Promise.all([
+        fetchAllRows(base,"/rest/v1/customer_requests?select=request_code,label,quoted_price,paid_at,created_at,payment_status&payment_status=eq.paid&order=paid_at.desc",headers),
+        fetchAllRows(base,"/rest/v1/business_expenses?select=id,description,category,amount,expense_date,notes,created_at&order=expense_date.desc",headers),
+        fetchAllRows(base,"/rest/v1/research_usage?select=id,created_at,model,input_tokens,output_tokens,estimated_cost_usd,completed_at,status&order=created_at.desc",headers)
       ]);
-      if(!incomeRes.ok) throw new Error("Could not load paid research income");
-      if(!expenseRes.ok) throw new Error("Could not load expenses. Apply supabase/business-expenses.sql first.");
-      if(!usageRes.ok) throw new Error("Could not load AI research usage. Apply supabase/research-usage.sql first.");
-      return json({income:await incomeRes.json(),expenses:await expenseRes.json(),usage:await usageRes.json()});
+      if(!income.ok) throw new Error("Could not load all paid research income");
+      if(!expenses.ok) throw new Error("Could not load all expenses. Apply supabase/business-expenses.sql first.");
+      if(!usage.ok) throw new Error("Could not load all AI research usage. Apply supabase/research-usage.sql first.");
+      return json({income:income.rows,expenses:expenses.rows,usage:usage.rows});
     }
     let body; try{body=await req.json()}catch{return json({error:"Request body must be valid JSON."},400);}
     if(req.method==="POST"){
