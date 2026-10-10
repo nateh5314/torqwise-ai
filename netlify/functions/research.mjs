@@ -107,7 +107,7 @@ export default async (req) => {
 
   if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
   let access;
-  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); return json({ error: "Could not verify your research allowance. Please try again shortly." }, 503); }
+  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); const detail=String(e?.message||""); if(detail.includes("apply supabase/research-usage.sql")) return json({ error: "AI research setup is incomplete: the Supabase research-usage migration is missing. Run supabase/research-usage.sql in the connected Supabase SQL Editor, then redeploy." }, 503); return json({ error: "Could not verify your AI research allowance. Check Netlify variables and Supabase function logs, then use the Check setup status tool in the account panel." }, 503); }
   if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
