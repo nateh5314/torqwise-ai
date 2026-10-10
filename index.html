@@ -40,10 +40,25 @@
 .saved-case small{display:block;color:var(--muted)}
 @media(max-width:760px){.research-layout{grid-template-columns:1fr}}
 
+
+/* Parts marketplace beta: comparison shortlist, not a payment cart */
+.market-layout{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;align-items:start}
+.market-suppliers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.market-supplier{border:1px solid var(--line);border-radius:10px;padding:13px;background:#141519}
+.market-supplier p{font-size:12px;color:var(--muted);margin:5px 0 12px}
+.market-supplier button{width:100%;padding:9px;font-size:12px}
+.market-item{border:1px solid var(--line);border-radius:10px;padding:13px;margin-top:10px;background:#141519}
+.market-item strong{display:block}
+.market-item small{display:block;color:var(--muted);margin:4px 0 10px}
+.market-item-actions{display:flex;gap:8px;flex-wrap:wrap}
+.market-item-actions button{width:auto;padding:8px 10px;font-size:12px}
+.market-disclaimer{border-left:3px solid var(--red);padding:11px 13px;background:#211719;border-radius:6px;color:#d7c5c7;font-size:12px;margin-top:14px}
+@media(max-width:760px){.market-layout{grid-template-columns:1fr}.market-suppliers{grid-template-columns:1fr 1fr}}
+@media(max-width:420px){.market-suppliers{grid-template-columns:1fr}}
 </style></head>
 <body>
 <div class="topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
-<header class="wrap nav"><a class="brand" href="#home"><span class="mark">T</span><span>TORQWISE<small>AUTOMOTIVE RESEARCH</small></span></a><nav class="navlinks"><a href="#research-hub">Research hub</a><a href="#diagnostics">Diagnostics</a><a href="#vin-lookup">VIN lookup</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#request">Request research</a><a href="#account">My orders</a></nav><button onclick="openAuth('signup')">Create account ↗</button></header>
+<header class="wrap nav"><a class="brand" href="#home"><span class="mark">T</span><span>TORQWISE<small>AUTOMOTIVE RESEARCH</small></span></a><nav class="navlinks"><a href="#research-hub">Research hub</a><a href="#diagnostics">Diagnostics</a><a href="#vin-lookup">VIN lookup</a><a href="#parts-market">Parts market</a><a href="#services">Services</a><a href="#request">Request research</a><a href="#account">My orders</a></nav><button onclick="openAuth('signup')">Create account ↗</button></header>
 <main>
 <section class="hero" id="home"><div class="wrap"><div class="eyebrow">Research before you wrench</div><h1>Know what you're buying.<br><span>Know what fits.</span></h1><p>Automotive parts research, repair-estimate comparisons, and used-vehicle research — organized in plain language with sources you can check.</p><div class="heroactions"><a class="btn" href="#request">Start a research request <span>→</span></a><a class="btn secondary" href="#services">Explore services</a></div><div class="trust"><span>Upfront pricing</span><span>Source-linked research</span><span>No parts markup</span><span>Made for drivers & shops</span></div></div></section>
 
@@ -91,6 +106,35 @@
 
 <section class="section" id="vin-lookup"><div class="wrap"><div class="sectionhead"><div><div class="eyebrow">Vehicle identification</div><h2>Decode a VIN.</h2><p class="sub">Look up the VIN against the U.S. National Highway Traffic Safety Administration's public vPIC decoder. An internet connection is required; incomplete or non-U.S.-market VINs may return limited data.</p></div></div><div class="card"><form id="vinForm"><div class="field"><label for="vinInput">17-character VIN</label><div class="diag-search"><input id="vinInput" maxlength="17" autocapitalize="characters" placeholder="e.g. 1FTEW1EP5JFA00001" autocomplete="off" required><button type="submit" id="vinSubmit">Decode VIN</button></div><small>VINs normally use 17 characters and exclude I, O and Q. Do not use this result alone to confirm parts fitment.</small></div></form><div id="vinMessage" class="notice hidden" role="status" style="margin-top:14px"></div><div id="vinResult" style="margin-top:14px"></div><p class="tiny">Data source: NHTSA vPIC public API. This lookup is not an OEM parts catalogue and may not identify every option or engine variant.</p></div></div></section>
 
+
+<section class="section alt" id="parts-market"><div class="wrap">
+ <div class="sectionhead"><div><div class="eyebrow">TORQWISE parts marketplace · Beta</div><h2>Compare parts without opening ten tabs.</h2><p class="sub">Build a shortlist, then search multiple suppliers with the same part and vehicle details. TORQWISE will grow toward verified fitment, live stock, delivered-price comparisons, and checkout integrations.</p></div></div>
+ <div class="market-layout">
+  <div class="card">
+   <h3>Find a part</h3><p>Be as specific as possible. Include the year, make, model, engine, trim, or OE part number if you have it.</p>
+   <form id="marketSearchForm">
+    <div class="field"><label for="marketPart">Part or job description</label><input id="marketPart" required maxlength="180" placeholder="e.g. front wheel bearing, 2018 F-150 5.0L"></div>
+    <div class="field" style="margin-top:12px"><label for="marketVehicle">Vehicle / equipment details</label><input id="marketVehicle" maxlength="180" placeholder="Year, make, model, engine, VIN or serial"></div>
+    <div class="field" style="margin-top:12px"><label for="marketRegion">Delivery area</label><input id="marketRegion" maxlength="100" value="Newfoundland and Labrador, Canada" placeholder="City, province or postal code"></div>
+    <div class="formbuttons"><button type="submit">Compare supplier searches ↗</button><button type="button" class="secondary" id="marketSaveButton">Add to shortlist</button></div>
+   </form>
+   <div id="marketMessage" class="notice hidden" role="status"></div>
+   <div class="divider"></div><h3>Search suppliers</h3><p class="tiny">Opens supplier/search pages. Availability, fitment, shipping and final price must be confirmed on the seller's site.</p>
+   <div class="market-suppliers">
+    <div class="market-supplier"><strong>Google Shopping</strong><p>Broad price discovery across retailers.</p><button type="button" data-market="shopping">Search prices ↗</button></div>
+    <div class="market-supplier"><strong>RockAuto</strong><p>Wide aftermarket catalogue.</p><button type="button" data-market="rockauto">Search parts ↗</button></div>
+    <div class="market-supplier"><strong>NAPA Canada</strong><p>Parts and local-store availability.</p><button type="button" data-market="napa">Search parts ↗</button></div>
+    <div class="market-supplier"><strong>Canadian Tire</strong><p>Retail parts and pickup options.</p><button type="button" data-market="canadiantire">Search parts ↗</button></div>
+    <div class="market-supplier"><strong>PartsAvatar</strong><p>Canadian aftermarket parts retailer.</p><button type="button" data-market="partsavatar">Search parts ↗</button></div>
+    <div class="market-supplier"><strong>Amazon Canada</strong><p>Additional listings to cross-check.</p><button type="button" data-market="amazon">Search parts ↗</button></div>
+   </div>
+  </div>
+  <div class="card"><div class="dashhead"><div><h3>Your parts shortlist</h3><p>Keep candidate parts together while you research.</p></div><button type="button" class="secondary" id="marketExportButton">Export list</button></div>
+   <div id="marketCart"><div class="empty">Your shortlist is empty. Search for a part and add it here.</div></div>
+   <div class="market-disclaimer"><strong>Important:</strong> This is a research shortlist, not a checkout cart. No live prices, stock, delivery quotes, compatibility, or seller quality are guaranteed by these search links. Do not order a safety-critical part until fitment is confirmed for the exact vehicle or machine.</div>
+  </div>
+ </div>
+</div></section>
 <section class="section" id="services"><div class="wrap"><div class="sectionhead"><div><div class="eyebrow">Straightforward pricing</div><h2>Research that saves you time.</h2><p class="sub">Introductory prices for clearly scoped research jobs. You'll confirm the details and total before work begins.</p></div></div><div class="grid">
 <article class="card"><div class="iconbox">⚙</div><h3>Parts Finder</h3><p>Find candidate replacement parts and compare supplier options for your vehicle.</p><div class="price">$15 <small>CAD · starting at</small></div><ul><li>One vehicle and part category</li><li>Up to two options</li><li>Supplier links and price comparison</li><li>Fitment uncertainties flagged</li></ul><button onclick="chooseService('parts')">Request parts research →</button></article>
 <article class="card"><span class="tag">Popular</span><div class="iconbox">▤</div><h3>Estimate Comparison</h3><p>Turn a repair estimate into a clearer, organized comparison of parts and quoted costs.</p><div class="price">$25 <small>CAD · starting at</small></div><ul><li>One existing estimate</li><li>Parts alternatives where available</li><li>Line-item summary</li><li>Questions to ask the shop</li></ul><button onclick="chooseService('estimate')">Compare an estimate →</button></article>
