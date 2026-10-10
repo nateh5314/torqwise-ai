@@ -1,9 +1,9 @@
-# TORQWISE billing setup (staging first)
+# TORQWISE deployment and account configuration
 
-This branch adds server-side billing endpoints. It does **not** turn on live payments, deploy the site, or complete frontend account wiring by itself. Keep the current live site unchanged until the staging checklist passes.
+The repository now contains the website, account integration, server-side research entitlement, subscription billing endpoints, customer request storage, operator request management, and draft legal/support pages. Publishing still requires connecting the repository to Netlify and configuring the operator-owned Supabase, Stripe, and email accounts. Do not enable live charges until the legal/business details and billing settings are correct.
 
 ## Required Netlify environment variables
-Set these on the **staging Netlify site**, with Functions/runtime scope:
+Set these on the Netlify site, with Functions/runtime scope. Start with Stripe test mode; switch to live credentials only when you are ready to accept real payments:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY` (public project anon/publishable key; server uses it only to verify a session)
 - `SUPABASE_SERVICE_ROLE_KEY` (secret; server functions only)
@@ -46,6 +46,6 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 - The staging site now includes draft Privacy Policy, Terms of Service, and Support pages. Confirm legal business identity, monitored contact address, refund terms, and privacy wording before public launch. The staging HTML wires the account modal to Supabase sign-up/sign-in, shows the CA$29.99/month Pro subscription option, checks the signed-in user's subscription status, and offers the Stripe customer portal when Pro is active. This wiring is not yet production-verified.
 - Customer request submission and history are wired to persistent Supabase storage. Optional request notification emails are supported through Resend environment variables, and `/admin.html` provides a restricted request-status dashboard. Set `SUPPORT_EMAIL`, configure the sender, and add the operator's Supabase user UUID to `TORQWISE_ADMIN_USER_IDS` before launch.
 - The AI research endpoint now checks the signed-in user's subscription and enforces a three-report monthly free allowance using `research_usage`. This is a basic count-based quota, not an atomic quota reservation under concurrent requests.
-- Do not take real payments until the UI uses real Supabase sign-in, checkout redirects are connected, the webhook and subscription status are tested, Pro access is enforced server-side for protected usage, and cancellation/refund/support/legal pages are ready.
+- Before enabling live payments, the operator must complete the account configuration, verify that the Stripe price is the intended CA$29.99 recurring plan, set up the billing portal, confirm refund/cancellation terms, and replace or approve the draft legal pages. The site code does not replace these account-level decisions.
 - The existing AI research endpoint currently uses a best-effort in-memory rate limit, which is not suitable for a public paid product by itself.
 - A successful checkout redirect is not proof of payment. Grant access only after a verified webhook updates the subscription record.
