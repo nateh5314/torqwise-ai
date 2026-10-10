@@ -135,6 +135,10 @@ export default async (req) => {
     console.error("TORQWISE quota RPC returned an unexpected response.");
     return json({ error: "The question-limit service returned an unexpected response." }, 503);
   }
+  if (quota.allowed && (typeof quota.reservation_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(quota.reservation_id))) {
+    console.error("TORQWISE allowed quota response did not include a valid reservation ID.");
+    return json({ error: "The question-limit service could not safely reserve your allowance. Please try again later." }, 503);
+  }
   if (!quota.allowed) {
     return json({
       error: `You've reached your ${quota.limit}-question ${quota.period_type === "daily" ? "daily" : "monthly"} limit. Please try again when your allowance resets.`,
