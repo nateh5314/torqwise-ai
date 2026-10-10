@@ -6,7 +6,7 @@ const recentRequests = new Map();
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" },
   });
 }
 function clean(value, max = MAX_FIELD) {
@@ -24,6 +24,28 @@ function tooManyRequests(key) {
   if (!item || now - item.start > WINDOW_MS) item = { start: now, count: 0 };
   item.count += 1; recentRequests.set(key, item);
   return item.count > MAX_REQUESTS_PER_WINDOW;
+}
+async function refundQuota({ supabaseUrl, secretKey, quota }) {
+  // Best-effort rollback: a successful quota reservation should not cost a user
+  // a question when the upstream research service fails.
+  if (!quota?.reservation_id) return;
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/torqwise_refund_question_v2`, {
+      method: "POST",
+      headers: {
+        apikey: secretKey,
+        authorization: `Bearer ${secretKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        p_reservation_id: quota.reservation_id,
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) console.error("TORQWISE quota refund failed:", response.status);
+  } catch {
+    console.error("TORQWISE quota refund could not reach Supabase.");
+  }
 }
 function extractText(response) {
   const parts = [];
@@ -59,7 +81,6 @@ export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST to submit a research question." }, 405);
   if (!process.env.OPENAI_API_KEY) return json({ error: "The server is missing OPENAI_API_KEY. Add it in Netlify environment variables and redeploy." }, 503);
   if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
-
   let body;
   try { body = await req.json(); } catch { return json({ error: "The request body must be valid JSON." }, 400); }
   const asset = clean(body.asset, 240);
@@ -67,6 +88,64 @@ export default async (req) => {
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
+  const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  if (!supabaseUrl || !publishableKey || !secretKey) {
+    return json({ error: "Account and usage-limit services are not fully configured on the server yet." }, 503);
+  }
+  const authorization = req.headers.get("authorization") || "";
+  const tokenMatch = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!tokenMatch) return json({ error: "Sign in to your TORQWISE account before asking a research question." }, 401);
+  let userResponse;
+  try {
+    userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: publishableKey, authorization: `Bearer ${tokenMatch[1]}` },
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch {
+    return json({ error: "Could not verify your account session. Please try signing in again." }, 502);
+  }
+  if (!userResponse.ok) return json({ error: "Your sign-in session is invalid or expired. Please sign in again." }, 401);
+  let user;
+  try { user = await userResponse.json(); } catch { return json({ error: "Could not verify your account session." }, 502); }
+  if (!user?.id) return json({ error: "Could not verify your account session." }, 401);
+  let quota;
+  try {
+    const rpcResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/torqwise_consume_question_v2`, {
+      method: "POST",
+      headers: {
+        apikey: secretKey,
+        authorization: `Bearer ${secretKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ p_user_id: user.id, p_plan: "free" }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!rpcResponse.ok) {
+      console.error("TORQWISE quota RPC failed:", rpcResponse.status);
+      return json({ error: "Could not check your question allowance. Please try again later." }, 503);
+    }
+    quota = await rpcResponse.json();
+  } catch {
+    return json({ error: "Could not check your question allowance. Please try again later." }, 503);
+  }
+  if (Array.isArray(quota)) quota = quota[0];
+  if (!quota || typeof quota.allowed !== "boolean") {
+    console.error("TORQWISE quota RPC returned an unexpected response.");
+    return json({ error: "The question-limit service returned an unexpected response." }, 503);
+  }
+  if (quota.allowed && (typeof quota.reservation_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(quota.reservation_id))) {
+    console.error("TORQWISE allowed quota response did not include a valid reservation ID.");
+    return json({ error: "The question-limit service could not safely reserve your allowance. Please try again later." }, 503);
+  }
+  if (!quota.allowed) {
+    return json({
+      error: `You've reached your ${quota.limit}-question ${quota.period_type === "daily" ? "daily" : "monthly"} limit. Please try again when your allowance resets.`,
+      quota: { used: quota.used, limit: quota.limit, remaining: quota.remaining, periodType: quota.period_type, periodStart: quota.period_start },
+    }, 429);
+  }
+
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
     service: "service procedures and manual availability",
@@ -101,17 +180,25 @@ export default async (req) => {
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
-    return json({ error: "Could not reach the AI research service. Please retry shortly." }, 502);
+    await refundQuota({ supabaseUrl, secretKey, quota });
+    return json({ error: "Could not reach the AI research service. Your question allowance has been restored if the quota service is available. Please retry shortly." }, 502);
   }
   let payload;
-  try { payload = await upstream.json(); } catch { return json({ error: "The AI service returned an unreadable response." }, 502); }
+  try { payload = await upstream.json(); } catch {
+    await refundQuota({ supabaseUrl, secretKey, quota });
+    return json({ error: "The AI service returned an unreadable response. Your question allowance has been restored if the quota service is available." }, 502);
+  }
   if (!upstream.ok) {
+    await refundQuota({ supabaseUrl, secretKey, quota });
     console.error("TORQWISE OpenAI API error:", upstream.status, payload?.error?.code || "unknown");
-    if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website." }, 502);
-    if (upstream.status === 429) return json({ error: "The AI service is rate-limited or out of available API credit. Check API billing and usage." }, 429);
-    return json({ error: "The AI service returned an error. Check API usage and Netlify function logs." }, 502);
+    if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website. Your question allowance has been restored if the quota service is available." }, 502);
+    if (upstream.status === 429) return json({ error: "The AI service is rate-limited or out of available API credit. Your question allowance has been restored if the quota service is available; check API billing and usage." }, 429);
+    return json({ error: "The AI service returned an error. Your question allowance has been restored if the quota service is available. Check API usage and Netlify function logs." }, 502);
   }
   const answer = extractText(payload);
-  if (!answer) return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
-  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini" });
+  if (!answer) {
+    await refundQuota({ supabaseUrl, secretKey, quota });
+    return json({ error: "The AI service did not return a usable answer. Your question allowance has been restored if the quota service is available. Please retry with a more specific question." }, 502);
+  }
+  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", quota: { used: quota.used, limit: quota.limit, remaining: quota.remaining, periodType: quota.period_type, periodStart: quota.period_start } });
 };
