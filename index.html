@@ -440,6 +440,8 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       const q=new URLSearchParams(location.search);
       if(q.get('billing')==='success'){alert('Checkout returned successfully. Your Pro access will appear after Stripe confirms the subscription.');history.replaceState({},'',location.pathname+location.hash);}
       if(q.get('billing')==='cancelled'){alert('Checkout was cancelled. No subscription was started.');history.replaceState({},'',location.pathname+location.hash);}
+      if(q.get('service_payment')==='success'){const m=byId('requestMessage');if(m){m.classList.remove('hidden');m.textContent='Stripe checkout returned successfully. Your request will show as paid after the verified payment confirmation arrives. Refresh your request list shortly.'}history.replaceState({},'',location.pathname+location.hash);}
+      if(q.get('service_payment')==='cancelled'){const m=byId('requestMessage');if(m){m.classList.remove('hidden');m.textContent='Checkout was cancelled. No payment was confirmed. Your request remains saved.'}history.replaceState({},'',location.pathname+location.hash);}
     }catch(e){console.warn('TORQWISE account setup:',e.message);addSetupNotice(e.message);}
   }
   function addSetupNotice(message){
