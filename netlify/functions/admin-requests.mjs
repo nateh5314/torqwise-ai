@@ -12,7 +12,9 @@ export default async req => {
   try {
     const auth = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
     if (!auth.ok) return json({ error: "Your session is invalid or expired." }, 401);
-    const user = await auth.json();
+    let user;
+    try { user = await auth.json(); } catch { return json({ error: "Your session could not be verified." }, 401); }
+    if (!user || typeof user.id !== "string" || !user.id) return json({ error: "Your session could not be verified." }, 401);
     if (!admins.includes(user.id)) return json({ error: "You are not authorized to access the operator dashboard." }, 403);
     const headers = { apikey: service, authorization: "Bearer " + service, "content-type": "application/json" };
     if (req.method === "GET") {
