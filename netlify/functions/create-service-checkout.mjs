@@ -58,6 +58,7 @@ export default async req => {
     }
     const form = new URLSearchParams({
       mode: "payment",
+      "payment_method_types[0]": "card",
       customer_email: user.email,
       client_reference_id: code,
       "line_items[0][price_data][currency]": "cad",
