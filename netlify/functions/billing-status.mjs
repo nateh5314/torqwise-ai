@@ -15,7 +15,9 @@ export default async (req) => {
   try {
     const ur = await fetch(url + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
     if (!ur.ok) return json({ error: "Your session is invalid or expired." }, 401);
-    const user = await ur.json();
+    let user;
+    try { user = await ur.json(); } catch { return json({ error: "Your session could not be verified." }, 401); }
+    if (!user || typeof user.id !== "string" || !user.id) return json({ error: "Your session could not be verified." }, 401);
     const sr = await fetch(url + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) + "&select=status,current_period_end,cancel_at_period_end,price_id&order=updated_at.desc&limit=1", {
       headers: { apikey: service, authorization: "Bearer " + service }
     });
