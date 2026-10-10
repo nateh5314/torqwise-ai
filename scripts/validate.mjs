@@ -57,6 +57,7 @@ const required = [
   [quotaReservations, "reservation refund updates matching usage period", "where user_id = v_user_id"],
   [research, "question-limit rejection", "if (!quota.allowed)"],
   [research, "fail-closed reservation ID validation", "The question-limit service could not safely reserve your allowance."],
+  [research, "fail-closed reservation ID validation", "The question-limit service could not safely reserve your allowance."],
   [config, "public Supabase config", "SUPABASE_PUBLISHABLE_KEY"],
   [netlify, "Netlify function directory", 'functions = "netlify/functions"'],
 ];
