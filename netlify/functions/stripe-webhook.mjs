@@ -69,14 +69,20 @@ export default async (req) => {
       if (!requestCode || !userId) return json({ error: "Service checkout is missing request metadata." }, 400);
       const url = env("SUPABASE_URL"), key = env("SUPABASE_SERVICE_ROLE_KEY");
       if (!url || !key) throw new Error("Supabase webhook configuration missing");
-      const r = await fetch(url + "/rest/v1/customer_requests?request_code=eq." + encodeURIComponent(requestCode) + "&user_id=eq." + encodeURIComponent(userId), {
+      const headers = { apikey: key, authorization: "Bearer " + key, "content-type": "application/json" };
+      const query = "request_code=eq." + encodeURIComponent(requestCode) + "&user_id=eq." + encodeURIComponent(userId) + "&stripe_checkout_session_id=eq." + encodeURIComponent(String(obj.id || "")) + "&select=request_code,quoted_price,payment_status&limit=1";
+      const lookup = await fetch(url + "/rest/v1/customer_requests?" + query, { headers });
+      if (!lookup.ok) throw new Error("Supabase service payment lookup failed");
+      const matches = await lookup.json();
+      if (!matches.length) return json({ received: true, ignored: true });
+      const expectedAmount = Math.round(Number(matches[0].quoted_price) * 100);
+      if (!Number.isFinite(expectedAmount) || obj.amount_total !== expectedAmount || String(obj.currency).toLowerCase() !== "cad") {
+        console.error("Service payment amount/currency did not match the saved request:", requestCode);
+        return json({ error: "Payment amount did not match the saved request." }, 400);
+      }
+      const r = await fetch(url + "/rest/v1/customer_requests?request_code=eq." + encodeURIComponent(requestCode) + "&user_id=eq." + encodeURIComponent(userId) + "&stripe_checkout_session_id=eq." + encodeURIComponent(String(obj.id)), {
         method: "PATCH",
-        headers: {
-          apikey: key,
-          authorization: "Bearer " + key,
-          "content-type": "application/json",
-          prefer: "return=representation",
-        },
+        headers: { ...headers, prefer: "return=representation" },
         body: JSON.stringify({
           payment_status: "paid",
           paid_at: new Date().toISOString(),
@@ -84,7 +90,7 @@ export default async (req) => {
       });
       if (!r.ok) throw new Error("Supabase service payment update failed");
       const rows = await r.json();
-      if (!rows.length) throw new Error("Paid service request was not found; retry webhook after request sync");
+      if (!rows.length) throw new Error("Paid service request was not found during update");
     } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
       const sub = obj;
       const userId = sub.metadata?.supabase_user_id;
