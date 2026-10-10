@@ -19,8 +19,8 @@ const pkgText = read("package.json");
 let pkg = {};
 try { pkg = JSON.parse(pkgText); } catch { fail("package.json is not valid JSON."); }
 
-const inlineScripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
-  .filter((match) => !/\\bsrc\\s*=/.test(match[1]));
+const inlineScripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+  .filter((match) => !/\bsrc\s*=/.test(match[1]));
 if (inlineScripts.length === 0) fail("No inline JavaScript was found in index.html.");
 for (let i = 0; i < inlineScripts.length; i++) {
   try { new vm.Script(inlineScripts[i][2], { filename: "index.html:inline-script-" + (i + 1) }); }
