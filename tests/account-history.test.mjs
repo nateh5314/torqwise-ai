@@ -142,6 +142,6 @@ test("clear-all deletes only the verified user's cloud history", async () => {
   const result = await handler(request("DELETE", "/", { clearAll: true }));
   assert.equal(result.status, 200);
   assert.deepEqual(await result.json(), { deleted: "all" });
-  assert.match(deleteUrl, /user_id=eq\\.user-123/);
+  assert.match(deleteUrl, /user_id=eq\.user-123/);
   assert.doesNotMatch(deleteUrl, /[?&]id=eq/);
 });
