@@ -17,13 +17,15 @@ export default async req => {
     if(!user||!admins.includes(user.id)) return json({error:"You are not authorized to access finance records."},403);
     const headers={apikey:service,authorization:"Bearer "+service,"content-type":"application/json"};
     if(req.method==="GET"){
-      const [incomeRes,expenseRes]=await Promise.all([
+      const [incomeRes,expenseRes,usageRes]=await Promise.all([
         fetch(base+"/rest/v1/customer_requests?select=request_code,label,quoted_price,paid_at,created_at,payment_status&payment_status=eq.paid&order=paid_at.desc&limit=1000",{headers}),
-        fetch(base+"/rest/v1/business_expenses?select=id,description,category,amount,expense_date,notes,created_at&order=expense_date.desc&limit=500",{headers})
+        fetch(base+"/rest/v1/business_expenses?select=id,description,category,amount,expense_date,notes,created_at&order=expense_date.desc&limit=500",{headers}),
+        fetch(base+"/rest/v1/research_usage?select=id,created_at&order=created_at.desc&limit=5000",{headers})
       ]);
       if(!incomeRes.ok) throw new Error("Could not load paid research income");
       if(!expenseRes.ok) throw new Error("Could not load expenses. Apply supabase/business-expenses.sql first.");
-      return json({income:await incomeRes.json(),expenses:await expenseRes.json()});
+      if(!usageRes.ok) throw new Error("Could not load AI research usage. Apply supabase/research-usage.sql first.");
+      return json({income:await incomeRes.json(),expenses:await expenseRes.json(),usage:await usageRes.json()});
     }
     let body; try{body=await req.json()}catch{return json({error:"Request body must be valid JSON."},400);}
     if(req.method==="POST"){
