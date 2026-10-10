@@ -1,7 +1,12 @@
 {
-  "name": "torqwise-ai-research-connector",
-  "private": true,
-  "version": "0.1.0",
-  "description": "TORQWISE research workspace with a server-side OpenAI web-search connection",
-  "engines": { "node": ">=20" }
+"name": "torqwise-ai-research-connector",
+"private": true,
+"version": "0.1.0",
+"description": "TORQWISE research workspace with a server-side OpenAI web-search connection",
+"engines": {
+"node": ">=20"
+},
+"dependencies": {
+"@supabase/supabase-js": "^2.57.0"
+}
 }
