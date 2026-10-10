@@ -41,6 +41,20 @@ export default async (req) => {
       return json({ error: "Could not save your request. Please try again shortly." }, 503);
     }
     const rows = await saved.json();
+    if (env("RESEND_API_KEY") && env("SUPPORT_EMAIL") && env("EMAIL_FROM")) {
+      try {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { authorization: "Bearer " + env("RESEND_API_KEY"), "content-type": "application/json" },
+          body: JSON.stringify({
+            from: env("EMAIL_FROM"),
+            to: [env("SUPPORT_EMAIL")],
+            subject: "New TORQWISE research request " + code,
+            text: "A customer submitted a TORQWISE research request.\\n\\nRequest: " + code + "\\nService: " + services[serviceId][0] + "\\nCustomer: " + user.email + "\\nVehicle/equipment: " + vehicle + "\\nDetails: " + details + "\\nDeadline: " + (row.deadline || "Not specified") + "\\n\\nSign in to the connected Supabase dashboard to review the saved request."
+          })
+        });
+      } catch (e) { console.error("Request notification email failed:", e?.message || "unknown"); }
+    }
     return json({ request: { ...rows[0], id: rows[0].request_code, email: rows[0].customer_email, customerType: rows[0].customer_type, price: rows[0].quoted_price, created: rows[0].created_at } }, 201);
   } catch (e) {
     console.error("Customer request error:", e?.message || "unknown");
