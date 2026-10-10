@@ -21,6 +21,7 @@ The private operator console is served at `/admin.html`. It uses the same Supaba
 - Adds a private Income & expenses view: totals recorded paid custom-research income, manually entered business expenses, and a simple tracked net figure.
 - Lets the operator record categorized expenses (including software/AI and hosting), dates, and notes, and remove mistaken entries.
 - Filters the loaded finance ledger by month and exports the currently selected income/expense records as CSV for use in a spreadsheet.
+- Shows the number of recorded AI research usage reservations by selected month; this is usage volume only, not AI provider dollar cost.
 
 ## Enable the finance ledger
 
