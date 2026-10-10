@@ -50,6 +50,9 @@ jobs:
           for required in ["parts-market", "marketSearchForm", "marketCart", "marketAiButton", "marketExportButton", "research-hub", "diagnostics", "vin-lookup"]:
               assert required in id_set, f"Missing expected page feature: {required}"
           print("Page anchors and parts marketplace UI hooks are valid.")
+          for required in ["function diagResearchCase(id)", "function diagFindParts(id)", "Research this case with AI", "Explore related parts"]:
+              assert required in html, f"Missing diagnostic-to-research/parts workflow: {required}"
+          print("Diagnostic-to-AI-research and diagnostic-to-parts handoffs are present.")
           PY
       - name: Check required billing integration files
         run: |
