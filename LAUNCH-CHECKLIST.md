@@ -8,7 +8,7 @@ This repository branch is the prepared release candidate. Keep the existing live
 - Parts marketplace beta with supplier search shortcuts, a local shortlist/export, and a handoff into AI parts research
 - Marketplace roadmap in `MARKETPLACE-ROADMAP.md`; current beta is not a live-price engine or universal checkout
 - Supabase account creation, sign-in, and password-reset request flow
-- Free AI research allowance (3 reports per calendar month) and server-side Pro entitlement checks
+- Free AI research allowance (3 reports per UTC day, enforced with an atomic server-side reservation) and server-side Pro entitlement checks
 - Pro Technician subscription checkout at CA$29.99/month
 - Fixed-price one-time checkout flow for Parts Research (CA$15), Estimate Comparison (CA$25), and Used Vehicle Research (CA$30); custom research remains quote-first
 - Verified Stripe webhook processing and Stripe customer portal endpoint
