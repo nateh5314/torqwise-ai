@@ -39,7 +39,7 @@ function paymentEvent({ amount = 1500, currency = "cad" } = {}) {
     } },
   };
 }
-function configure({ matching = true } = {}) {
+function configure({ matching = true, alreadyPaid = false } = {}) {
   Object.assign(process.env, {
     STRIPE_WEBHOOK_SECRET: secret,
     SUPABASE_URL: base,
@@ -54,7 +54,8 @@ function configure({ matching = true } = {}) {
       return response(matching && sessionMatches ? [{
         request_code: requestCode,
         quoted_price: 15,
-        payment_status: "pending",
+        payment_status: alreadyPaid ? "paid" : "pending",
+        status: alreadyPaid ? "Completed" : "Awaiting customer",
         stripe_checkout_session_id: sessionId,
       }] : []);
     }
@@ -118,5 +119,13 @@ test("does not mark a request paid when the event belongs to a different checkou
   const result = await handler(signedRequest(event));
   assert.equal(result.status, 200);
   assert.deepEqual(await result.json(), { received: true, ignored: true });
+  assert.equal(calls.some(c => c.options.method === "PATCH"), false);
+});
+
+test("does not regress an already-paid request when Stripe retries the event", async () => {
+  const calls = configure({ alreadyPaid: true });
+  const result = await handler(signedRequest(paymentEvent()));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { received: true, already_paid: true });
   assert.equal(calls.some(c => c.options.method === "PATCH"), false);
 });
