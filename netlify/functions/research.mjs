@@ -25,6 +25,30 @@ function tooManyRequests(key) {
   item.count += 1; recentRequests.set(key, item);
   return item.count > MAX_REQUESTS_PER_WINDOW;
 }
+async function refundQuota({ supabaseUrl, secretKey, userId, quota }) {
+  // Best-effort rollback: a successful quota reservation should not cost a user
+  // a question when the upstream research service fails.
+  if (!quota?.period_type || !quota?.period_start || !userId) return;
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/torqwise_refund_question`, {
+      method: "POST",
+      headers: {
+        apikey: secretKey,
+        authorization: `Bearer ${secretKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        p_user_id: userId,
+        p_period_type: quota.period_type,
+        p_period_start: quota.period_start,
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) console.error("TORQWISE quota refund failed:", response.status);
+  } catch {
+    console.error("TORQWISE quota refund could not reach Supabase.");
+  }
+}
 function extractText(response) {
   const parts = [];
   for (const item of response.output || []) {
@@ -66,7 +90,7 @@ export default async (req) => {
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
-  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\\/+$/, "");
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   if (!supabaseUrl || !publishableKey || !secretKey) {
@@ -154,10 +178,14 @@ export default async (req) => {
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
-    return json({ error: "Could not reach the AI research service. Please retry shortly." }, 502);
+    await refundQuota({ supabaseUrl, secretKey, userId: user.id, quota });
+    return json({ error: "Could not reach the AI research service. Your question allowance has been restored if the quota service is available. Please retry shortly." }, 502);
   }
   let payload;
-  try { payload = await upstream.json(); } catch { return json({ error: "The AI service returned an unreadable response." }, 502); }
+  try { payload = await upstream.json(); } catch {
+    await refundQuota({ supabaseUrl, secretKey, userId: user.id, quota });
+    return json({ error: "The AI service returned an unreadable response. Your question allowance has been restored if the quota service is available." }, 502);
+  }
   if (!upstream.ok) {
     console.error("TORQWISE OpenAI API error:", upstream.status, payload?.error?.code || "unknown");
     if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website." }, 502);
@@ -165,6 +193,9 @@ export default async (req) => {
     return json({ error: "The AI service returned an error. Check API usage and Netlify function logs." }, 502);
   }
   const answer = extractText(payload);
-  if (!answer) return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
+  if (!answer) {
+    await refundQuota({ supabaseUrl, secretKey, userId: user.id, quota });
+    return json({ error: "The AI service did not return a usable answer. Your question allowance has been restored if the quota service is available. Please retry with a more specific question." }, 502);
+  }
   return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", quota: { used: quota.used, limit: quota.limit, remaining: quota.remaining, periodType: quota.period_type, periodStart: quota.period_start } });
 };
