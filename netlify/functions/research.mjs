@@ -69,7 +69,7 @@ export default async (req) => {
   if (!tokenMatch) return json({ error: "Sign in to your TORQWISE account before asking a research question." }, 401);
   let userResponse;
   try {
-    userResponse = await fetch(`${supabaseUrl.replace(/\\/$/, "")}/auth/v1/user`, {
+    userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { apikey: publishableKey, authorization: `Bearer ${tokenMatch[1]}` },
       signal: AbortSignal.timeout(10000),
     });
@@ -82,7 +82,7 @@ export default async (req) => {
   if (!user?.id) return json({ error: "Could not verify your account session." }, 401);
   let quota;
   try {
-    const rpcResponse = await fetch(`${supabaseUrl.replace(/\\/$/, "")}/rest/v1/rpc/torqwise_consume_question`, {
+    const rpcResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/torqwise_consume_question`, {
       method: "POST",
       headers: {
         apikey: secretKey,
