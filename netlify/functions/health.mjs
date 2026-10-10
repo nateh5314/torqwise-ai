@@ -8,18 +8,21 @@ export default async () => {
     supabaseServiceRoleKey: Boolean((process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim()),
     openaiApiKey: Boolean((process.env.OPENAI_API_KEY||"").trim()),
   };
-  const checks = { environment: Object.values(env).every(Boolean), database: "not_checked" };
+  const checks = { environment: Object.values(env).every(Boolean), usageTable: "not_checked", quotaFunction: "not_checked" };
   if (env.supabaseUrl && env.supabaseServiceRoleKey) {
     const base=(process.env.SUPABASE_URL||"").trim();
     const key=(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
+    const headers={apikey:key,authorization:"Bearer "+key};
     try {
-      const r=await fetch(base+"/rest/v1/rpc/reserve_research_usage", {
-        method:"OPTIONS",
-        headers:{apikey:key,authorization:"Bearer "+key,"content-type":"application/json"},
+      const table=await fetch(base+"/rest/v1/research_usage?select=id&limit=0",{headers});
+      checks.usageTable=table.ok ? "ready" : (table.status===404 ? "missing_migration" : "not_ready");
+    } catch { checks.usageTable="unreachable"; }
+    try {
+      const rpc=await fetch(base+"/rest/v1/rpc/reserve_research_usage",{
+        method:"OPTIONS",headers:{...headers,"content-type":"application/json"},
       });
-      // OPTIONS only tests route reachability, not whether SQL privileges/function args work.
-      checks.database = r.status < 500 ? "reachable_check_migration" : "unreachable";
-    } catch { checks.database="unreachable"; }
+      checks.quotaFunction=rpc.status===404 ? "missing_migration" : (rpc.status<500 ? "reachable" : "unreachable");
+    } catch { checks.quotaFunction="unreachable"; }
   }
-  return json({ configured: env.supabaseUrl && env.supabaseAnonKey, environment: env, checks }, 200);
+  return json({ configured: env.supabaseUrl && env.supabaseAnonKey, environment: env, checks });
 };
