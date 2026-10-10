@@ -67,6 +67,13 @@ jobs:
           test -f netlify/functions/admin-requests.mjs
           test -f supabase/research-usage.sql
           test -f supabase/customer-requests.sql
+          test -f supabase/account-history.sql
+          test -f netlify/functions/account-history.mjs
+          grep -q 'accountHistoryList' index.html
+          grep -q 'torqSaveAccountHistory' index.html
+          grep -q 'account-history' index.html
+          grep -q 'account_history' netlify/functions/account-history.mjs
+          grep -q 'user_id=eq.' netlify/functions/account-history.mjs
           test -f privacy.html
           test -f terms.html
           test -f support.html
