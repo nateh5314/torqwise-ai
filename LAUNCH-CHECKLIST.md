@@ -4,7 +4,9 @@ This repository branch is the prepared release candidate. Keep the existing live
 
 ## Included in this release candidate
 
-- Existing TORQWISE landing page, VIN decoder, offline diagnostics, Research Hub, and source links
+- Existing TORQWISE landing page, VIN decoder, guided diagnostic starters, Research Hub, and source links
+- Parts marketplace beta with supplier search shortcuts, a local shortlist/export, and a handoff into AI parts research
+- Marketplace roadmap in `MARKETPLACE-ROADMAP.md`; current beta is not a live-price engine or universal checkout
 - Supabase account creation, sign-in, and password-reset request flow
 - Free AI research allowance (3 reports per calendar month) and server-side Pro entitlement checks
 - Pro Technician subscription checkout at CA$29.99/month
@@ -14,6 +16,12 @@ This repository branch is the prepared release candidate. Keep the existing live
 - Optional request-notification email integration
 - Privacy, terms, and support pages
 - Baseline hosting security headers
+
+## Before connecting or publishing
+
+- Confirm the intended Netlify site and deployment branch. The repository deploys from the root (`publish = "."`) and includes Netlify Functions; do not use a static-only drag-and-drop upload.
+- Keep the existing design and feature set stable while validating the release candidate. First test the deployed home page, VIN lookup, diagnostics, AI research, parts shortlist, mobile navigation, and customer request flow.
+- Treat supplier links as research shortcuts only. Do not advertise live price/stock comparison, verified fitment, or direct checkout until the corresponding data/ordering integrations are implemented and tested.
 
 ## Operator-owned configuration required before public use
 
