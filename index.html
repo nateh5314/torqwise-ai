@@ -355,7 +355,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       setTimeout(()=>byId('authModal').classList.add('hidden'),700);
     }catch(err){msg.textContent=err.message||'Sign-in failed. Please try again.';}
   },true);
-  window.signout=async function(){if(client)await client.auth.signOut();currentUser=null;pro=false;refreshAccountUI();};
+  window.__torqwiseGetToken=async function(){if(!client)return {};const session=(await client.auth.getSession()).data.session;return session?{authorization:'Bearer '+session.access_token}:{}};\n  window.signout=async function(){if(client)await client.auth.signOut();currentUser=null;pro=false;refreshAccountUI();};
   async function refreshAccountUI(){
     const identity=byId('accountIdentity'); if(!identity)return;
     if(!ready||!client){identity.textContent='Secure customer accounts are being configured.';return;}
