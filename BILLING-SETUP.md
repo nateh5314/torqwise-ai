@@ -29,11 +29,15 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 
 ## Endpoints in this branch
 - `POST /.netlify/functions/create-checkout`: verifies the Supabase access token and creates a hosted Stripe Checkout subscription session.
+- `POST /.netlify/functions/create-portal`: verifies the signed-in user and creates a Stripe customer portal session for an existing subscription.
+- `GET /.netlify/functions/public-config`: returns only the public Supabase URL and anon key for the browser; it never returns secret keys.
 - `GET /.netlify/functions/billing-status`: verifies the user and returns that user's subscription state.
 - `POST /.netlify/functions/stripe-webhook`: verifies Stripe's timestamped HMAC signature before syncing subscription events.
 
 ## Important limitations before public launch
-- The existing HTML still contains demo/local-storage accounts. This branch's backend endpoints are not yet wired into the existing account UI, and the subscription gate has not been applied to AI usage.
+- The staging HTML now wires the account modal to Supabase sign-up/sign-in, shows the CA$29.99/month Pro subscription option, checks the signed-in user's subscription status, and offers the Stripe customer portal when Pro is active. This wiring is not yet production-verified.
+- Customer order/request history is still local to the browser; shared, durable customer records are not implemented.
+- Pro access is not yet enforced server-side for the AI research endpoint. Do not advertise protected features as gated or grant access based on the checkout return URL alone.
 - Do not take real payments until the UI uses real Supabase sign-in, checkout redirects are connected, the webhook and subscription status are tested, Pro access is enforced server-side for protected usage, and cancellation/refund/support/legal pages are ready.
 - The existing AI research endpoint currently uses a best-effort in-memory rate limit, which is not suitable for a public paid product by itself.
 - A successful checkout redirect is not proof of payment. Grant access only after a verified webhook updates the subscription record.
