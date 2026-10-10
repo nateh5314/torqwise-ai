@@ -12,6 +12,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Run account history API regression tests
+        run: node --test tests/account-history.test.mjs
       - name: Check Netlify function syntax
         run: |
           for file in netlify/functions/*.mjs; do
