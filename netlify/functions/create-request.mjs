@@ -18,7 +18,6 @@ export default async (req) => {
     const auth = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
     if (!auth.ok) return json({ error: "Your session expired. Please sign in again." }, 401);
     const user = await auth.json();
-    const serviceKey = env("OPENAI_API_KEY"); // Required server setup is not exposed to the browser.
     const code = "TQ-" + Date.now().toString().slice(-7) + "-" + Math.random().toString(36).slice(2, 6).toUpperCase();
     const services = { parts: ["Parts Research", 15], estimate: ["Estimate Comparison", 25], used: ["Used Vehicle Research", 30], business: ["Business / custom research", null] };
     const serviceId = clean(body.service, 30);
