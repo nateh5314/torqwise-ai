@@ -4,6 +4,8 @@ The repository now contains the website, account integration, server-side resear
 
 ## Required Netlify environment variables
 Set these on the Netlify site, with Functions/runtime scope. Start with Stripe test mode; switch to live credentials only when you are ready to accept real payments:
+- `OPENAI_API_KEY` (required for AI research; secret, server-side only)
+- `OPENAI_MODEL` (optional; defaults to `gpt-5-mini`)
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY` (public project anon/publishable key; server uses it only to verify a session)
 - `SUPABASE_SERVICE_ROLE_KEY` (secret; server functions only)
