@@ -86,6 +86,7 @@ export default async (req) => {
         body: JSON.stringify({
           payment_status: "paid",
           paid_at: new Date().toISOString(),
+          status: "In progress",
         }),
       });
       if (!r.ok) throw new Error("Supabase service payment update failed");
