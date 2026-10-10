@@ -89,7 +89,7 @@ begin
 
   insert into public.torqwise_quota_reservations (user_id, period_type, period_start)
   values (p_user_id, v_period_type, v_period_start)
-  returning public.torqwise_quota_reservations.reservation_id into v_reservation_id;
+  returning reservation_id into v_reservation_id;
 
   return query select true, v_used, v_limit, greatest(v_limit - v_used, 0),
     v_period_type, v_period_start, v_reservation_id;
