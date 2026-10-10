@@ -6,6 +6,7 @@ create table if not exists public.research_usage (
   model text,
   input_tokens integer check (input_tokens is null or input_tokens >= 0),
   output_tokens integer check (output_tokens is null or output_tokens >= 0),
+  estimated_cost_usd numeric(12,8) check (estimated_cost_usd is null or estimated_cost_usd >= 0),
   completed_at timestamptz,
   status text not null default 'reserved' check (status in ('reserved','completed'))
 );
@@ -14,6 +15,7 @@ create index if not exists research_usage_user_created_idx on public.research_us
 alter table public.research_usage add column if not exists model text;
 alter table public.research_usage add column if not exists input_tokens integer check (input_tokens is null or input_tokens >= 0);
 alter table public.research_usage add column if not exists output_tokens integer check (output_tokens is null or output_tokens >= 0);
+alter table public.research_usage add column if not exists estimated_cost_usd numeric(12,8) check (estimated_cost_usd is null or estimated_cost_usd >= 0);
 alter table public.research_usage add column if not exists completed_at timestamptz;
 alter table public.research_usage add column if not exists status text not null default 'reserved' check (status in ('reserved','completed'));
 alter table public.research_usage enable row level security;
