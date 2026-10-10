@@ -83,6 +83,7 @@ test("marks only the matching request and exact CAD amount as paid", async () =>
   assert.match(lookup.url, /stripe_checkout_session_id=eq.cs_test_123/);
   const patch = calls.find(c => c.options.method === "PATCH");
   assert.deepEqual(JSON.parse(patch.options.body).payment_status, "paid");
+  assert.deepEqual(JSON.parse(patch.options.body).status, "In progress");
   assert.ok(JSON.parse(patch.options.body).paid_at);
 });
 
