@@ -58,4 +58,17 @@ jobs:
           grep -q 'billing-status' index.html
           grep -q 'create-request' index.html
           grep -q 'TORQWISE_ADMIN_USER_IDS' netlify/functions/admin-requests.mjs
+          grep -q 'auth.signInWithPassword' index.html
+          grep -q 'billing-status' index.html
+          grep -q 'create-request' index.html
+          grep -q 'TORQWISE_ADMIN_USER_IDS' netlify/functions/admin-requests.mjs
           echo "Required integration files and UI hooks are present."
+      - name: Check security-critical server-side gates
+        run: |
+          grep -q 'Bearer' netlify/functions/research.mjs
+          grep -q 'research_usage' netlify/functions/research.mjs
+          grep -q 'timingSafeEqual' netlify/functions/stripe-webhook.mjs
+          grep -q 'STRIPE_WEBHOOK_SECRET' netlify/functions/stripe-webhook.mjs
+          grep -q 'admins.includes(user.id)' netlify/functions/admin-requests.mjs
+          grep -q 'X-Frame-Options' netlify.toml
+          echo "Research authentication, usage checks, webhook signature validation, admin authorization, and baseline headers are present."
