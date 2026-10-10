@@ -20,7 +20,7 @@ export default async req => {
       const [incomeRes,expenseRes,usageRes]=await Promise.all([
         fetch(base+"/rest/v1/customer_requests?select=request_code,label,quoted_price,paid_at,created_at,payment_status&payment_status=eq.paid&order=paid_at.desc&limit=1000",{headers}),
         fetch(base+"/rest/v1/business_expenses?select=id,description,category,amount,expense_date,notes,created_at&order=expense_date.desc&limit=500",{headers}),
-        fetch(base+"/rest/v1/research_usage?select=id,created_at&order=created_at.desc&limit=5000",{headers})
+        fetch(base+"/rest/v1/research_usage?select=id,created_at,model,input_tokens,output_tokens,completed_at,status&order=created_at.desc&limit=5000",{headers})
       ]);
       if(!incomeRes.ok) throw new Error("Could not load paid research income");
       if(!expenseRes.ok) throw new Error("Could not load expenses. Apply supabase/business-expenses.sql first.");
