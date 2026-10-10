@@ -16,7 +16,7 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 
 ## Supabase
 1. Open the staging Supabase project SQL Editor.
-2. Run `supabase/subscriptions.sql`.
+2. Run `supabase/subscriptions.sql` and `supabase/research-usage.sql`.
 3. Confirm email/password authentication is enabled and email confirmation settings are suitable for testing.
 4. Keep the service-role key server-side only.
 
