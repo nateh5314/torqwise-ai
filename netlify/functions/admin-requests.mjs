@@ -41,7 +41,7 @@ export default async req => {
           body: JSON.stringify({
             from: env("EMAIL_FROM"),
             to: [request.customer_email],
-            subject: "Your TORQWISE research request is ready for review",
+            subject: "Your TORQWISE research request is ready for payment",
             text: "Your TORQWISE request " + code + " has been reviewed and is ready for the next step.\n\nService: " + (request.label || request.service) + "\nPrice: " + amount + "\n\nSign in to your TORQWISE account at " + env("SITE_URL").replace(/\/$/, "") + "/#account to review the request and use secure checkout when available. Custom research remains quote-first. If the scope or price does not look right, contact support before paying."
           })
         });
