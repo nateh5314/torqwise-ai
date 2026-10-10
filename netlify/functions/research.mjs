@@ -45,12 +45,12 @@ async function getResearchAccess(req) {
   const reserveResponse = await fetch(base + '/rest/v1/rpc/reserve_research_usage', {
     method: 'POST',
     headers: { apikey: service, authorization: 'Bearer ' + service, 'content-type': 'application/json' },
-    body: JSON.stringify({ p_user_id: user.id, p_daily_limit: 3 }),
+    body: JSON.stringify({ p_user_id: user.id, p_monthly_limit: 3 }),
   });
   if (!reserveResponse.ok) throw new Error('Usage reservation failed; apply supabase/research-usage.sql before enabling AI research');
   const reservation = await reserveResponse.json();
   if (!reservation || reservation.allowed !== true || !Number.isSafeInteger(reservation.usage_id)) {
-    return { error: 'You have used your 3 free AI research reports for today. Your allowance resets at midnight UTC. Upgrade to Pro Technician for $29.99 CAD/month for continued research.', status: 402, remaining: 0 };
+    return { error: 'You have used your 3 free AI research reports this month. Your allowance resets at the start of next month (UTC). Upgrade to Pro Technician for $29.99 CAD/month for continued research.', status: 402, remaining: 0 };
   }
   return { userId: user.id, isPro: false, remaining: Number(reservation.remaining), usageId: reservation.usage_id };
 }
