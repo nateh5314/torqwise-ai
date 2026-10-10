@@ -14,6 +14,7 @@ Set these on the **staging Netlify site**, with Functions/runtime scope:
 - `RESEND_API_KEY` (optional; enables request notification emails)
 - `SUPPORT_EMAIL` (optional; operator inbox for new request notifications)
 - `EMAIL_FROM` (optional; verified sender address for request notifications)
+- `TORQWISE_ADMIN_USER_IDS` (comma-separated Supabase user UUIDs permitted to access `/admin.html`)
 
 Never put secret keys in HTML, commit them to Git, or send them in chat/screenshots.
 
@@ -37,12 +38,13 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 - `GET /.netlify/functions/public-config`: returns only the public Supabase URL and anon key for the browser; it never returns secret keys.
 - `POST /.netlify/functions/create-request`: validates the signed-in account and stores a customer research request.
 - `GET /.netlify/functions/list-requests`: returns only the signed-in customer's saved request history.
+- `GET/PATCH /.netlify/functions/admin-requests`: operator-only request management, restricted to `TORQWISE_ADMIN_USER_IDS`.
 - `GET /.netlify/functions/billing-status`: verifies the user and returns that user's subscription state.
 - `POST /.netlify/functions/stripe-webhook`: verifies Stripe's timestamped HMAC signature before syncing subscription events.
 
 ## Important limitations before public launch
-- The staging HTML now wires the account modal to Supabase sign-up/sign-in, shows the CA$29.99/month Pro subscription option, checks the signed-in user's subscription status, and offers the Stripe customer portal when Pro is active. This wiring is not yet production-verified.
-- Customer request submission and history are wired to persistent Supabase storage. Automated email notifications and an operator/admin dashboard for fulfilling requests are not yet implemented.
+- The staging site now includes draft Privacy Policy, Terms of Service, and Support pages. Confirm legal business identity, monitored contact address, refund terms, and privacy wording before public launch. The staging HTML wires the account modal to Supabase sign-up/sign-in, shows the CA$29.99/month Pro subscription option, checks the signed-in user's subscription status, and offers the Stripe customer portal when Pro is active. This wiring is not yet production-verified.
+- Customer request submission and history are wired to persistent Supabase storage. Optional request notification emails are supported through Resend environment variables, and `/admin.html` provides a restricted request-status dashboard. Set `SUPPORT_EMAIL`, configure the sender, and add the operator's Supabase user UUID to `TORQWISE_ADMIN_USER_IDS` before launch.
 - The AI research endpoint now checks the signed-in user's subscription and enforces a three-report monthly free allowance using `research_usage`. This is a basic count-based quota, not an atomic quota reservation under concurrent requests.
 - Do not take real payments until the UI uses real Supabase sign-in, checkout redirects are connected, the webhook and subscription status are tested, Pro access is enforced server-side for protected usage, and cancellation/refund/support/legal pages are ready.
 - The existing AI research endpoint currently uses a best-effort in-memory rate limit, which is not suitable for a public paid product by itself.
