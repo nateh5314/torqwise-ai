@@ -34,7 +34,9 @@ async function getResearchAccess(req) {
   if (!token) return { error: 'Sign in to use AI research. Free accounts include 3 reports per month.', status: 401 };
   const userResponse = await fetch(base + '/auth/v1/user', { headers: { apikey: anon, authorization: 'Bearer ' + token } });
   if (!userResponse.ok) return { error: 'Your session expired. Please sign in again.', status: 401 };
-  const user = await userResponse.json();
+  let user;
+  try { user = await userResponse.json(); } catch { return { error: 'Your session could not be verified. Please sign in again.', status: 401 }; }
+  if (!user || typeof user.id !== 'string' || !user.id) return { error: 'Your session could not be verified. Please sign in again.', status: 401 };
   const headers = { apikey: service, authorization: 'Bearer ' + service };
   const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status&order=updated_at.desc&limit=1', { headers });
   if (!subsResponse.ok) throw new Error('Subscription lookup failed');
