@@ -68,11 +68,17 @@ async function recordResearchUsage({userId,usageId,model,payload}) {
   const base=(process.env.SUPABASE_URL||"").trim(), key=(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
   if(!base||!key||!userId)return;
   const usage=payload?.usage||{};
+  const inputRate=Number(process.env.TORQWISE_OPENAI_INPUT_USD_PER_MILLION);
+  const outputRate=Number(process.env.TORQWISE_OPENAI_OUTPUT_USD_PER_MILLION);
+  const ratesConfigured=process.env.TORQWISE_OPENAI_INPUT_USD_PER_MILLION?.trim()!==""&&process.env.TORQWISE_OPENAI_OUTPUT_USD_PER_MILLION?.trim()!==""&&Number.isFinite(inputRate)&&inputRate>=0&&Number.isFinite(outputRate)&&outputRate>=0;
+  const hasTokens=Number.isSafeInteger(usage.input_tokens)&&Number.isSafeInteger(usage.output_tokens);
+  const estimatedCostUsd=ratesConfigured&&hasTokens?((usage.input_tokens*inputRate)+(usage.output_tokens*outputRate))/1000000:null;
   const record={
     user_id:userId,
     model:clean(model,120)||null,
     input_tokens:Number.isSafeInteger(usage.input_tokens)?usage.input_tokens:null,
     output_tokens:Number.isSafeInteger(usage.output_tokens)?usage.output_tokens:null,
+    estimated_cost_usd:estimatedCostUsd,
     completed_at:new Date().toISOString(),
     status:"completed"
   };
