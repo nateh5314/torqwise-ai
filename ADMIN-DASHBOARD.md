@@ -18,6 +18,14 @@ The private operator console is served at `/admin.html`. It uses the same Supaba
 - Filters by workflow status and payment status.
 - Lets an authorized operator change workflow status.
 - Keeps payment status read-only; never mark an order paid manually in the dashboard.
+- Adds a private Income & expenses view: totals recorded paid custom-research income, manually entered business expenses, and a simple tracked net figure.
+- Lets the operator record categorized expenses (including software/AI and hosting), dates, and notes, and remove mistaken entries.
+
+## Enable the finance ledger
+
+After the admin dashboard change is deployed, run `supabase/business-expenses.sql` once in the correct Supabase project's SQL Editor. The finance endpoint uses the same `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `TORQWISE_ADMIN_USER_IDS` variables and verifies the operator UUID server-side before accessing financial records. Do not put the service-role key in the browser or share it in chat.
+
+**Important limitations:** paid custom-research orders are currently the only automatically counted income source. Membership subscription revenue, Stripe fees, refunds, AI API costs, and hosting costs are not automatically reconciled yet; enter expenses manually and keep receipts. The net figure is only the difference between loaded paid requests and recorded expenses, not formal accounting profit or a tax report. The endpoint currently loads the most recent 1,000 paid requests and 500 expenses, so old records may require a future reporting/pagination upgrade.
 
 ## Customer data and payment safety
 
@@ -25,4 +33,4 @@ The browser does not receive the service-role key. The server verifies the Supab
 
 ## Not implemented / not verified yet
 
-This is a request-management console, not yet a complete business control centre. Revenue reconciliation, customer membership management, AI report generation/review/approval, report delivery, refunds, role management, and audit history still need dedicated implementation and testing. Email notices require the optional Resend configuration. Never enable live payments until the order, cancellation/refund, legal, and webhook workflows have been tested end-to-end in Stripe test mode.
+This is an early operator console, not yet a complete business control centre. Customer membership management, AI report generation/review/approval, report delivery, refunds, role management, audit history, and complete revenue/cost reconciliation still need dedicated implementation and testing. The finance UI and endpoint have not yet been verified against the real Supabase project. Email notices require the optional Resend configuration. Never enable live payments until the order, cancellation/refund, legal, and webhook workflows have been tested end-to-end in Stripe test mode.
