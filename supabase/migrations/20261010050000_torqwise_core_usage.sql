@@ -43,6 +43,7 @@ as $$
 declare
   v_plan text := 'free';
   v_status text := 'free';
+  v_period_end timestamptz;
   v_period_type text;
   v_period_start date;
   v_limit integer;
@@ -52,8 +53,8 @@ begin
     raise exception 'User id is required';
   end if;
 
-  select s.plan, s.status
-    into v_plan, v_status
+  select s.plan, s.status, s.current_period_end
+    into v_plan, v_status, v_period_end
     from public.torqwise_subscriptions as s
    where s.user_id = p_user_id;
 
@@ -62,9 +63,8 @@ begin
     v_status := 'free';
   end if;
 
-  if v_plan in ('driver', 'pro') and v_status = 'active' then
+  if v_plan in ('driver', 'pro') and v_status = 'active' and (v_period_end is null or v_period_end > now()) then
     v_period_type := 'monthly';
-    v_period_start := (now() at time zone 'UTC')::date;
     -- Paid quota periods are keyed to the UTC calendar month.
     v_period_start := date_trunc('month', now() at time zone 'UTC')::date;
     v_limit := case v_plan when 'driver' then 100 when 'pro' then 400 else 3 end;
