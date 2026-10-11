@@ -58,6 +58,9 @@ export default async (req) => {
   }
   let rows;
   try { rows = await response.json(); } catch { return respond({ error: "Fitment catalog returned an unreadable response." }, 502); }
+  // PostgREST may cap broad catalog searches at this request's 300-row limit.
+  // Be explicit about that boundary instead of implying an exhaustive no-match.
+  const catalogMayBeTruncated = Array.isArray(rows) && rows.length === 300;
   const matches = (Array.isArray(rows) ? rows : []).filter(row => {
     // Treat a supplied part number as an exact identifier, not a fuzzy search term.
     if (partNumber && normalize(row.part_number) !== normalize(partNumber)) return false;
@@ -125,8 +128,13 @@ export default async (req) => {
     matches,
     count: matches.length,
     catalogStatus: matches.length ? "matches_found" : "no_reviewed_match",
-    message: matches.length
-      ? "Matches below come from TORQWISE's reviewed first-party catalog."
-      : "No reviewed match exists in TORQWISE's catalog yet. No fitment is guaranteed from this lookup.",
+    catalogMayBeTruncated,
+    message: catalogMayBeTruncated
+      ? (matches.length
+        ? "Matches below come from TORQWISE's reviewed first-party catalog. This broad search reached the 300-record limit, so results may be incomplete; narrow the search with a part number or vehicle details."
+        : "This broad search reached the 300-record limit before a reviewed match could be confirmed. Narrow the search with a part number or vehicle details; no fitment is guaranteed.")
+      : matches.length
+        ? "Matches below come from TORQWISE's reviewed first-party catalog."
+        : "No reviewed match exists in TORQWISE's catalog yet. No fitment is guaranteed from this lookup.",
   });
 };
