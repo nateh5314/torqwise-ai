@@ -103,7 +103,7 @@
   </div>
  </div>
  <div id="diagOutput" class="diag-results" aria-live="polite"><div class="diag-empty">Search a code or choose a symptom to get started. Add the vehicle details above for a more useful case summary.</div></div>
- <div class="card diag-history" style="margin-top:18px"><div class="sectionhead"><div><h3>Saved diagnostic cases</h3><p class="sub">Cases are saved only in this browser on this device. Do not use this feature to store customer-identifying information.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" type="button" onclick="diagExportHistory()">Export backup</button><button class="secondary" type="button" onclick="diagClearHistory()">Clear history</button></div></div><div id="diagHistory"><div class="empty">No saved cases yet.</div></div></div>
+ <div class="card diag-history" style="margin-top:18px"><div class="sectionhead"><div><h3>Saved diagnostic cases</h3><p class="sub">Cases are saved only in this browser on this device. Do not use this feature to store customer-identifying information.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" type="button" onclick="diagExportHistory()">Export backup</button><button class="secondary" type="button" onclick="document.getElementById(&quot;diagImportFile&quot;).click()">Import backup</button><input id="diagImportFile" type="file" accept=".json,application/json" hidden onchange="diagImportHistory(event)"><button class="secondary" type="button" onclick="diagClearHistory()">Clear history</button></div></div><div id="diagHistory"><div class="empty">No saved cases yet.</div></div></div>
  <p class="tiny" style="margin-top:14px">The generic OBD-II reference database is bundled with this website build and loads from TORQWISE assets, not a third-party API. Generic code definitions are not OEM repair procedures. Confirm applicability, test values, wiring and safety precautions using service information for the exact vehicle.</p>
 </div></section>
 
@@ -516,6 +516,25 @@ function diagRenderHistory(){
 }
 function diagClearHistory(){if(!confirm('Clear saved diagnostic cases from this browser?'))return;localStorage.removeItem('torqwise_diag_history_v1');diagRenderHistory()}
 function diagExportHistory(){const cases=diagReadHistory();if(!cases.length){alert('There are no saved diagnostic cases to export yet.');return}const backup={format:'TORQWISE-DIAGNOSTIC-BACKUP',version:1,exportedAt:new Date().toISOString(),cases};const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-diagnostic-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+async function diagImportHistory(event){
+ const input=event&&event.target,file=input&&input.files&&input.files[0];if(!file)return;
+ try{
+  if(file.size>2*1024*1024)throw new Error('Backup file is larger than 2 MB.');
+  const backup=JSON.parse(await file.text());
+  if(!backup||backup.format!=='TORQWISE-DIAGNOSTIC-BACKUP'||backup.version!==1||!Array.isArray(backup.cases))throw new Error('Unsupported TORQWISE diagnostic backup format or version.');
+  if(backup.cases.length>500)throw new Error('Backup contains too many records to import safely.');
+  const imported=backup.cases.map(row=>{
+   if(!row||typeof row!=='object'||Array.isArray(row)||typeof row.id!=='string'||!row.id.trim()||typeof row.title!=='string'||!row.title.trim()||typeof row.created!=='string'||!Number.isFinite(Date.parse(row.created)))throw new Error('Backup contains an invalid case. Nothing was imported.');
+   const session=row.session&&typeof row.session==='object'&&!Array.isArray(row.session)?row.session:{};
+   return {id:row.id.slice(0,100),title:row.title.slice(0,300),vehicle:typeof row.vehicle==='string'?row.vehicle.slice(0,500):'Vehicle not specified',created:new Date(row.created).toISOString(),kind:row.kind==='symptom'?'symptom':'code',code:typeof row.code==='string'&&/^[PBCU][0-9A-F]{4}$/i.test(row.code)?row.code.toUpperCase():null,symptomId:typeof row.symptomId==='string'?row.symptomId.slice(0,80):null,session:{answers:Array.isArray(session.answers)?session.answers.filter(v=>typeof v==='string').slice(0,100).map(v=>v.slice(0,500)):[],findings:typeof session.findings==='string'?session.findings.slice(0,10000):''}};
+  });
+  const existing=diagReadHistory(),known=new Set(existing.map(row=>row.id)),fresh=imported.filter(row=>!known.has(row.id));
+  const merged=[...fresh,...existing].sort((a,b)=>Date.parse(b.created)-Date.parse(a.created)).slice(0,25);
+  localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(merged));diagRenderHistory();
+  alert('Imported '+fresh.length+' new diagnostic case'+(fresh.length===1?'':'s')+'. Existing case IDs were skipped; up to 25 recent cases are kept in this browser.');
+ }catch(error){alert('Could not import diagnostic backup: '+String(error&&error.message||error));}
+ finally{if(input)input.value='';}
+}
 document.getElementById('diagSearchForm').addEventListener('submit',e=>{e.preventDefault();diagRunSearch(document.getElementById('diagQuery').value)});diagRenderHistory();
 
 /* Load generic OBD-II records from the bundled build asset. No runtime third-party fetch. */
