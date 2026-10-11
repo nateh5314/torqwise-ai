@@ -231,3 +231,14 @@ test("rejects null, array, and primitive research bodies before checking quota",
     assert.ok(!calls.some(c => c.url === "https://api.openai.com/v1/responses"));
   }
 });
+
+
+test("bounds identity and subscription lookup requests", async () => {
+  const calls = configure();
+  const result = await handler(request());
+  assert.equal(result.status, 200);
+  const identity = calls.find(c => c.url === base + "/auth/v1/user");
+  const subscription = calls.find(c => c.url.includes("/rest/v1/subscriptions?"));
+  assert.ok(identity?.options.signal, "identity verification should have a timeout");
+  assert.ok(subscription?.options.signal, "subscription lookup should have a timeout");
+});
