@@ -142,6 +142,26 @@ test("adds a cautious safety instruction when severe brake symptoms are reported
   assert.ok(payload.input.includes("braking"));
 });
 
+test("follow-up research carries new test results and prior report without reserving another report", async () => {
+  const calls = configure();
+  const result = await handler(request({ body: {
+    asset: "2018 Ford F-150 5.0L",
+    question: "The misfire stayed on cylinder 2 after swapping coils. What next?",
+    followUp: true,
+    previousAnswer: "Hypothesis: ignition coil failure; not yet confirmed.",
+    symptoms: "Rough warm idle",
+    dtcs: "P0302 current",
+    testsPerformed: "Swapped cylinder 2 and 3 coils; misfire stayed on cylinder 2"
+  }}));
+  assert.equal(result.status, 200);
+  const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+  const payload = JSON.parse(aiCall.options.body);
+  assert.ok(payload.input.includes("Previous TORQWISE report"));
+  assert.ok(payload.input.includes("misfire stayed on cylinder 2"));
+  assert.ok(payload.instructions.includes("revise the next step"));
+  assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
+});
+
 test("blocks exhausted monthly allowance without calling the AI provider", async () => {
   const calls = configure({ reservation: response({ allowed: false, remaining: 0 }) });
   const result = await handler(request());
