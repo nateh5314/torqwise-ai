@@ -42,9 +42,7 @@ function configure({ authResponse = response({ id: userId, email: "mechanic@exam
     if (target.includes("/rest/v1/customer_requests?") && options.method === "PATCH") {
       return response([]);
     }
-    if (target.includes("/v1/checkout/sessions/cs_old")) {
-      return response({ id: "cs_old", status: "open", url: "https://checkout.stripe.example/old" });
-    }
+    if (target.includes("/v1/checkout/sessions/cs_old")) return previousSessionResponse;
     if (target === "https://api.stripe.com/v1/checkout/sessions" && options.method === "POST") {
       return response(stripeSession, 200);
     }
