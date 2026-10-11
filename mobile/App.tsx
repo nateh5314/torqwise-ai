@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ActivityIndicator, Linking, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type Tab = "Home" | "Diagnose" | "VIN" | "Garage";
@@ -25,7 +26,35 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [vehicle, setVehicle] = useState("");
   const [vehicles, setVehicles] = useState<string[]>([]);
+  const [garageLoaded, setGarageLoaded] = useState(false);
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem("@torqwise/garage/v1")
+      .then((stored) => {
+        if (!mounted) return;
+        if (stored) {
+          const parsed: unknown = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+            setVehicles(parsed);
+          }
+        }
+      })
+      .catch(() => {
+        if (mounted) setNotice("Saved garage could not be loaded. You can still add vehicles.");
+      })
+      .finally(() => {
+        if (mounted) setGarageLoaded(true);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!garageLoaded) return;
+    AsyncStorage.setItem("@torqwise/garage/v1", JSON.stringify(vehicles))
+      .catch(() => setNotice("Garage changes could not be saved on this device."));
+  }, [vehicles, garageLoaded]);
   const dtc = useMemo(() => CODES[code.trim().toUpperCase()], [code]);
 
   async function openWeb() { await Linking.openURL(WEB); }
@@ -52,7 +81,7 @@ export default function App() {
     const value = vehicle.trim();
     if (!value) return;
     if (vehicles.some(v => v.toLowerCase() === value.toLowerCase())) { setNotice("That vehicle is already in your local garage."); return; }
-    setVehicles(current => [value, ...current]); setVehicle(""); setNotice("Saved to this device for prototype testing.");
+    setVehicles(current => [value, ...current]); setVehicle(""); setNotice("Vehicle saved on this device.");
   }
 
   return (
@@ -115,7 +144,7 @@ export default function App() {
           <View style={s.formRow}><TextInput style={[s.input,{flex:1,marginBottom:0}]} value={vehicle} onChangeText={setVehicle} placeholder="e.g. 2018 Ford F-150 5.0L" placeholderTextColor="#7e8794" returnKeyType="done" onSubmitEditing={addVehicle}/><TouchableOpacity style={s.addButton} onPress={addVehicle}><Text style={s.primaryText}>ADD</Text></TouchableOpacity></View>
           {vehicles.length === 0 ? <View style={s.empty}><Text style={s.emptyIcon}>▣</Text><Text style={s.panelTitle}>Your garage is ready</Text><Text style={s.body}>Add a vehicle to start your local list. Cloud sync and account-linked history are planned for a later integration phase.</Text></View> :
             vehicles.map((v,i)=><View style={s.vehicleRow} key={v+i}><View style={{flex:1}}><Text style={s.panelTitle}>{v}</Text><Text style={s.mutedCaps}>SAVED ON THIS DEVICE</Text></View><TouchableOpacity onPress={()=>setVehicles(current=>current.filter((_,index)=>index!==i))}><Text style={s.remove}>REMOVE</Text></TouchableOpacity></View>)}
-          <Text style={s.disclaimer}>Prototype note: garage entries are held in memory and reset when the app restarts. Persistent storage and account sync are not connected yet.</Text>
+          <Text style={s.disclaimer}>Garage entries are saved on this device. Cloud sync and account-linked history are not connected yet.</Text>
         </>}
 
         {!!notice && <TouchableOpacity style={s.notice} onPress={()=>setNotice("")}><Text style={s.noticeText}>{notice}  ×</Text></TouchableOpacity>}
