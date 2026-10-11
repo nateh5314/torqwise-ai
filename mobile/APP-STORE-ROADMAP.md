@@ -1,44 +1,60 @@
 # TORQWISE iPhone release roadmap
 
-## Stage 1 — Developer prototype
+## Stage 1 — Developer prototype (completed)
 - [x] Dedicated Expo / React Native project isolated under `mobile/`
-- [x] Native-feeling Home, Diagnose, VIN and Garage navigation
-- [x] Starter generic-code guidance and safety caveats
-- [x] VIN decoding via NHTSA vPIC
+- [x] Home, Diagnose, VIN and Garage navigation
+- [x] Starter generic-code guidance with diagnostic safety caveats
+- [x] VIN decoding through NHTSA vPIC
 - [x] Local vehicle garage persistence
-- [x] Attempt to load the website's validated generic DTC JSON, cache it on device, and fall back gracefully when unavailable
-- [x] CI type-check and iOS JavaScript bundle validation
+- [x] Runtime loader for the website's generic DTC JSON, local cache and starter fallback
+- [x] CI type-check, iOS JavaScript bundle export and Expo config validation
 
-## Stage 2 — Product integration
-- [ ] Verify that the current production website serves `/assets/dtc-database.json` and that the native app can load it successfully.
-- [ ] Integrate sign-in with the existing account service using secure token storage and tested session expiry behavior.
-- [ ] Sync garage, saved diagnostic cases, and research history to the signed-in user's account.
-- [ ] Integrate the AI research endpoint through server-side APIs only; never ship OpenAI or Supabase service-role secrets in the app.
-- [ ] Add request timeouts, retry states, rate limits, analytics consent, and graceful offline behavior.
-- [ ] Add automated tests for VIN validation, DTC parsing, and storage behavior.
+## Stage 2 — Core product reliability (next)
+- [ ] Verify the deployed site serves `/assets/dtc-database.json`; test actual iPhone network behavior and the 9,000-record threshold.
+- [ ] Add a user-facing connection state with retry action, last successful sync time, and a clear distinction between cached and starter data.
+- [ ] Add automated tests for VIN validation, DTC normalization, malformed data, cache corruption and offline behavior.
+- [ ] Add saved diagnostic cases with technician notes, timestamps, reopen/delete actions and local persistence.
+- [ ] Validate long diagnostic content on smaller iPhones, including keyboard dismissal and scrolling.
+- [ ] Add user-friendly errors for invalid VINs, network timeouts, empty search results and storage failures.
 
-## Stage 3 — Quality and compliance
-- [ ] Review all app screens with VoiceOver and Dynamic Type; verify touch targets, contrast, keyboard behavior, and iPhone safe areas.
-- [ ] Add final app icon, launch assets, support contact, privacy policy, terms, and App Store screenshots.
-- [ ] Complete App Privacy disclosures and data-retention / account-deletion workflows.
-- [ ] Decide the subscription strategy. Paid digital features may be subject to Apple's in-app purchase rules; validate the correct approach before accepting payments in the app.
-- [ ] Test on multiple physical iPhone sizes and iOS versions, including offline, API failures, expired sessions, and poor connectivity.
-- [ ] Confirm bundle ID ownership, Apple Developer account, App Store Connect app record, and signing credentials.
+## Stage 3 — Account and paid-product integration
+- [ ] Inspect the existing web authentication model and choose a compatible native sign-in flow.
+- [ ] Store session credentials only in platform-secure storage; test sign-out, token refresh and expired sessions.
+- [ ] Sync garage and case history only after sign-in, with clear offline behavior and conflict handling.
+- [ ] Connect AI research through a server-side endpoint; never ship OpenAI keys or Supabase service-role secrets in the binary.
+- [ ] Enforce subscription entitlements server-side, not only with a client-side switch.
+- [ ] Confirm whether native digital subscriptions must use StoreKit / Apple's in-app purchase flow. Do not enable web checkout in the iOS app until the applicable Apple rules have been reviewed.
 
-## Stage 4 — TestFlight and release
-Run from the `mobile/` directory after signing in to an Expo account and confirming the bundle identifier:
+## Stage 4 — Privacy, accessibility and review
+- [ ] Publish a public privacy policy and support page with real contact details.
+- [ ] Complete App Store Connect privacy labels based on actual network traffic, SDKs, identifiers, analytics and account data.
+- [ ] Provide account deletion in-app if account creation is supported; explain retention and deletion of cloud data.
+- [ ] Review VoiceOver labels, Dynamic Type, contrast, keyboard behavior, reduced motion and touch target sizes.
+- [ ] Create final app icon, launch screen, screenshots for required device sizes, subtitle, description, keywords and support URL.
+- [ ] Test on physical iPhones across supported iOS versions: fresh install, upgrade, offline, poor connectivity, API failures, privacy permissions and subscription restore.
+- [ ] Confirm ownership/availability of bundle ID `ca.torqwise.automotive` and set production app metadata.
+- [ ] Confirm Apple Developer Program membership, App Store Connect app record and signing credentials.
+
+## Stage 5 — TestFlight and release
+1. Build a signed internal preview and install it on a real iPhone.
+2. Run a structured acceptance test and fix every release-blocking issue.
+3. Upload a production build to App Store Connect.
+4. Invite internal TestFlight testers, then external testers if useful.
+5. Complete App Review details, export compliance and privacy disclosures.
+6. Submit for App Review only after the release checklist is complete.
+
+From `mobile/`, once Expo and Apple credentials are configured:
+
 ```sh
 npx eas-cli build --platform ios --profile preview
-```
-
-For an App Store Connect / TestFlight distribution build:
-```sh
 npx eas-cli build --platform ios --profile production
 ```
 
-Submission can then be performed with EAS Submit or Xcode/App Store Connect once Apple signing and account details are configured. A successful build does not guarantee App Review approval.
+A successful JavaScript bundle or cloud build is not the same as a signed, device-tested, App Store-approved release.
 
-## Current limitations
-The native DTC screen currently retrieves the generic reference dataset from the existing website at runtime rather than embedding the multi-megabyte dataset inside the app binary. It checks for at least 9,000 valid records and caches a normalized version on-device. If the current deployed website is unavailable or doesn't serve that file, the app uses its small built-in starter set and shows a clear status.
-
-This is a development app, not yet a released or App Store-submitted product. The build profile configuration does not include any credentials and cannot sign or submit the app until the owner's Apple / Expo accounts are configured.
+## Known limitations — do not treat as complete
+- The app has not yet been signed, installed on a physical iPhone, submitted to TestFlight or reviewed by Apple.
+- The generic DTC dataset is downloaded at runtime from the production website. If the deployed site does not serve it correctly, only the starter codes are available.
+- Account sign-in, cloud history, native AI research and paid entitlement integration are not yet complete.
+- The bundle identifier is provisional until ownership and availability are confirmed.
+- The owner must configure their own Apple Developer and Expo accounts. No credentials belong in this repository.
