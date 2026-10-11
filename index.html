@@ -732,7 +732,8 @@ async function torqLookupFitment(button){
  const result=document.getElementById('torqFitmentResults');
  const body={partNumber:document.getElementById('torqFitmentPart').value.trim(),brand:document.getElementById('torqFitmentBrand').value.trim(),partType:document.getElementById('torqFitmentType').value.trim(),year:document.getElementById('torqFitmentYear').value.trim(),make:document.getElementById('torqFitmentMake').value.trim(),model:document.getElementById('torqFitmentModel').value.trim(),engine:document.getElementById('torqFitmentEngine').value.trim(),trim:document.getElementById('torqFitmentTrim').value.trim(),driveType:document.getElementById('torqFitmentDrive').value.trim(),axlePosition:document.getElementById('torqFitmentAxle').value.trim(),absType:document.getElementById('torqFitmentAbs').value.trim()};
  if(!body.partNumber&&!body.brand&&!body.partType&&!(body.year&&body.make&&body.model)){result.textContent='Enter a part number, brand, part category, or vehicle year, make and model.';return;}
- button.disabled=true;button.textContent='Searching catalog…';result.textContent='Checking TORQWISE reviewed fitment records…';
+ if((body.year||body.make||body.model)&&!(body.year&&body.make&&body.model)){result.textContent='To check vehicle fitment, enter all three: year, make, and model. You can still search by part number, brand, or part category without them.';return;}
+ button.disabled=true;button.textContent='Searching catalog…';result.textContent='Checking reviewed TORQWISE catalog records and application restrictions…';
  try{
   const response=await fetch('/.netlify/functions/fitment-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await response.json();if(!response.ok)throw new Error(data.error||'Catalog lookup failed.');
