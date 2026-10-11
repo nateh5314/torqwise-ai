@@ -9,10 +9,10 @@ Netlify runs `npm run build`. The build script downloads the open OBDex generic 
 ## Data scope and source
 
 - Source project: https://github.com/foerbsnavi/OBDex
-- Published source data: https://foerbsnavi.github.io/obdex/generic.min.json
+- Source data: https://github.com/foerbsnavi/OBDex/tree/main/data/generic
 - Dataset license: CC0-1.0 (as stated by the source project's LICENSE-DATA)
 - Scope: generic P-, B-, C- and U-family OBD-II definitions. This does not include a complete manufacturer-specific DTC catalogue, factory service procedures, wiring diagrams, live scan-tool data, or guaranteed vehicle-specific repair steps.
-- Each source update is checked for at least 9,000 records, valid code format, and required titles/descriptions before it can be published.
+- Each source update is checked for at least 9,000 unique records, valid code format, and required English titles/source references before it can be published.
 
 The source is fetched at build time only; the deployed website serves its generated JSON asset locally. A later build refreshes the snapshot from the source. If all sources fail or the dataset fails validation, the build stops. Review the source licence and contents before changing data providers.
 
