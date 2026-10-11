@@ -24,7 +24,12 @@ export default async (req) => {
   const driveType = normalize(body.driveType || body.drive_type).slice(0, 80);
   const axlePosition = normalize(body.axlePosition || body.axle_position).slice(0, 80);
   const absType = normalize(body.absType || body.abs_type).slice(0, 80);
-  const year = Number.isInteger(Number(body.year)) && Number(body.year) >= 1900 && Number(body.year) <= 2200 ? Number(body.year) : null;
+  const yearProvided = body.year !== undefined && body.year !== null && String(body.year).trim() !== "";
+  const parsedYear = yearProvided ? Number(body.year) : null;
+  if (yearProvided && (!Number.isInteger(parsedYear) || parsedYear < 1900 || parsedYear > 2200)) {
+    return respond({ error: "Enter a valid four-digit vehicle year between 1900 and 2200." }, 400);
+  }
+  const year = yearProvided ? parsedYear : null;
   if (!partNumber && !partType && !brand && !(make && model)) return respond({ error: "Enter a part number, brand or part type, or a vehicle year, make, and model." }, 400);
   const query = new URLSearchParams({
     select: "id,part_number,brand,part_name,vehicle_year_start,vehicle_year_end,make,model,trim,engine,drive_type,axle_position,abs_type,market,status,evidence,fitment_notes,reviewed_at,source_checked_at",
