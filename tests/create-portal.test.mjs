@@ -20,6 +20,7 @@ function configure({ subscriptions = response([]), stripe = response({ url: "htt
     calls.push({ url: target, options });
     if (target === base + "/auth/v1/user") return auth;
     if (target.includes("/rest/v1/subscriptions?")) return subscriptions;
+    if (target === "https://api.stripe.com/v1/subscriptions?status=all&limit=100") return response({ data: [] });
     if (target === "https://api.stripe.com/v1/billing_portal/sessions") return stripe;
     throw new Error("Unexpected fetch: " + target);
   };
@@ -47,7 +48,7 @@ test("does not open a billing portal for an account without a Pro subscription",
   const calls = configure({ subscriptions: response([{ stripe_customer_id: "cus_driver", price_id: "price_driver_monthly", status: "active" }]) });
   const result = await handler(request());
   assert.equal(result.status, 404);
-  assert.match((await result.json()).error, /No Pro subscription/i);
+  assert.match((await result.json()).error, /couldn.t find an active Pro subscription/i);
   assert.ok(!calls.some(c => c.url === "https://api.stripe.com/v1/billing_portal/sessions"));
 });
 
@@ -61,7 +62,7 @@ test("opens billing portal for the configured Pro price even when a different pl
   assert.equal((await result.json()).url, "https://billing.stripe.example/session");
   const stripe = calls.find(c => c.url === "https://api.stripe.com/v1/billing_portal/sessions");
   assert.equal(new URLSearchParams(stripe.options.body).get("customer"), "cus_pro");
-  assert.equal(new URLSearchParams(stripe.options.body).get("return_url"), "https://torqwise.example/#account");
+  assert.equal(new URLSearchParams(stripe.options.body).get("return_url"), "https://torqwise.example/?billing_return=1#account");
 });
 
 test("fails closed when the subscription lookup fails", async () => {
