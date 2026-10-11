@@ -25,6 +25,31 @@ export default async (req) => {
     return json({ error: "Account verification is temporarily unavailable." }, 503);
   }
   if (!user?.id || !user?.email) return json({ error: "Your session is invalid or expired. Sign in again." }, 401);
+
+  // Prevent accidental duplicate Pro subscriptions for the same signed-in account.
+  // If we cannot verify the current subscription state, fail closed instead of risking a second charge.
+  const supabaseUrl = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co";
+  const serviceKey = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceKey) return json({ error: "Subscription verification is not configured yet. Please try again later." }, 503);
+  try {
+    const existingResponse = await fetch(
+      supabaseUrl.replace(/\/+$/, "") + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) +
+      "&status=in.(active,trialing)&price_id=eq." + encodeURIComponent(price) + "&select=stripe_subscription_id&limit=1",
+      { headers: { apikey: serviceKey, authorization: "Bearer " + serviceKey }, signal: AbortSignal.timeout(5000) }
+    );
+    if (!existingResponse.ok) {
+      console.error("Existing subscription check failed:", existingResponse.status);
+      return json({ error: "Could not verify your current subscription. No new checkout was started; please retry shortly." }, 503);
+    }
+    const existing = await existingResponse.json();
+    if (Array.isArray(existing) && existing.length) {
+      return json({ error: "Your Pro Technician subscription is already active. Use Manage subscription in your account to update or cancel it." }, 409);
+    }
+  } catch (e) {
+    console.error("Existing subscription check unavailable:", e?.name || "network error");
+    return json({ error: "Could not verify your current subscription. No new checkout was started; please retry shortly." }, 503);
+  }
+
   const form = new URLSearchParams({
     mode: "subscription",
     "line_items[0][price]": price,
