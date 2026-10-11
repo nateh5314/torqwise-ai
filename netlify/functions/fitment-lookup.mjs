@@ -17,8 +17,10 @@ export default async (req) => {
   const partNumber = typeof body.partNumber === "string" ? body.partNumber.trim().slice(0, 100) : "";
   const make = normalize(body.make).slice(0, 100);
   const model = normalize(body.model).slice(0, 100);
+  const brand = normalize(body.brand).slice(0, 100);
+  const partType = normalize(body.partType).slice(0, 100);
   const year = Number.isInteger(Number(body.year)) && Number(body.year) >= 1900 && Number(body.year) <= 2200 ? Number(body.year) : null;
-  if (!partNumber && !(make && model)) return respond({ error: "Enter a part number or a vehicle year, make, and model." }, 400);
+  if (!partNumber && !partType && !brand && !(make && model)) return respond({ error: "Enter a part number, brand or part type, or a vehicle year, make, and model." }, 400);
   const query = new URLSearchParams({
     select: "id,part_number,brand,part_name,vehicle_year_start,vehicle_year_end,make,model,trim,engine,drive_type,axle_position,abs_type,market,status,evidence,fitment_notes,reviewed_at,source_checked_at",
     status: "in.(verified,cross_reference)",
@@ -28,6 +30,8 @@ export default async (req) => {
   if (partNumber) query.set("part_number", "ilike." + partNumber.replace(/[%,]/g, ""));
   if (make) query.set("make", "ilike." + make);
   if (model) query.set("model", "ilike.*" + model.replace(/[*%]/g, "") + "*");
+  if (brand) query.set("brand", "ilike.*" + brand.replace(/[*%]/g, "") + "*");
+  if (partType) query.set("part_name", "ilike.*" + partType.replace(/[*%]/g, "") + "*");
   let response;
   try {
     response = await fetch(base.replace(/\/+$/, "") + "/rest/v1/fitment_applications?" + query.toString(), {
@@ -55,7 +59,7 @@ export default async (req) => {
       : "Multiple-source cross-reference; not an OEM-confirmed guarantee.",
   }));
   return respond({
-    query: { partNumber: partNumber || null, year, make: make || null, model: model || null },
+    query: { partNumber: partNumber || null, partType: partType || null, brand: brand || null, year, make: make || null, model: model || null },
     matches,
     count: matches.length,
     catalogStatus: matches.length ? "matches_found" : "no_reviewed_match",
