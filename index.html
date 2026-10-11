@@ -1099,7 +1099,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       try{
         const session=(await client.auth.getSession()).data.session;
         const r=await fetch('/.netlify/functions/create-checkout',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({})});
-        const data=await r.json();if(!r.ok||!data.url){const d=data.diagnostic;const details=d?'\n\nDiagnostic details\nStripe error: '+(d.stripeErrorCode||'unknown')+'\nHTTP status: '+(d.stripeStatus||'unknown')+'\nStripe account: '+(d.stripeAccountId||'unavailable')+'\nPrice setting: '+(d.priceSource||'unknown')+'\nPrice ID ending: '+(d.priceIdSuffix||'unknown')+'\nParameter: '+(d.stripeErrorParam||'none'):'';throw new Error((data.error||'Checkout could not be started.')+details);}
+        const data=await r.json();if(!r.ok||!data.url){throw new Error(data.error||'We could not open secure checkout right now. Please try again in a moment.');}
         location.assign(data.url);
       }catch(err){status.textContent=err.message||'Could not start checkout.';button.disabled=false;button.textContent='Try subscription checkout again';}
     };
