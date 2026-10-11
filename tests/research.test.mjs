@@ -87,6 +87,32 @@ test("requires atomic quota reservation before calling the AI provider", async (
   assert.ok(!calls.some(c => c.url.includes("/rest/v1/research_usage?")));
 });
 
+test("passes structured diagnostic evidence into the AI research request", async () => {
+  const calls = configure();
+  const result = await handler(request({ body: {
+    asset: "2018 Ford F-150 5.0L",
+    question: "Diagnose intermittent misfire",
+    symptoms: "Shakes at warm idle",
+    dtcs: "P0302 current; P0300 pending",
+    freezeFrame: "720 rpm, coolant 94 C",
+    liveData: "STFT bank 1 +18%, bank 2 +2%",
+    testsPerformed: "Swapped coil 2 with coil 3; misfire stayed on cylinder 2",
+    repairsAttempted: "None"
+  }}));
+  assert.equal(result.status, 200);
+  const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+  assert.ok(aiCall, "AI provider should be called");
+  const payload = JSON.parse(aiCall.options.body);
+  for (const detail of [
+    "Technician-observed symptoms: Shakes at warm idle",
+    "Diagnostic trouble codes (preserve exact codes and status): P0302 current; P0300 pending",
+    "Freeze-frame / snapshot data: 720 rpm, coolant 94 C",
+    "Scan-tool live data and units: STFT bank 1 +18%, bank 2 +2%",
+    "Tests already performed and measured results: Swapped coil 2 with coil 3; misfire stayed on cylinder 2",
+    "Repairs or parts already tried: None"
+  ]) assert.ok(payload.input.includes(detail), "Missing structured diagnostic detail: " + detail);
+});
+
 test("blocks exhausted monthly allowance without calling the AI provider", async () => {
   const calls = configure({ reservation: response({ allowed: false, remaining: 0 }) });
   const result = await handler(request());
