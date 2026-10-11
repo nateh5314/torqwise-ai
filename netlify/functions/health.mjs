@@ -14,7 +14,7 @@ export default async () => {
   };
   const checks = { environment: Object.values(env).every(Boolean), usageTable: "not_checked", quotaFunction: "not_checked" };
   if (env.supabaseUrl && env.supabaseServiceRoleKey) {
-    const base=(process.env.SUPABASE_URL||"").trim();
+    const base=supabaseBase();
     const key=(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
     const headers={apikey:key,authorization:"Bearer "+key};
     try {
