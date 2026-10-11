@@ -22,7 +22,9 @@ async function getUser(accessToken) {
 }
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
-  const stripeKey = env("STRIPE_SECRET_KEY"), price = "price_1UOqWAIpQUHCdBSxunv5OqtK", site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
+  const stripeKey = env("STRIPE_SECRET_KEY"), price = "price_1UOqWAIpQUHCdBSxunv5OqtK";
+  const requestOrigin = req.headers.get("origin") || "";
+  const site = /^https:\/\/(?:deploy-preview-[0-9]+--torqwiseauto\.netlify\.app|torqwiseauto\.netlify\.app)$/i.test(requestOrigin) ? requestOrigin : (env("SITE_URL") || "https://torqwiseauto.netlify.app");
   if (!stripeKey || !price || !site) return json({ error: "Billing is not configured yet. Ask the site administrator to finish setup." }, 503);
   const auth = req.headers.get("authorization") || "";
   const match = auth.match(/^Bearer\s+(.+)$/i);
