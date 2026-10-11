@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 
 const sources = [
   "https://foerbsnavi.github.io/obdex/generic.min.json",
-  "https://cdn.jsdelivr.net/gh/foerbsnavi/OBDex@main/generic.min.json"
+  "https://cdn.jsdelivr.net/gh/foerbsnavi/OBDex@main/dist/generic.min.json"
 ];
 const minimumRecords = 9000;
 let records;
