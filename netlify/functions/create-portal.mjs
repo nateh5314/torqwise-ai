@@ -16,7 +16,9 @@ const env = (name) => {
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
   const stripeKey = env("STRIPE_SECRET_KEY"), site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
-  const proPriceId = env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID") || "price_1UOqWAIpQUHCdBSxunv5OqtK";
+  // Match billing-status and checkout exactly. Do not allow a stale Netlify
+  // price environment variable to make an active subscription look unlinked.
+  const proPriceId = "price_1UOqWAIpQUHCdBSxunv5OqtK";
   const supabaseUrl = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co", anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!stripeKey || !site || !supabaseUrl || !anon || !service || !proPriceId) return json({ error: "Billing management is not configured yet." }, 503);
   const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
