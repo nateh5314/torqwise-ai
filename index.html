@@ -715,7 +715,7 @@ function torqRenderAiResult(data){
   if(src&&typeof src==='object')return {url:typeof src.url==='string'?src.url:'',title:typeof src.title==='string'?src.title:(typeof src.source==='string'?src.source:'')};
   return null;
  }).filter(src=>{
-  if(!src||!/^https?:\\/\\//i.test(src.url))return false;
+  if(!src||!src.url)return false;
   try{const parsed=new URL(src.url);if(!['http:','https:'].includes(parsed.protocol)||seenSourceUrls.has(parsed.href))return false;seenSourceUrls.add(parsed.href);src.url=parsed.href;src.title=(src.title||parsed.hostname).slice(0,240);return true;}catch(_){return false;}
  });
  const h=document.createElement('h4');h.textContent=sources.length?'Sources to check':'Source links were not supplied with this response';h.style.marginTop='18px';host.appendChild(h);
