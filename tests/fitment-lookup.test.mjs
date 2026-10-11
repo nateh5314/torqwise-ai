@@ -101,3 +101,11 @@ test("does not fuzzy-match a supplied part number", async () => {
   const data = await response.json();
   assert.equal(data.matches.length, 0);
 });
+
+test("rejects an invalid supplied year instead of silently broadening lookup", async () => {
+  configure([catalogRow()]);
+  const response = await handler(request({ year: "twenty twenty-one", make: "Ford", model: "F-150", partType: "brake pad" }));
+  assert.equal(response.status, 400);
+  const data = await response.json();
+  assert.match(data.error, /valid four-digit vehicle year/i);
+});
