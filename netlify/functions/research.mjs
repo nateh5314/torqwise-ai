@@ -1,5 +1,16 @@
+function env(name) {
+  // Netlify's runtime env API is the supported path for function-scoped variables.
+  // Keep process.env as a compatibility fallback for local development and tests.
+  try {
+    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {
+      const value = Netlify.env.get(name);
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {}
+  return (process.env[name] || "").trim();
+}
 function supabaseBase() {
-  const raw = (process.env.SUPABASE_URL || "https://wnvmtjimldleqfjuuprl.supabase.co").trim().replace(/\/+$/, "");
+  const raw = (env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co").trim().replace(/\/+$/, "");
   if (/^https?:\/\//i.test(raw)) return raw;
   const host = raw.match(/^([a-z0-9-]+\.supabase\.co)$/i);
   if (host) return "https://" + host[1];
@@ -37,8 +48,8 @@ function tooManyRequests(key) {
 }
 async function getResearchAccess(req, followUp = false) {
   const base = supabaseBase();
-  const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || '').trim();
-  const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const anon = (env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY") || '').trim();
+  const service = (env("SUPABASE_SERVICE_ROLE_KEY") || '').trim();
   if (!base || !anon || !service) return { error: 'Research accounts are not configured yet.', status: 503 };
   const token = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return { error: 'Sign in to use AI research. Free accounts include 3 reports per month.', status: 401 };
@@ -53,7 +64,7 @@ async function getResearchAccess(req, followUp = false) {
   // every signed-in user. Unexpected server errors still fail safely.
   // Keep entitlement checks aligned with billing-status.mjs and create-portal.mjs.
   // The live environment must use its matching live price ID and credentials.
-  const proPriceId = (process.env.STRIPE_PRICE_PRO || process.env.STRIPE_PRO_PRICE_ID || "").trim();
+  const proPriceId = (env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID") || "").trim();
   let subs = [];
   const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status,price_id&order=updated_at.desc&limit=10', { headers });
   if (subsResponse.ok) {
@@ -83,7 +94,7 @@ async function getResearchAccess(req, followUp = false) {
 }
 async function releaseResearchUsage(userId, usageId) {
   if (!userId || !Number.isSafeInteger(usageId)) return;
-  const base = supabaseBase(); const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const base = supabaseBase(); const key = (env("SUPABASE_SERVICE_ROLE_KEY") || '').trim();
   const response = await fetch(base + '/rest/v1/rpc/release_research_usage', {
     method: 'POST',
     headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json' },
@@ -96,7 +107,7 @@ async function lookupReviewedFitment(partNumber) {
   const cleanPart = clean(partNumber, 100);
   if (!cleanPart) return [];
   const base = supabaseBase();
-  const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || "").trim();
+  const anon = (env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY") || "").trim();
   if (!base || !anon) return [];
   const params = new URLSearchParams({
     select: "id,part_number,brand,part_name,vehicle_year_start,vehicle_year_end,make,model,trim,engine,drive_type,axle_position,abs_type,market,status,evidence,fitment_notes,reviewed_at,source_checked_at",
@@ -179,7 +190,7 @@ function extractSources(response) {
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST to submit a research question." }, 405);
-  if (!process.env.OPENAI_API_KEY) return json({ error: "The server is missing OPENAI_API_KEY. Add it in Netlify environment variables and redeploy." }, 503);
+  if (!env("OPENAI_API_KEY")) return json({ error: "The server is missing OPENAI_API_KEY. Add it in Netlify environment variables and redeploy." }, 503);
   let body;
   try { body = await req.json(); } catch { return json({ error: "The request body must be valid JSON." }, 400); }
   const asset = clean(body.asset, 240);
@@ -279,9 +290,9 @@ export default async (req) => {
   try {
     upstream = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
-      headers: { "authorization": `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" },
+      headers: { "authorization": `Bearer ${env("OPENAI_API_KEY")}`, "content-type": "application/json" },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-5-mini",
+        model: env("OPENAI_MODEL") || "gpt-5-mini",
         instructions: requestInstructions,
         input,
         ...(followUp ? {} : { tools: [{ type: "web_search", search_context_size: "medium" }] }),
@@ -312,5 +323,5 @@ export default async (req) => {
     try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
   }
-  return json({ answer, sources: followUp ? [] : extractSources(payload), fitmentMatches, model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
+  return json({ answer, sources: followUp ? [] : extractSources(payload), fitmentMatches, model: payload.model || env("OPENAI_MODEL") || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
 };
