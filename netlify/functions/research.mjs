@@ -189,6 +189,16 @@ export default async (req) => {
   const detectedDtcCodes = [...new Set([question, dtcs].join(" ").match(/\b[PCBU][0-9A-F]{4}\b/gi) || [])]
     .map(code => code.toUpperCase())
     .slice(0, 20);
+  // Heuristic flags prompt caution; they are not a diagnosis or proof of danger.
+  const safetyText = [question, symptoms, dtcs, liveData, testsPerformed].join(" ").toLowerCase();
+  const safetyFlags = [
+    { flag: "braking", pattern: /brake pedal (?:goes to floor|soft|spongy)|brake failure|no brakes|brake fluid leak|brakes? (?:not working|failed)/ },
+    { flag: "steering or vehicle control", pattern: /steering (?:failed|locked|loss|failure)|lost steering|wheel (?:about to come off|loose)|control arm (?:broken|separated)/ },
+    { flag: "fire, smoke, or fuel leak", pattern: /fuel leak|gasoline leak|diesel leak|smoke from (?:engine|vehicle|wiring)|electrical fire|flames|burning wiring/ },
+    { flag: "severe overheating", pattern: /overheating|temperature gauge (?:in red|pegged)|coolant boiling|coolant spraying/ },
+    { flag: "high-voltage electric vehicle", pattern: /high[- ]voltage|orange cable|ev battery pack|hybrid battery|electric vehicle battery/ },
+    { flag: "pressurized hydraulic or injection hazard", pattern: /hydraulic (?:hose|line) (?:burst|ruptured|leaking)|pinhole leak|high[- ]pressure (?:fuel|hydraulic)|diesel injection injury/ },
+  ].filter(item => item.pattern.test(safetyText)).map(item => item.flag);
   const followUp = body.followUp === true;
   const previousAnswer = clean(body.previousAnswer, 8000);
   if (followUp && (!question || !previousAnswer)) return json({ error: "A follow-up needs a question and the previous research report." }, 400);
@@ -229,6 +239,7 @@ export default async (req) => {
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
+        ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes and status: ${dtcs}`] : []),
         ...(freezeFrame ? [`Freeze-frame / snapshot data: ${freezeFrame}`] : []),
@@ -243,6 +254,7 @@ export default async (req) => {
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
+        ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes (preserve exact codes and status): ${dtcs}`] : []),
         ...(freezeFrame ? [`Freeze-frame / snapshot data: ${freezeFrame}`] : []),
