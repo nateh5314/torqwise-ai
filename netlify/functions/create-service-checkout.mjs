@@ -27,7 +27,7 @@ async function supabase(path, options = {}) {
 }
 export default async req => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
-  const stripeKey = env("STRIPE_SECRET_KEY"), site = env("SITE_URL");
+  const stripeKey = env("STRIPE_SECRET_KEY"), site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
   if (!stripeKey || !site) return json({ error: "Service checkout is not configured yet." }, 503);
   const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return json({ error: "Sign in before paying for a research request." }, 401);
