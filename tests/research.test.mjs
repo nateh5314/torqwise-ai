@@ -215,3 +215,19 @@ test("releases the reserved report when the AI provider fails", async () => {
   assert.equal(result.status, 429);
   assert.ok(calls.some(c => c.url === base + "/rest/v1/rpc/release_research_usage"));
 });
+
+
+test("rejects null, array, and primitive research bodies before checking quota", async () => {
+  for (const raw of ["null", "[]", "42", "\"text\""]) {
+    const calls = configure();
+    const result = await handler(new Request("https://torqwise.example/.netlify/functions/research", {
+      method: "POST",
+      headers: { authorization: "Bearer valid-token", "content-type": "application/json" },
+      body: raw,
+    }));
+    assert.equal(result.status, 400);
+    assert.deepEqual(await result.json(), { error: "The request body must be a JSON object." });
+    assert.ok(!calls.some(c => c.url.includes("/rest/v1/rpc/reserve_research_usage")));
+    assert.ok(!calls.some(c => c.url === "https://api.openai.com/v1/responses"));
+  }
+});
