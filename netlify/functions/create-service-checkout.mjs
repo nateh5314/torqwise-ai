@@ -41,7 +41,7 @@ export default async req => {
   if (!token) return json({ error: "Sign in before paying for a research request." }, 401);
   let body;
   try { body = await req.json(); } catch { return json({ error: "Request body must be valid JSON." }, 400); }
-  const code = typeof body.requestCode === "string" ? body.requestCode.trim().slice(0, 60) : "";
+  const code = body && typeof body.requestCode === "string" ? body.requestCode.trim().slice(0, 60) : "";
   if (!/^TQ-[A-Z0-9-]+$/i.test(code)) return json({ error: "Choose a valid saved request." }, 400);
   try {
     const user = await getUser(token);
