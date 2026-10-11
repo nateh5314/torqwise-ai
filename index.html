@@ -1085,7 +1085,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       try{
         const session=(await client.auth.getSession()).data.session;
         const r=await fetch('/.netlify/functions/create-checkout',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({})});
-        const data=await r.json();if(!r.ok||!data.url)throw new Error(data.error||'Checkout could not be started.');
+        const data=await r.json();if(!r.ok||!data.url){const d=data.diagnostic;const details=d?'\n\nDiagnostic: '+JSON.stringify(d):'';throw new Error((data.error||'Checkout could not be started.')+details);}
         location.assign(data.url);
       }catch(err){status.textContent=err.message||'Could not start checkout.';button.disabled=false;button.textContent='Try subscription checkout again';}
     };
