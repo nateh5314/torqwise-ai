@@ -253,6 +253,159 @@ const DIAG_GUIDES={
   advanced:["Capture freeze-frame, Mode $06 where supported, cylinder misfire counters and all related DTCs.","Inspect plugs/coils/boots and verify ignition control/primary-secondary behavior using the approved procedure.","Compare fuel trims, MAF/load and intake integrity; smoke-test if indicated.","Verify injector balance/current and fuel pressure/volume using OEM specifications.","If indicated, perform compression/leak-down and valve-train/timing checks; consider catalyst protection if active misfire persists."]
  }
 };
+/* Additional guided paths built into the existing diagnostic workspace.
+   Branches prioritize tests only; they never declare a failed part. */
+function torqGuidePair(config){
+ const makeBranch=(topic,yes,no,unknown,next)=>({
+  "0:yes":{title:topic+" — evidence found",text:yes,next},
+  "0:no":{title:topic+" — no evidence yet",text:no,next},
+  "0:unknown":{title:"Collect the missing baseline",text:unknown,next},
+  "1:yes":{title:"Verify the suspected issue",text:yes,next:"Confirm the condition with the specified test and repair only what the evidence supports."},
+  "1:no":{title:"Continue to the next test",text:no,next:"Use the exact vehicle's diagnostic chart and measured values before replacing parts."},
+  "1:unknown":{title:"Inspect or measure before deciding",text:unknown,next:"Record results and follow the manufacturer test sequence."}
+ });
+ return {
+  beginner:config.beginner,
+  questions:[
+   {q:config.q1,opts:[["yes",config.yes1],["no",config.no1],["unknown","Not checked / not sure"]]},
+   {q:config.q2,opts:[["yes",config.yes2],["no",config.no2],["unknown","Not checked / not sure"]]}
+  ],
+  branches:makeBranch(config.topic,config.yesText,config.noText,config.unknownText,config.next),
+  advanced:config.advanced
+ };
+}
+Object.assign(DIAG_GUIDES,{
+ P0455:torqGuidePair({
+  beginner:"P0455 indicates a large EVAP-system leak was detected. It does not by itself identify the leak location or prove the fuel cap is the cause.",
+  topic:"EVAP leak check",q1:"Is the fuel cap loose, damaged, or missing its seal?",yes1:"Yes, cap/seal looks suspect",no1:"No obvious cap issue",
+  q2:"Has the EVAP system been tested with an approved smoke/pressure procedure?",yes2:"Yes, a leak test was performed",no2:"No leak test yet",
+  yesText:"Inspect the cap seal and filler-neck sealing surfaces; confirm the leak with the specified test before replacing anything.",
+  noText:"A cap can appear normal and still fail to seal. Test the EVAP system using the vehicle-specific procedure and correct pressure limits.",
+  unknownText:"Check the cap and filler-neck area with the engine off; do not introduce unregulated shop air or smoke.",
+  next:"If the leak is not at the cap, isolate hoses, purge/vent valves and tank connections using the OEM test.",
+  advanced:["Read stored, pending and permanent codes plus freeze-frame.","Inspect cap, filler neck, EVAP hoses and accessible connections.","Run the manufacturer-approved EVAP leak test at its specified pressure.","Command purge/vent valves with a capable scan tool if supported.","Verify monitor completion after repair; do not assume a generic smoke result covers every leak path."]
+ }),
+ P0442:torqGuidePair({
+  beginner:"P0442 indicates a small EVAP leak. A small leak can be difficult to locate visually, and the code alone does not identify a failed valve or hose.",
+  topic:"Small EVAP leak",q1:"Is the fuel cap seal or filler-neck area visibly damaged?",yes1:"Visible cap/filler-neck concern",no1:"No visible concern",
+  q2:"Has a low-pressure EVAP smoke test located a leak?",yes2:"Yes, leak location found",no2:"Not tested / not located",
+  yesText:"Confirm the exact leak point and sealing condition; inspect adjacent fittings before replacing parts.",
+  noText:"Use the correct low-pressure smoke procedure. Avoid over-pressurizing the EVAP system or using unsafe improvised methods.",
+  unknownText:"Start with a careful visual check, then use the manufacturer-approved leak test.",
+  next:"Inspect the purge valve, vent valve, hoses and seals only as indicated by the test results.",
+  advanced:["Record all codes and freeze-frame.","Inspect cap seal and filler neck.","Perform approved EVAP leak detection within specified pressure limits.","Check purge/vent valve sealing and commanded operation.","Repeat the required EVAP monitor after the repair."]
+ }),
+ P0128:torqGuidePair({
+  beginner:"P0128 means coolant temperature did not reach the expected thermostat-regulated range within the expected conditions. A thermostat is one possibility, not a confirmed failure.",
+  topic:"Engine warm-up",q1:"Does live coolant temperature rise normally from a cold start?",yes1:"Temperature rises steadily",no1:"Temperature stays low or behaves erratically",
+  q2:"Has coolant level and the coolant-temperature sensor reading been checked against ambient temperature?",yes2:"Yes, readings/level checked",no2:"Not checked yet",
+  yesText:"Compare warm-up time and thermostat operation with the vehicle's specifications; verify cooling-fan strategy and operating conditions.",
+  noText:"Check coolant level only when safe/cool, inspect for leaks, and compare scan-tool temperature to a reliable temperature measurement.",
+  unknownText:"With the engine cold, verify coolant level and compare the sensor's cold reading to ambient conditions before warm-up testing.",
+  next:"Confirm sensor plausibility and thermostat performance using the OEM procedure before replacing either component.",
+  advanced:["Record ambient temperature, freeze-frame and coolant-temperature PID.","Compare cold-soak ECT to intake-air/ambient temperature.","Check coolant level and system integrity when cold.","Monitor warm-up and fan operation against OEM data.","Test thermostat and ECT circuit using specified procedures."]
+ }),
+ P0101:torqGuidePair({
+  beginner:"P0101 indicates a mass-airflow signal outside the expected range. It may involve air leaks, contamination, wiring, restrictions or engine condition—not just the MAF sensor.",
+  topic:"Air metering",q1:"Is the intake duct/filter housing damaged or leaking after the air meter?",yes1:"Intake damage/leak found",no1:"No visible intake damage",
+  q2:"Do live MAF/load values match the manufacturer's expected range for this engine and condition?",yes2:"Values appear plausible",no2:"Values are out of range / not checked",
+  yesText:"Repair confirmed intake leaks and retest; verify that the fault returns under the original conditions before moving on.",
+  noText:"Inspect connector, power/ground, wiring, intake restriction and sensor contamination using the OEM procedure.",
+  unknownText:"Save freeze-frame, inspect the intake tract, and compare live data against vehicle-specific specifications.",
+  next:"Check for intake leaks and restrictions before condemning the MAF; use approved cleaning procedures only if specified.",
+  advanced:["Read companion DTCs and freeze-frame.","Inspect filter, ducting and clamps downstream of the MAF.","Check MAF power, ground and signal integrity.","Compare MAF/load values under defined RPM/load conditions.","Check intake/exhaust restrictions and engine mechanical condition if readings remain implausible."]
+ }),
+ P0135:torqGuidePair({
+  beginner:"P0135 typically indicates an upstream oxygen-sensor heater circuit fault on Bank 1 Sensor 1. Verify the exact vehicle definition and circuit before replacing a sensor.",
+  topic:"Oxygen-sensor heater circuit",q1:"Is there visible damage, corrosion or a loose connection at the sensor harness?",yes1:"Harness/connector issue visible",no1:"No visible harness issue",
+  q2:"Have heater power, ground/control and resistance been tested to the OEM specification?",yes2:"Circuit tests completed",no2:"Circuit tests not completed",
+  yesText:"Repair wiring/connector faults confirmed by testing, then clear and verify using the specified monitor procedure.",
+  noText:"Check the correct fuse/feed, grounds, control side and heater element using the wiring diagram and safe test method.",
+  unknownText:"Identify the exact sensor and wiring diagram; exhaust components may be hot, so allow safe cooling before inspection.",
+  next:"Test the heater circuit and sensor against vehicle-specific values; do not infer sensor failure from the code alone.",
+  advanced:["Confirm bank/sensor location from service information.","Inspect harness routing, connector pins and heat damage.","Verify fuse and heater supply under load.","Test control/ground and heater resistance using OEM limits.","Repair, clear if appropriate, and confirm monitor completion."]
+ }),
+ P0401:torqGuidePair({
+  beginner:"P0401 indicates insufficient EGR flow under the monitor conditions. Carbon restriction, valve operation, passages, controls or sensor feedback may be involved.",
+  topic:"EGR flow",q1:"Are there signs of restricted EGR passages or a valve that cannot move as commanded?",yes1:"Restriction/operation concern found",no1:"No obvious restriction or binding",
+  q2:"Does commanded EGR operation produce the expected sensor/engine response?",yes2:"Expected response observed",no2:"Response missing / not tested",
+  yesText:"Confirm the restriction or actuator issue with the vehicle's specified flow test before cleaning or replacing parts.",
+  noText:"Check command circuit, vacuum supply if fitted, feedback sensors and passage restriction using the correct diagram.",
+  unknownText:"Record companion codes and use scan-tool active tests only when supported by the service procedure.",
+  next:"Confirm actual flow with the manufacturer's test; avoid applying generic actuator assumptions across different systems.",
+  advanced:["Identify EGR architecture and read companion codes.","Inspect related passages and cooler where fitted, when cool and safe.","Command the valve and monitor feedback using a capable scan tool.","Check control wiring, vacuum supply or actuator circuit as applicable.","Verify flow with the OEM procedure and complete the specified drive cycle."]
+ }),
+ P0562:torqGuidePair({
+  beginner:"P0562 indicates system voltage below the control module's expected range. The battery, connections, charging system, wiring or excessive load may be responsible.",
+  topic:"Low system voltage",q1:"Are battery terminals, grounds or main power connections loose or corroded?",yes1:"Connection issue visible",no1:"Connections look sound",
+  q2:"Have battery condition and charging voltage been tested under the specified conditions?",yes2:"Battery/charging tests done",no2:"Not tested yet",
+  yesText:"Clean/repair only confirmed connection faults using safe battery procedures, then retest voltage and stored codes.",
+  noText:"Load-test the battery and test the charging system, cables, grounds and voltage drop to manufacturer specifications.",
+  unknownText:"Check battery condition and connections safely; avoid shorting terminals and follow battery handling precautions.",
+  next:"Record voltage at the battery and relevant module feeds under load; don't replace an alternator solely from this code.",
+  advanced:["Record freeze-frame and all low-voltage/network codes.","Inspect battery posts, grounds and high-current connections.","Test battery state/health with the correct procedure.","Measure charging output and voltage drop under load.","Check parasitic draw or wiring faults if the supply system passes."]
+ }),
+ P0016:torqGuidePair({
+  beginner:"P0016 indicates a crankshaft/camshaft correlation mismatch. Possible causes include timing, oil/VVT operation, sensor circuits or mechanical issues. Incorrect timing can cause engine damage.",
+  topic:"Cam/crank correlation",q1:"Did the fault begin after timing-chain/belt or engine work, or is there abnormal mechanical noise?",yes1:"Recent work/noise concern",no1:"No recent work or unusual noise",
+  q2:"Have oil level/condition and cam/crank signal data been checked using the OEM procedure?",yes2:"Oil and signal checks completed",no2:"Not checked yet",
+  yesText:"If timing work or mechanical noise is involved, stop unnecessary running and verify mechanical timing before further operation.",
+  noText:"Check oil level/specification and VVT control, then evaluate sensor signals and timing using the exact engine procedure.",
+  unknownText:"Avoid extended running if there is abnormal noise or severe drivability trouble. Preserve codes and inspect oil condition safely.",
+  next:"Use engine-specific timing marks, correlation data and service steps; do not replace sensors as a substitute for checking mechanical timing.",
+  advanced:["Check all cam/crank/VVT codes and freeze-frame.","Verify oil level, condition and correct specification.","Inspect sensor connectors and signal integrity.","Compare cam/crank correlation and VVT commanded/actual values.","Verify mechanical timing with engine-specific procedures if indicated."]
+ }),
+ P0340:torqGuidePair({
+  beginner:"P0340 typically indicates a camshaft-position sensor circuit fault. The cause may be the sensor, wiring, power/ground, signal target or a timing/mechanical issue.",
+  topic:"Camshaft signal",q1:"Is there visible damage or a loose/corroded connection at the cam sensor circuit?",yes1:"Harness/connector concern",no1:"No visible connection concern",
+  q2:"Has the sensor's supply, ground and signal been tested against the wiring diagram?",yes2:"Circuit tests completed",no2:"Not tested yet",
+  yesText:"Repair a verified wiring/connector issue and confirm a stable signal before replacing the sensor.",
+  noText:"Test supply, ground and signal with the specified equipment; check related crank-sensor/timing codes.",
+  unknownText:"Identify sensor location and circuit from the exact vehicle information; keep clear of moving engine components.",
+  next:"Confirm circuit integrity and signal pattern, then consider reluctor/timing checks if the circuit passes.",
+  advanced:["Record companion DTCs and freeze-frame.","Inspect connector pins, harness routing and oil/coolant contamination.","Verify power, ground and reference/signal using the correct diagram.","Check signal during cranking/running with approved equipment.","Investigate reluctor and mechanical timing only when indicated."]
+ }),
+ P0118:torqGuidePair({
+  beginner:"P0118 typically means the engine coolant-temperature input is reporting an abnormally high electrical signal, often interpreted as very cold coolant. The circuit must be tested before replacing the sensor.",
+  topic:"Coolant temperature circuit",q1:"After a true cold soak, does scan-tool coolant temperature match ambient temperature reasonably?",yes1:"Cold reading is plausible",no1:"Reading is implausible / not checked",
+  q2:"Have the sensor connector, reference circuit and wiring been tested to the wiring diagram?",yes2:"Circuit checks completed",no2:"Not checked yet",
+  yesText:"If the cold reading is plausible, monitor the signal through warm-up and check intermittent wiring faults under the approved procedure.",
+  noText:"Inspect connector corrosion/open circuits and compare sensor resistance/signal with OEM temperature charts.",
+  unknownText:"Start with a cold-soak plausibility check and inspect the circuit with ignition off as directed by service information.",
+  next:"Use the exact sensor type and circuit diagram; never jumper unknown terminals or assume the sensor itself is faulty.",
+  advanced:["Record freeze-frame and compare cold-soak ECT to ambient/IAT.","Inspect connector pins, harness damage and open/high-resistance circuits.","Test reference voltage and return/signal circuit per diagram.","Measure sensor response using the OEM temperature/resistance chart.","Verify stable readings through warm-up and confirm monitor behavior."]
+ }),
+ P0174:torqGuidePair({
+  beginner:"P0174 indicates a lean correction limit on Bank 2. Air leaks, air metering, fuel delivery, exhaust leaks or sensor feedback may contribute; the code doesn't identify a part.",
+  topic:"Bank 2 lean condition",q1:"Are fuel trims much worse at idle than at a steady elevated RPM?",yes1:"Lean correction worse at idle",no1:"Lean correction similar across RPM",
+  q2:"Have intake/PCV leaks and fuel pressure/volume been checked?",yes2:"Leak/fuel tests performed",no2:"Not checked yet",
+  yesText:"Prioritize unmetered air leaks affecting Bank 2 and confirm with a suitable smoke test.",
+  noText:"Check MAF plausibility, fuel delivery and exhaust/sensor integrity using the correct engine-specific procedure.",
+  unknownText:"Save freeze-frame and compare bank-to-bank trims at idle and elevated RPM before selecting a test.",
+  next:"Use measured trims and OEM fuel-pressure/air-metering specifications; do not replace sensors or injectors from the code alone.",
+  advanced:["Read all DTCs and preserve freeze-frame.","Compare STFT/LTFT on both banks at idle and elevated RPM.","Inspect intake/PCV/vacuum circuits and smoke-test as appropriate.","Compare MAF/load and fuel pressure/volume with OEM data.","Check exhaust leaks and upstream sensor response if earlier tests pass."]
+ }),
+ P0301:torqGuidePair({
+  beginner:"P0301 indicates a misfire detected on cylinder 1. It does not identify whether the cause is ignition, fuel, compression, wiring or another engine fault.",
+  topic:"Cylinder 1 misfire",q1:"Is the check-engine light flashing or is the misfire severe?",yes1:"Flashing light / severe misfire",no1:"No severe active misfire",
+  q2:"Do ignition, injector and mechanical tests identify a cylinder 1 issue?",yes2:"A test points to a system",no2:"No test result yet",
+  yesText:"Stop or limit operation if the misfire is severe; follow the test result to confirm the cause without unnecessary driving.",
+  noText:"Compare cylinder-specific ignition/injector data, inspect connectors and follow the engine-specific diagnostic chart.",
+  unknownText:"Read companion codes and freeze-frame, then determine whether the misfire is active before running further tests.",
+  next:"Use approved cylinder contribution, ignition, fuel and compression tests as applicable; do not swap parts without tracking the result.",
+  advanced:["Assess severity; avoid driving with a flashing MIL/severe misfire.","Record misfire counters, freeze-frame and related codes.","Inspect cylinder 1 ignition components and wiring using OEM procedure.","Test injector control/fuel delivery if indicated.","Perform compression/leak-down and valve-train checks if ignition/fuel tests pass."]
+ }),
+ P0302:torqGuidePair({
+  beginner:"P0302 indicates a misfire detected on cylinder 2. The code identifies the cylinder being flagged, not the failed component.",
+  topic:"Cylinder 2 misfire",q1:"Is the check-engine light flashing or is the misfire severe?",yes1:"Flashing light / severe misfire",no1:"No severe active misfire",
+  q2:"Do ignition, injector and mechanical tests identify a cylinder 2 issue?",yes2:"A test points to a system",no2:"No test result yet",
+  yesText:"Stop or limit operation if the misfire is severe; follow the test result to confirm the cause without unnecessary driving.",
+  noText:"Compare cylinder-specific ignition/injector data, inspect connectors and follow the engine-specific diagnostic chart.",
+  unknownText:"Read companion codes and freeze-frame, then determine whether the misfire is active before running further tests.",
+  next:"Use approved cylinder contribution, ignition, fuel and compression tests as applicable; do not swap parts without tracking the result.",
+  advanced:["Assess severity; avoid driving with a flashing MIL/severe misfire.","Record misfire counters, freeze-frame and related codes.","Inspect cylinder 2 ignition components and wiring using OEM procedure.","Test injector control/fuel delivery if indicated.","Perform compression/leak-down and valve-train checks if ignition/fuel tests pass."]
+ })
+});
 function diagGuidedHtml(code){
  const g=DIAG_GUIDES[code];
  if(!g)return '<div class="guided-box"><h3>Guided follow-up</h3><p>This code has a general test sequence above. Guided branching is currently available for P0171, P0420 and P0300; more paths will be added after validation.</p></div>';
