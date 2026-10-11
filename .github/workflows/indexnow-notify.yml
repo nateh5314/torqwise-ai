@@ -19,7 +19,7 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Notify IndexNow of the live homepage
+      - name: Notify IndexNow of live TORQWISE pages
         env:
           INDEXNOW_KEY: 7c5f1a9e4d2b8c6f0a3e7d1b5f9c2a84
         run: |
