@@ -260,7 +260,7 @@ const s = StyleSheet.create({
   body:{color:"#b1bac6",fontSize:13,lineHeight:20,marginBottom:12},
   pageTitle:{color:"#fff",fontSize:29,lineHeight:35,fontWeight:"900",letterSpacing:-0.7,marginBottom:10},
   input:{backgroundColor:"#141820",borderColor:"#343b47",borderWidth:1,borderRadius:12,paddingHorizontal:15,paddingVertical:14,color:"#fff",fontSize:15,marginTop:10,marginBottom:10},
-  databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},\n  databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},\n  sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},\n  databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},
+  databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},
   databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},
   sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},
   codeBadge:{alignSelf:"flex-start",backgroundColor:"#3a171c",borderWidth:1,borderColor:"#8d2d35",borderRadius:7,paddingHorizontal:10,paddingVertical:6,marginBottom:13},
