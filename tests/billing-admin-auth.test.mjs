@@ -17,6 +17,7 @@ function setup(authResponse) {
     SUPABASE_ANON_KEY: "public-test-key",
     SUPABASE_SERVICE_ROLE_KEY: "server-test-key",
     STRIPE_SECRET_KEY: "sk_test_placeholder",
+    STRIPE_PRO_PRICE_ID: "price_pro_monthly",
     SITE_URL: "https://torqwise.example",
     TORQWISE_ADMIN_USER_IDS: "admin-123",
   });
