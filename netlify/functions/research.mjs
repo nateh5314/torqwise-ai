@@ -139,12 +139,17 @@ async function lookupReviewedFitment(partNumber) {
       if (!Array.isArray(row.evidence) || row.evidence.length === 0) evidenceWarnings.push("No source evidence attached.");
       if (!row.reviewed_at) evidenceWarnings.push("Review timestamp missing.");
       if (!row.source_checked_at) evidenceWarnings.push("Source-check timestamp missing.");
+      const now = Date.now();
+      const reviewedAt = row.reviewed_at ? Date.parse(row.reviewed_at) : NaN;
       const sourceCheckedAt = row.source_checked_at ? Date.parse(row.source_checked_at) : NaN;
+      const reviewedTimestampInvalid = Boolean(row.reviewed_at) && (!Number.isFinite(reviewedAt) || reviewedAt > now + 86400000);
+      const sourceTimestampInvalid = Boolean(row.source_checked_at) && (!Number.isFinite(sourceCheckedAt) || sourceCheckedAt > now + 86400000);
       const sourceCheckAgeDays = Number.isFinite(sourceCheckedAt)
-        ? Math.floor((Date.now() - sourceCheckedAt) / 86400000)
+        ? Math.floor((now - sourceCheckedAt) / 86400000)
         : null;
       const sourceCheckStale = sourceCheckAgeDays !== null && sourceCheckAgeDays > 365;
-      if (row.source_checked_at && sourceCheckAgeDays === null) evidenceWarnings.push("Source-check timestamp is not a valid date.");
+      if (reviewedTimestampInvalid) evidenceWarnings.push("Review timestamp is invalid or more than 24 hours in the future.");
+      if (sourceTimestampInvalid) evidenceWarnings.push("Source-check timestamp is invalid or more than 24 hours in the future.");
       if (sourceCheckStale) evidenceWarnings.push("Source evidence was last checked more than 12 months ago; revalidation is recommended.");
       const missingApplicationDetails = [
         row.vehicle_year_start == null || row.vehicle_year_end == null ? "complete year range" : null,
@@ -160,7 +165,9 @@ async function lookupReviewedFitment(partNumber) {
       const evidenceComplete = evidenceWarnings.length === 0 && missingApplicationDetails.length === 0;
       const confidence = sourceCheckStale
         ? "STALE SOURCE CHECK — REVALIDATION REQUIRED BEFORE RELYING ON THIS RECORD"
-        : !evidenceComplete
+        : reviewedTimestampInvalid || sourceTimestampInvalid
+          ? "INVALID EVIDENCE TIMESTAMP — REVALIDATE BEFORE RELYING ON THIS RECORD"
+          : !evidenceComplete
           ? "INCOMPLETE CATALOG RECORD — NOT SUFFICIENT TO VERIFY FITMENT"
           : row.status === "cross_reference"
             ? "REVIEWED CROSS-REFERENCE — EXACT VEHICLE FITMENT NOT YET CONFIRMED"
