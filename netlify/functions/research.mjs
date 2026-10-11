@@ -263,7 +263,7 @@ export default async (req) => {
   const testsPerformed = clean(body.testsPerformed, 1200);
   const repairsAttempted = clean(body.repairsAttempted, 800);
   // Extract only code-shaped tokens for cross-code reasoning; never infer code status.
-  const detectedDtcCodes = [...new Set([question, dtcs].join(" ").match(/\b[PCBU][0-9A-F]{4}\b/gi) || [])]
+  const detectedDtcCodes = [...new Set([question, dtcs, symptoms, freezeFrame, liveData, testsPerformed, repairsAttempted].join(" ").match(/\b[PCBU][0-9A-F]{4}\b/gi) || [])]
     .map(code => code.toUpperCase())
     .slice(0, 20);
   // Heuristic flags prompt caution; they are not a diagnosis or proof of danger.
