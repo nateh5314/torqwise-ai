@@ -77,6 +77,18 @@
    <div class="formbuttons"><button type="button" onclick="torqAskAI()" id="torqAiButton">Ask TORQWISE AI · researched answer</button><button class="secondary" type="button" onclick="torqResearch()">Open web research links ↗</button><button class="secondary" type="button" onclick="torqSaveCase()">Save job context</button></div>
    <div id="torqAiStatus" class="notice" style="margin-top:12px" role="status">AI research connects through a secure server function. Answers should include source links; vehicle-specific specs still need exact applicability checks.</div>
    <div id="torqAiOutput" class="card" style="display:none;margin-top:12px;background:#15171a;border-color:#3b3e45" aria-live="polite"></div>
+   <div class="research-result" id="torqFitmentLookupPanel" style="margin-top:14px">
+    <strong>TORQWISE verified fitment catalog</strong>
+    <p class="tiny">Search our reviewed internal fitment records. Only reviewed cross-references and verified records are shown; an empty result means our catalog does not yet cover that application.</p>
+    <div class="form-grid">
+     <label>Part number<input id="torqFitmentPart" placeholder="e.g. WB510089" autocomplete="off"></label>
+     <label>Vehicle year<input id="torqFitmentYear" inputmode="numeric" placeholder="e.g. 2018"></label>
+     <label>Make<input id="torqFitmentMake" placeholder="e.g. Honda"></label>
+     <label>Model<input id="torqFitmentModel" placeholder="e.g. Civic"></label>
+    </div>
+    <button type="button" class="secondary" style="margin-top:10px" onclick="torqLookupFitment(this)">Search internal fitment catalog ↗</button>
+    <div id="torqFitmentResults" aria-live="polite" style="margin-top:10px"></div>
+   </div>
    <div class="research-result" id="torqFollowUpPanel" style="margin-top:12px">
     <strong>Follow-up question</strong>
     <p class="tiny" id="torqFollowUpContextStatus">After a report is available, ask about it here without using another monthly report. If needed, load the saved report from cloud history using Reuse context.</p>
@@ -673,6 +685,26 @@ async function torqAskFollowUp(button){
   status.textContent='Follow-up answered using the same equipment context. No additional monthly research report was used.';status.classList.add('success');
  }catch(err){status.textContent='Follow-up could not complete: '+(err.message||'unknown error')+'. Your original report is still available.';if(/sign in to use AI research|session expired/i.test(err.message||'')&&typeof window.openAuth==='function')window.openAuth('signin');}
  finally{button.disabled=false;button.textContent='Ask follow-up ↗';}
+}
+async function torqLookupFitment(button){
+ const result=document.getElementById('torqFitmentResults');
+ const body={partNumber:document.getElementById('torqFitmentPart').value.trim(),year:document.getElementById('torqFitmentYear').value.trim(),make:document.getElementById('torqFitmentMake').value.trim(),model:document.getElementById('torqFitmentModel').value.trim()};
+ if(!body.partNumber&&!(body.year&&body.make&&body.model)){result.textContent='Enter a part number, or enter year, make and model.';return;}
+ button.disabled=true;button.textContent='Searching catalog…';result.textContent='Checking TORQWISE reviewed fitment records…';
+ try{
+  const response=await fetch('/.netlify/functions/fitment-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await response.json();if(!response.ok)throw new Error(data.error||'Catalog lookup failed.');
+  result.innerHTML='';const summary=document.createElement('p');summary.className='tiny';summary.textContent=data.message||'Catalog search complete.';result.appendChild(summary);
+  (data.matches||[]).forEach(match=>{
+   const card=document.createElement('div');card.className='research-result';card.style.marginTop='8px';
+   const title=document.createElement('strong');title.textContent=(match.confidence||match.status||'FITMENT RECORD')+' — '+match.part_number;card.appendChild(title);
+   const detail=document.createElement('p');detail.className='tiny';detail.textContent=[match.brand,match.part_name,[match.vehicle_year_start,match.vehicle_year_end].filter(Boolean).join('–'),match.make,match.model,match.trim,match.engine,match.drive_type,match.axle_position,match.abs_type,match.market].filter(Boolean).join(' · ');card.appendChild(detail);
+   if(match.fitment_notes){const notes=document.createElement('p');notes.textContent=match.fitment_notes;card.appendChild(notes);}
+   if(Array.isArray(match.evidence)&&match.evidence.length){const list=document.createElement('ul');match.evidence.forEach(ev=>{if(!ev||typeof ev!=='object')return;const li=document.createElement('li');const a=document.createElement('a');if(/^https?:\/\//i.test(ev.url||'')){a.href=ev.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=ev.title||ev.url;li.appendChild(a);}else li.textContent=ev.title||ev.source||'Reviewed evidence record';list.appendChild(li)});if(list.children.length)card.appendChild(list);}
+   const confidence=document.createElement('p');confidence.className='tiny';confidence.textContent=match.guaranteeNote||'';card.appendChild(confidence);result.appendChild(card);
+  });
+ }catch(err){result.textContent='Fitment lookup could not complete: '+(err.message||'unknown error');}
+ finally{button.disabled=false;button.textContent='Search internal fitment catalog ↗';}
 }
 async function torqAskAI(){
  const c=torqGetContext();if(!c.asset&&!c.question){alert('Enter a vehicle/equipment name or a question first.');return;}
