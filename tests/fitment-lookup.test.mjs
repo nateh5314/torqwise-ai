@@ -61,7 +61,7 @@ test("does not award vehicle-match confidence to a partial model-name match", as
   configure([catalogRow({ model: "F-150 SuperCrew" })]);
   const response = await handler(request({ year: "2021", make: "Ford", model: "F-150", partType: "brake pad", engine: "5.0L", trim: "XLT", driveType: "4WD", axlePosition: "front", absType: "standard ABS" }));
   const data = await response.json();
-  assert.equal(data.matches[0].confidence, "REVIEWED CATALOG RECORD - VEHICLE DETAILS STILL NEED CONFIRMATION");
+  assert.equal(data.matches.length, 0);
 });
 
 test("retains missing configuration as a candidate but flags uncertainty", async () => {
@@ -77,6 +77,20 @@ test("retains missing configuration as a candidate but flags uncertainty", async
 test("filters a known engine contradiction instead of showing it as a candidate", async () => {
   configure([catalogRow({ engine: "3.5L EcoBoost" })]);
   const response = await handler(request({ year: "2021", make: "Ford", model: "F-150", partType: "brake pad", engine: "5.0L" }));
+  const data = await response.json();
+  assert.equal(data.matches.length, 0);
+});
+
+test("excludes catalog records with unknown year bounds when a year is requested", async () => {
+  configure([catalogRow({ vehicle_year_start: null, vehicle_year_end: null })]);
+  const response = await handler(request({ year: "2021", make: "Ford", model: "F-150", partType: "brake pad" }));
+  const data = await response.json();
+  assert.equal(data.matches.length, 0);
+});
+
+test("excludes records with a known make mismatch", async () => {
+  configure([catalogRow({ make: "Lincoln" })]);
+  const response = await handler(request({ year: "2021", make: "Ford", model: "F-150", partType: "brake pad" }));
   const data = await response.json();
   assert.equal(data.matches.length, 0);
 });
