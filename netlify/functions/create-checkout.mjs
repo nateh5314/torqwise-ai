@@ -6,7 +6,7 @@ function json(body, status = 200) {
 }
 function env(name) { return (process.env[name] || "").trim(); }
 async function getUser(accessToken) {
-  const url = env("SUPABASE_URL"), key = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY");
+  const url = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co", key = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY");
   if (!url || !key) throw new Error("Supabase server configuration is missing.");
   const r = await fetch(url + "/auth/v1/user", { headers: { apikey: key, authorization: "Bearer " + accessToken } });
   if (!r.ok) return null;
