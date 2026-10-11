@@ -94,6 +94,7 @@
 
 <section class="section alt" id="diagnostics"><div class="wrap">
  <div class="sectionhead"><div><div class="eyebrow">TORQWISE diagnostic workspace · Beta</div><h2>Start with the evidence.</h2><p class="sub">Search common OBD-II trouble codes or choose a symptom. Guided follow-up questions help prioritize the next checks, with an optional advanced test sequence for experienced technicians. Results are not a confirmed diagnosis.</p></div></div>
+ <div id="dtcDatabaseStatus" class="card" role="status" aria-live="polite" style="margin:0 0 14px;padding:12px 16px">Loading bundled generic OBD-II database…</div>
  <div class="diag-shell">
   <div class="card"><div class="diag-label">Step 1 · Vehicle context</div><div class="formgrid" style="margin-top:12px"><div class="field"><label for="diagYear">Year</label><input id="diagYear" inputmode="numeric" placeholder="e.g. 2018"></div><div class="field"><label for="diagMake">Make</label><input id="diagMake" placeholder="e.g. Ford"></div><div class="field"><label for="diagModel">Model</label><input id="diagModel" placeholder="e.g. F-150"></div><div class="field"><label for="diagEngine">Engine</label><input id="diagEngine" placeholder="e.g. 5.0L V8"></div></div><div class="notice" style="margin-top:12px">Vehicle details help frame the case, but this offline beta does not yet retrieve factory service information or vehicle-specific specifications.</div></div>
   <div class="card"><div class="diag-label">Step 2 · Find a starting point</div><div class="diag-tabs"><button type="button" id="tabCode" aria-pressed="true" onclick="diagSetMode('code')">Trouble code</button><button type="button" id="tabSymptom" aria-pressed="false" onclick="diagSetMode('symptom')">Symptoms</button></div>
@@ -103,7 +104,7 @@
  </div>
  <div id="diagOutput" class="diag-results" aria-live="polite"><div class="diag-empty">Search a code or choose a symptom to get started. Add the vehicle details above for a more useful case summary.</div></div>
  <div class="card diag-history" style="margin-top:18px"><div class="sectionhead"><div><h3>Saved diagnostic cases</h3><p class="sub">Cases are saved only in this browser on this device. Do not use this feature to store customer-identifying information.</p></div><button class="secondary" type="button" onclick="diagClearHistory()">Clear history</button></div><div id="diagHistory"><div class="empty">No saved cases yet.</div></div></div>
- <p class="tiny" style="margin-top:14px">Coverage note: this beta uses a small, curated offline starter library. It does not query a live database, scan a vehicle, read freeze-frame data, or confirm repairs. Always verify code definitions, wiring, test values, service bulletins and procedures against trusted information for the exact vehicle.</p>
+ <p class="tiny" style="margin-top:14px">The generic OBD-II reference database is bundled with this website build and loads from TORQWISE assets, not a third-party API. Generic code definitions are not OEM repair procedures. Confirm applicability, test values, wiring and safety precautions using service information for the exact vehicle.</p>
 </div></section>
 
 
@@ -191,7 +192,16 @@ battery:{title:'Battery repeatedly goes dead',urgency:'Stop if the battery is ho
 power:{title:'Loss of engine power',urgency:'If power loss makes merging or traffic unsafe, pull over when safe. Stop if there is overheating, oil-pressure warning, severe knocking or smoke.',first:['Scan all modules and record codes/freeze-frame; note limp mode messages.','Check basic fluids and visible intake/charge-air hoses when safe.','Compare requested vs actual boost/throttle/airflow and fuel pressure using the right scan tool.','Check for exhaust restriction, misfire, fuel delivery or sensor issues guided by data.','Do not replace a turbo, MAF or catalytic converter without confirming the failure.'],causes:['Limp mode due to stored fault','Air/boost leak or airflow measurement','Fuel delivery restriction','Exhaust restriction','Ignition/misfire or mechanical problem']}}
 function diagSetMode(mode){document.getElementById('diagCodePane').classList.toggle('hidden',mode!=='code');document.getElementById('diagSymptomPane').classList.toggle('hidden',mode!=='symptom');document.getElementById('tabCode').setAttribute('aria-pressed',String(mode==='code'));document.getElementById('tabSymptom').setAttribute('aria-pressed',String(mode==='symptom'));}
 function diagVehicle(){return [document.getElementById('diagYear').value,document.getElementById('diagMake').value,document.getElementById('diagModel').value,document.getElementById('diagEngine').value].map(x=>x.trim()).filter(Boolean).join(' ')||'Vehicle details not supplied'}
-function diagRunSearch(q){q=(q||'').trim().toUpperCase();const out=document.getElementById('diagOutput');if(!q){out.innerHTML='<div class="diag-empty">Enter a trouble code or keyword to search the starter library.</div>';return}const normalized=q.replace(/\s+/g,'');let matches=DIAG_DB.filter(d=>d.code.includes(normalized)||d.title.toUpperCase().includes(q)||d.system.toUpperCase().includes(q)||d.summary.toUpperCase().includes(q)||d.causes.some(c=>c.toUpperCase().includes(q)));if(/^P[0-9A-F]{4}$/.test(normalized))matches=DIAG_DB.filter(d=>d.code===normalized);if(!matches.length){out.innerHTML='<div class="diag-empty"><strong>No exact match in the offline starter library.</strong><p>This does not mean the code is invalid. Check the full code and search a descriptive keyword, then verify the definition with trusted service information for the exact vehicle.</p></div>';return}out.innerHTML=matches.map(d=>'<article class="diag-result"><div class="diag-label">'+escapeHtml(d.code)+' · '+escapeHtml(d.system)+'</div><h3>'+escapeHtml(d.title)+'</h3><p>'+escapeHtml(d.summary)+'</p><button type="button" onclick="diagShowDetail(\''+d.code+'\')">Open diagnostic path →</button></article>').join('');}
+function diagRunSearch(q){
+ q=(q||'').trim().toUpperCase();const out=document.getElementById('diagOutput');
+ if(!q){out.innerHTML='<div class="diag-empty">Enter a trouble code or keyword to search diagnostic references.</div>';return}
+ const normalized=q.replace(/\\s+/g,'');
+ let matches=DIAG_DB.filter(d=>String(d.code||'').toUpperCase().includes(normalized)||String(d.title||'').toUpperCase().includes(q)||String(d.system||'').toUpperCase().includes(q)||String(d.summary||'').toUpperCase().includes(q)||(d.causes||[]).some(c=>String(c).toUpperCase().includes(q))||(d.symptoms||[]).some(c=>String(c).toUpperCase().includes(q)));
+ if(/^[PBCU][0-9A-F]{4}$/.test(normalized))matches=DIAG_DB.filter(d=>String(d.code||'').toUpperCase()===normalized);
+ matches=matches.slice(0,40);
+ if(!matches.length){out.innerHTML='<div class="diag-empty"><strong>No match in the bundled diagnostic library.</strong><p>This does not mean the code is invalid. Confirm the full code and reporting module, then check vehicle-specific service information.</p></div>';return}
+ out.innerHTML=matches.map((d,i)=>'<article class="diag-result"><div class="diag-label">'+escapeHtml(d.code)+' · '+escapeHtml(d.system)+(d.manufacturer?' · '+escapeHtml(d.manufacturer):'')+'</div><h3>'+escapeHtml(d.title)+'</h3><p>'+escapeHtml(d.summary)+'</p><button type="button" onclick="diagShowDetail(\\''+d.code+'\\')">Open diagnostic path →</button></article>').join('');
+}
 let diagCurrentCode=null;
 const DIAG_GUIDES={
  P0171:{
@@ -306,6 +316,45 @@ function diagSaveCase(id){const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPT
 function diagRenderHistory(){const h=diagReadHistory(),el=document.getElementById('diagHistory');if(!h.length){el.innerHTML='<div class="empty">No saved cases yet.</div>';return}el.innerHTML=h.map(x=>'<div class="order"><div class="orderhead"><span>'+escapeHtml(x.title)+'</span><span class="status">Saved locally</span></div><p>'+escapeHtml(x.vehicle)+' · '+new Date(x.created).toLocaleString()+'</p></div>').join('')}
 function diagClearHistory(){if(!confirm('Clear saved diagnostic cases from this browser?'))return;localStorage.removeItem('torqwise_diag_history_v1');diagRenderHistory()}
 document.getElementById('diagSearchForm').addEventListener('submit',e=>{e.preventDefault();diagRunSearch(document.getElementById('diagQuery').value)});diagRenderHistory();
+
+/* Load generic OBD-II records from the bundled build asset. No runtime third-party fetch. */
+async function torqLoadBundledDtcDatabase(){
+ const status=document.getElementById('dtcDatabaseStatus');
+ try{
+  const response=await fetch('./assets/dtc-generic.json',{cache:'force-cache'});
+  if(!response.ok)throw new Error('Bundled data file returned HTTP '+response.status);
+  const records=await response.json();
+  if(!Array.isArray(records)||records.length<9000)throw new Error('Bundled data failed completeness validation');
+  const seen=new Set(DIAG_DB.map(d=>String(d.code).toUpperCase()));let added=0;
+  for(const r of records){
+   const code=String(r.code||'').toUpperCase();if(!/^[PBCU][0-9A-F]{4}$/.test(code)||seen.has(code))continue;
+   const localize=v=>typeof v==='string'?v:(v&&typeof v==='object'?(v.en||v.de||''):'');
+   const title=localize(r.title)||code,description=localize(r.description)||title;
+   const causes=(r.common_causes||[]).map(c=>localize(c.label||c)).filter(Boolean).slice(0,10);
+   const symptoms=(r.symptoms||[]).map(localize).filter(Boolean).slice(0,10);
+   const components=(r.affected_components||[]).map(x=>String(x).replace(/_/g,' ')).slice(0,10);
+   const sourceLinks=(r.sources||[]).filter(x=>typeof x==='string'&&/^https?:\\/\\//i.test(x)).slice(0,5);
+   const related=Array.isArray(r.related_codes)?r.related_codes:[];
+   const repair=r.repair||{},cost=Array.isArray(repair.estimated_cost_eur)?repair.estimated_cost_eur:null,hours=Array.isArray(repair.estimated_hours)?repair.estimated_hours:null;
+   const extras=[];
+   if(components.length)extras.push('Affected components: '+components.join(', ')+'.');
+   if(related.length)extras.push('Related codes: '+related.join(', ')+'.');
+   if(repair.difficulty)extras.push('Reference repair difficulty: '+String(repair.difficulty)+'.');
+   if(cost)extras.push('Source-provided estimated cost: €'+cost.join('–')+' (not a local quote).');
+   if(hours)extras.push('Source-provided estimated labor: '+hours.join('–')+' hours (not a vehicle-specific labor guide).');
+   DIAG_DB.push({code,title,system:'Generic OBD-II · '+String(r.category||'diagnostic').replace(/_/g,' '),summary:description,causes:causes.length?causes:['A diagnostic code does not by itself prove a part has failed.'],checks:['Confirm exact code, status and reporting module with a capable scan tool.','Save freeze-frame data and companion codes before clearing anything.',...(components.length?['Inspect/test relevant systems: '+components.join(', ')+'.']:[]),...(causes.length?['Use measurements and the exact vehicle service procedure to distinguish possible causes: '+causes.slice(0,5).join('; ')+'.']:[]),'Verify the repair with the specified test and a rescan.'],urgent:'Generic code reference only. Follow the exact vehicle service procedure and safety precautions.',source:'Bundled OBDex generic DTC dataset (CC0 data)',sources:sourceLinks,symptoms,affected_components:components,related_codes:related,extraDetails:extras,repair,category:r.category,isGeneric:true});
+   seen.add(code);added++;
+  }
+  window.TORQWISE_DTC_STATUS={bundled:true,sourceRecords:records.length,uniqueCodes:seen.size,added};
+  if(status)status.textContent='Bundled generic OBD-II database loaded: '+records.length.toLocaleString()+' source records; '+added.toLocaleString()+' additional codes indexed locally. Generic definitions are not manufacturer-specific repair procedures.';
+  const q=document.getElementById('diagQuery')?.value?.trim();if(q)diagRunSearch(q);
+ }catch(error){
+  window.TORQWISE_DTC_STATUS={bundled:false,error:String(error&&error.message||error)};
+  if(status)status.textContent='Bundled database did not load: '+String(error&&error.message||error)+'. Curated diagnostic guides remain available; expanded coverage is not confirmed.';
+ }
+}
+torqLoadBundledDtcDatabase();
+
 
 
 
