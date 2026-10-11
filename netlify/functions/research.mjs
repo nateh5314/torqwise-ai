@@ -202,6 +202,9 @@ export default async (req) => {
   if (!env("OPENAI_API_KEY")) return json({ error: "The server is missing OPENAI_API_KEY. Add it in Netlify environment variables and redeploy." }, 503);
   let body;
   try { body = await req.json(); } catch { return json({ error: "The request body must be valid JSON." }, 400); }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return json({ error: "The request body must be a JSON object." }, 400);
+  }
   const asset = clean(body.asset, 240);
   const serial = clean(body.serial, 100);
   const topic = clean(body.topic, 40) || "general";
