@@ -2,10 +2,10 @@ export default async () => {
   const rawUrl = (process.env.SUPABASE_URL || "").trim();
   // Always return a URL, never a bare project ref. Normalize common Netlify
   // env formats: full URL, project.supabase.co host, or project ref.
-  const normalizedInput = rawUrl.replace(/\\/+$/, "").trim();
+  const normalizedInput = rawUrl.replace(/\/+$/, "").trim();
   let url = normalizedInput;
-  if (normalizedInput && !/^https?:\\/\\//i.test(normalizedInput)) {
-    const host = normalizedInput.match(/^([a-z0-9-]+\\.supabase\\.co)\\/?$/i);
+  if (normalizedInput && !/^https?:\/\//i.test(normalizedInput)) {
+    const host = normalizedInput.match(/^([a-z0-9-]+\.supabase\.co)\/?$/i);
     const ref = normalizedInput.match(/^([a-z0-9-]{15,40})$/i);
     if (host) url = "https://" + host[1];
     else if (ref) url = "https://" + ref[1] + ".supabase.co";
