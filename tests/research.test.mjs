@@ -128,6 +128,20 @@ test("passes detected DTC tokens as a group without inventing code status", asyn
   assert.ok(payload.input.includes("Analyze relationships across codes"));
 });
 
+test("adds a cautious safety instruction when severe brake symptoms are reported", async () => {
+  const calls = configure();
+  const result = await handler(request({ body: {
+    asset: "2018 pickup",
+    question: "Brake pedal goes to floor and brake fluid is leaking"
+  }}));
+  assert.equal(result.status, 200);
+  const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+  const payload = JSON.parse(aiCall.options.body);
+  assert.ok(payload.input.includes("Potential safety-critical language detected"));
+  assert.ok(payload.input.includes("stop operation if continued use could cause harm"));
+  assert.ok(payload.input.includes("braking"));
+});
+
 test("blocks exhausted monthly allowance without calling the AI provider", async () => {
   const calls = configure({ reservation: response({ allowed: false, remaining: 0 }) });
   const result = await handler(request());
