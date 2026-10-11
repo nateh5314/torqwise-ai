@@ -344,7 +344,7 @@ test("flags fitment records with source checks older than one year", async () =>
 
 test("flags tire and restraint-system safety risks without claiming a diagnosis", async () => {
   for (const [symptoms, expected] of [
-    ["Front tire has a sidewall bulge", "tire or wheel failure"],
+    ["Tire sidewall bulge", "tire or wheel failure"],
     ["SRS warning is on", "airbag or supplemental restraint system"],
   ]) {
     const calls = configure();
