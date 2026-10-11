@@ -76,3 +76,14 @@ test("limits multi-code batches to keep combined research manageable", () => {
   assert.match(h.output.innerHTML, /up to 12 codes at a time/);
   assert.doesNotMatch(h.output.innerHTML, /Multi-code research/);
 });
+
+test("labels manufacturer-specific definitions when matching the entered vehicle make", () => {
+  const h = harness([
+    { code: "P0300", title: "Ford-specific misfire description", summary: "Manufacturer test path", manufacturer: "Ford", isGeneric: false },
+    { code: "P0300", title: "Random misfire", summary: "Generic definition", manufacturer: "", isGeneric: true },
+    { code: "U0100", title: "Lost communication with ECM/PCM", summary: "Network communication fault", manufacturer: "", isGeneric: true }
+  ]);
+  h.search("P0300 U0100");
+  assert.match(h.output.innerHTML, /Manufacturer-specific · Ford/);
+  assert.match(h.output.innerHTML, /Ford-specific misfire description/);
+});
