@@ -185,6 +185,10 @@ export default async (req) => {
   const liveData = clean(body.liveData, 1800);
   const testsPerformed = clean(body.testsPerformed, 1200);
   const repairsAttempted = clean(body.repairsAttempted, 800);
+  // Extract only code-shaped tokens for cross-code reasoning; never infer code status.
+  const detectedDtcCodes = [...new Set([question, dtcs].join(" ").match(/\b[PCBU][0-9A-F]{4}\b/gi) || [])]
+    .map(code => code.toUpperCase())
+    .slice(0, 20);
   const followUp = body.followUp === true;
   const previousAnswer = clean(body.previousAnswer, 8000);
   if (followUp && (!question || !previousAnswer)) return json({ error: "A follow-up needs a question and the previous research report." }, 400);
@@ -224,6 +228,7 @@ export default async (req) => {
         `VIN / serial / PIN: ${serial || "Not provided"}`,
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
+        ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes and status: ${dtcs}`] : []),
         ...(freezeFrame ? [`Freeze-frame / snapshot data: ${freezeFrame}`] : []),
@@ -237,6 +242,7 @@ export default async (req) => {
         `VIN / serial / PIN: ${serial || "Not provided"}`,
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
+        ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes (preserve exact codes and status): ${dtcs}`] : []),
         ...(freezeFrame ? [`Freeze-frame / snapshot data: ${freezeFrame}`] : []),
