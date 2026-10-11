@@ -42,12 +42,22 @@ export default async (req) => {
       customer_type: clean(body.customerType, 40), vehicle, details,
       preferred_timeline: clean(body.deadline, 80) || "Flexible"
     };
-    const saved = await fetch(base + "/rest/v1/customer_requests", {
-      method: "POST",
-      headers: { apikey: service, authorization: "Bearer " + service, "content-type": "application/json", Prefer: "return=representation" },
-      body: JSON.stringify(row),
-      signal: AbortSignal.timeout(12000)
-    });
+    let saved;
+    try {
+      saved = await fetch(base + "/rest/v1/customer_requests", {
+        method: "POST",
+        headers: { apikey: service, authorization: "Bearer " + service, "content-type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify(row),
+        signal: AbortSignal.timeout(12000)
+      });
+    } catch (e) {
+      // A network failure/timeout does not prove the database rejected the write.
+      // Tell the customer to check history before retrying to avoid duplicate requests.
+      console.error("Customer request insert outcome uncertain:", e?.name || "network error");
+      return json({
+        error: "We could not confirm whether your request was saved. Check your request history before submitting again to avoid a duplicate."
+      }, 503);
+    }
     if (!saved.ok) {
       console.error("Customer request insert failed:", saved.status);
       return json({ error: "Could not save your request. Please try again shortly." }, 503);
