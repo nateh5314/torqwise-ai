@@ -18,7 +18,7 @@ export default async (req) => {
   const stripeKey = env("STRIPE_SECRET_KEY"), site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
   // Match billing-status and checkout exactly. Do not allow a stale Netlify
   // price environment variable to make an active subscription look unlinked.
-  const proPriceId = "price_1UOqWAIpQUHCdBSxunv5OqtK";
+  const proPriceId = env("STRIPE_PRICE_PRO");
   const supabaseUrl = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co", anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!stripeKey || !site || !supabaseUrl || !anon || !service || !proPriceId) return json({ error: "Billing management is not configured yet." }, 503);
   const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
@@ -78,7 +78,7 @@ export default async (req) => {
     // Pin the preview to the verified Stripe test-mode portal configuration.
     // This configuration enables invoice history, payment-method updates, and
     // cancellation at period end.
-    const portalConfiguration = env("STRIPE_PORTAL_CONFIGURATION_ID") || "bpc_1UPKu2IpQUHCdBSxPyaJHAfV";
+    const portalConfiguration = env("STRIPE_PORTAL_CONFIGURATION_ID") || (stripeKey.startsWith("sk_live_") || stripeKey.startsWith("rk_live_") ? "bpc_1UPQU6EZQ5ErsBByzbNhlhXO" : "bpc_1UPKu2IpQUHCdBSxPyaJHAfV");
     const form = new URLSearchParams({
       customer,
       return_url: site.replace(/\/$/, "") + "/?billing_return=1#account",
@@ -95,9 +95,9 @@ export default async (req) => {
       const stripeCode = data?.error?.code || "";
       console.error("Stripe portal creation failed:", pr.status, stripeType, stripeCode);
       let message = "Stripe could not open subscription management.";
-      if (stripeCode === "resource_missing") message = "The subscription or portal configuration could not be found in the connected Stripe account. The preview's Stripe account settings need to be aligned.";
-      else if (stripeType === "authentication_error") message = "The Stripe billing connection is not authorized. The site administrator needs to reconnect the test-mode Stripe key.";
-      else if (stripeType === "invalid_request_error") message = "Stripe rejected the billing portal request. Check that the connected test account has the Customer Portal enabled.";
+      if (stripeCode === "resource_missing") message = "The subscription or portal configuration could not be found in the configured Stripe account and mode. Check STRIPE_SECRET_KEY, STRIPE_PRICE_PRO, and STRIPE_PORTAL_CONFIGURATION_ID.";
+      else if (stripeType === "authentication_error") message = "The Stripe billing connection is not authorized. Check the secret key configured for this deploy context.";
+      else if (stripeType === "invalid_request_error") message = "Stripe rejected the billing portal request. Check that the Customer Portal is enabled for the configured Stripe account.";
       return json({ error: message, code: stripeCode || stripeType }, 502);
     }
     return json({ url: data.url });
