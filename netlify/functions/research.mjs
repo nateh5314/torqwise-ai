@@ -27,7 +27,7 @@ function tooManyRequests(key) {
 }
 async function getResearchAccess(req) {
   const base = (process.env.SUPABASE_URL || '').trim();
-  const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '').trim();
+  const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || '').trim();
   const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!base || !anon || !service) return { error: 'Research accounts are not configured yet.', status: 503 };
   const token = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1];
