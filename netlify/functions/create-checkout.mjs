@@ -14,7 +14,7 @@ async function getUser(accessToken) {
 }
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
-  const stripeKey = env("STRIPE_SECRET_KEY"), price = env("STRIPE_PRO_PRICE_ID"), site = env("SITE_URL");
+  const stripeKey = env("STRIPE_SECRET_KEY"), price = env("STRIPE_PRO_PRICE_ID") || env("STRIPE_PRICE_PRO"), site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
   if (!stripeKey || !price || !site) return json({ error: "Billing is not configured yet. Ask the site administrator to finish setup." }, 503);
   const auth = req.headers.get("authorization") || "";
   const match = auth.match(/^Bearer\s+(.+)$/i);
