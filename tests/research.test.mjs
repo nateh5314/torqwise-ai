@@ -9,18 +9,21 @@ const base = "https://supabase.example";
 function response(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
-function configure({ userResponse = response({ id: "user-123" }), reservation = response({ allowed: true, remaining: 2, usage_id: 101 }), openaiResponse = response({ output: [{ type: "message", content: [{ type: "output_text", text: "Test research answer", annotations: [] }] }, { type: "web_search_call", action: { sources: [{ url: "https://example.com/source", title: "Example source" }] } }], model: "gpt-5-mini" }) } = {}) {
+function configure({ userResponse = response({ id: "user-123" }), reservation = response({ allowed: true, remaining: 2, usage_id: 101 }), subscriptions = response([]), proPriceId = "", openaiResponse = response({ output: [{ type: "message", content: [{ type: "output_text", text: "Test research answer", annotations: [] }] }, { type: "web_search_call", action: { sources: [{ url: "https://example.com/source", title: "Example source" }] } }], model: "gpt-5-mini" }) } = {}) {
   Object.assign(process.env, {
     SUPABASE_URL: base,
     SUPABASE_ANON_KEY: "public-test-key",
     SUPABASE_SERVICE_ROLE_KEY: "server-test-key",
     OPENAI_API_KEY: "test-placeholder",
   });
+  delete process.env.STRIPE_PRO_PRICE_ID;
+  delete process.env.STRIPE_PRICE_PRO;
+  if (proPriceId) process.env.STRIPE_PRO_PRICE_ID = proPriceId;
   const calls = [];
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), options });
     if (String(url) === base + "/auth/v1/user") return userResponse;
-    if (String(url) === base + "/rest/v1/subscriptions?user_id=eq.user-123&select=status&order=updated_at.desc&limit=1") return response([]);
+    if (String(url) === base + "/rest/v1/subscriptions?user_id=eq.user-123&select=status,price_id&order=updated_at.desc&limit=10") return subscriptions;
     if (String(url) === base + "/rest/v1/rpc/reserve_research_usage") return reservation;
     if (String(url) === base + "/rest/v1/rpc/release_research_usage") return response(true);
     if (String(url) === "https://api.openai.com/v1/responses") return openaiResponse;
@@ -40,6 +43,33 @@ test.afterEach(() => {
   globalThis.fetch = originalFetch;
   for (const key of Object.keys(process.env)) if (!(key in originalEnv)) delete process.env[key];
   for (const [key, value] of Object.entries(originalEnv)) process.env[key] = value;
+});
+
+test("configured active Pro subscription bypasses free research quota", async () => {
+  const calls = configure({
+    proPriceId: "price_pro_monthly",
+    subscriptions: response([{ status: "active", price_id: "price_pro_monthly" }]),
+  });
+  const result = await handler(request());
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.equal(data.isPro, true);
+  assert.equal(data.remaining, null);
+  assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
+  assert.ok(calls.some(c => c.url === "https://api.openai.com/v1/responses"));
+});
+
+test("active subscription for another price does not grant Pro research access", async () => {
+  const calls = configure({
+    proPriceId: "price_pro_monthly",
+    subscriptions: response([{ status: "active", price_id: "price_driver_monthly" }]),
+  });
+  const result = await handler(request());
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.equal(data.isPro, false);
+  assert.equal(data.remaining, 2);
+  assert.ok(calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
 });
 
 test("rejects unsupported methods before calling providers", async () => {
@@ -158,7 +188,7 @@ test("follow-up research carries new test results and prior report without reser
   const payload = JSON.parse(aiCall.options.body);
   assert.ok(payload.input.includes("Previous TORQWISE report"));
   assert.ok(payload.input.includes("misfire stayed on cylinder 2"));
-  assert.ok(payload.instructions.includes("revise the next step"));
+  assert.ok(payload.instructions.includes("new evidence"));
   assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
 });
 
