@@ -1,0 +1,81 @@
+name: Live launch smoke test
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "HTTPS base URL to check (production or a Netlify deploy preview)"
+        required: true
+        default: "https://torqwiseauto.netlify.app"
+        type: string
+permissions:
+  contents: read
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check public site and launch-critical endpoints
+        env:
+          TARGET_URL: ${{ inputs.target_url }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+
+          const raw = (process.env.TARGET_URL || '').trim();
+          const base = new URL(raw);
+          assert.equal(base.protocol, 'https:', 'Target must use HTTPS');
+          assert.equal(base.username, '', 'Target URL must not contain credentials');
+          assert.equal(base.password, '', 'Target URL must not contain credentials');
+          base.pathname = base.pathname.replace(/\/+$/, '') + '/';
+          base.search = '';
+          base.hash = '';
+          const origin = base.toString().replace(/\/$/, '');
+
+          async function get(path) {
+            const url = new URL(path, origin);
+            const response = await fetch(url, { signal: AbortSignal.timeout(15000), redirect: 'follow' });
+            console.log(`${response.status} ${path}`);
+            assert.equal(response.status, 200, `${path} should return HTTP 200`);
+            return response;
+          }
+
+          const homepage = await (await get('/')).text();
+          assert.match(homepage, /TORQWISE/i, 'Homepage should identify TORQWISE');
+          for (const marker of ['diagnostics', 'research-hub', 'parts-market', 'vin-lookup']) {
+            assert.ok(homepage.includes(marker), `Homepage missing expected feature marker: ${marker}`);
+          }
+
+          for (const path of ['/privacy.html', '/terms.html', '/support.html']) {
+            const html = await (await get(path)).text();
+            assert.match(html, /<html[\s>]/i, `${path} should contain an HTML document`);
+          }
+
+          const dtcResponse = await get('/assets/dtc-database.json');
+          const records = await dtcResponse.json();
+          assert.ok(Array.isArray(records), 'DTC asset must be a JSON array');
+          assert.ok(records.length >= 9000, `Expected at least 9,000 generic DTC records, got ${records.length}`);
+          const seen = new Set();
+          for (const row of records) {
+            assert.match(row?.code || '', /^[PBCU][0-9A-F]{4}$/, 'Malformed DTC code');
+            assert.ok(!seen.has(row.code), `Duplicate DTC code: ${row.code}`);
+            seen.add(row.code);
+            assert.ok(row.title?.en && row.description?.en, `Missing English description for ${row.code}`);
+            assert.ok(Array.isArray(row.sources) && row.sources.length, `Missing source links for ${row.code}`);
+          }
+          for (const code of ['P0300', 'P0420', 'P0171']) {
+            assert.ok(seen.has(code), `Common diagnostic code missing from bundle: ${code}`);
+          }
+          console.log(`PASS: ${records.length} unique generic DTC records loaded from the deployed site.`);
+
+          const configResponse = await get('/.netlify/functions/public-config');
+          const config = await configResponse.json();
+          assert.equal(config.configured, true, 'Supabase public configuration must be present');
+          assert.match(config.url || '', /^https:\/\/[a-z0-9.-]+$/i, 'Supabase URL should be HTTPS');
+          assert.ok(typeof config.anonKey === 'string' && config.anonKey.length > 20, 'Supabase public anon/publishable key is missing');
+          const serialized = JSON.stringify(config).toLowerCase();
+          for (const forbidden of ['service_role', 'openai_api_key', 'stripe_secret_key', 'webhook_secret']) {
+            assert.ok(!serialized.includes(forbidden), `Public config must not expose ${forbidden}`);
+          }
+          console.log('PASS: public config is present and contains no named server-side secret fields.');
+          console.log(`PASS: launch smoke test succeeded for ${origin}`);
+          NODE
