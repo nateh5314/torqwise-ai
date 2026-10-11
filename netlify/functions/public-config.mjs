@@ -1,5 +1,5 @@
 export default async () => {
-  const rawUrl = (process.env.SUPABASE_URL || "").trim();
+  const rawUrl = (process.env.SUPABASE_URL || "https://wnvmtjimldleqfjuuprl.supabase.co").trim();
   // Always return a URL, never a bare project ref. Normalize common Netlify
   // env formats: full URL, project.supabase.co host, or project ref.
   const normalizedInput = rawUrl.replace(/\/+$/, "").trim();
