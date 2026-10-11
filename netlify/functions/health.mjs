@@ -1,5 +1,5 @@
 function supabaseBase() {
-  const raw = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const raw = (process.env.SUPABASE_URL || "https://wnvmtjimldleqfjuuprl.supabase.co").trim().replace(/\/+$/, "");
   if (/^https?:\/\//i.test(raw)) return raw;
   const host = raw.match(/^([a-z0-9-]+\.supabase\.co)$/i);
   if (host) return "https://" + host[1];
