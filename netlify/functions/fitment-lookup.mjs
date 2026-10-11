@@ -61,7 +61,7 @@ export default async (req) => {
     return ok(engine, row.engine) && ok(trim, row.trim) && ok(driveType, row.drive_type) && ok(axlePosition, row.axle_position) && ok(absType, row.abs_type);
   }).map(row => {
     const vehicleSpecified = year !== null && Boolean(make) && Boolean(model);
-    const coreVehicleMatch = vehicleSpecified && (!row.vehicle_year_start || year >= row.vehicle_year_start) && (!row.vehicle_year_end || year <= row.vehicle_year_end) && normalize(row.make) === make && normalize(row.model).includes(model);
+    const coreVehicleMatch = vehicleSpecified && (!row.vehicle_year_start || year >= row.vehicle_year_start) && (!row.vehicle_year_end || year <= row.vehicle_year_end) && normalize(row.make) === make && normalize(row.model) === model;
     const specificityMissing = [
       engine && !row.engine ? "catalog engine detail" : null,
       trim && !row.trim ? "catalog trim detail" : null,
@@ -83,7 +83,7 @@ export default async (req) => {
       ? "Reviewed cross-reference record; not an OEM-confirmed guarantee. Check configuration restrictions before ordering."
       : coreVehicleMatch
         ? "Year, make, and model align with the query. Confirm remaining configuration restrictions before ordering."
-        : "This reviewed record alone does not establish exact fitment for the supplied vehicle. Confirm application restrictions before ordering.";
+        : "The catalog model must match the supplied model exactly before this result can receive the vehicle-match label. Confirm engine, trim, drivetrain, axle/position, ABS, market, and source restrictions before ordering.";
     return { ...row, confidence, specificityMissing, evidenceWarnings, guaranteeNote };
   }).sort((a, b) => (a.status === "verified" ? 0 : 1) - (b.status === "verified" ? 0 : 1) || String(a.part_number || "").localeCompare(String(b.part_number || "")));
   return respond({
