@@ -184,19 +184,30 @@ function extractText(response) {
 }
 function extractSources(response) {
   const sources = new Map();
-  for (const item of response.output || []) {
+  const addSource = (candidateUrl, candidateTitle) => {
+    if (typeof candidateUrl !== "string") return;
+    const url = candidateUrl.trim();
+    if (!/^https?:\/\//i.test(url)) return;
+    let parsed;
+    try { parsed = new URL(url); } catch { return; }
+    if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) return;
+    const title = typeof candidateTitle === "string" && candidateTitle.trim()
+      ? candidateTitle.trim().slice(0, 240)
+      : url;
+    if (!sources.has(url)) sources.set(url, { url, title });
+  };
+  for (const item of Array.isArray(response.output) ? response.output : []) {
     if (item.type === "message" && Array.isArray(item.content)) {
       for (const part of item.content) {
-        for (const a of part.annotations || []) {
-          if (a.type === "url_citation" && typeof a.url === "string" && /^https?:\/\//i.test(a.url)) sources.set(a.url, { url: a.url, title: typeof a.title === "string" && a.title.trim() ? a.title.trim().slice(0, 240) : a.url });
+        for (const annotation of Array.isArray(part.annotations) ? part.annotations : []) {
+          if (annotation.type === "url_citation") addSource(annotation.url, annotation.title);
         }
       }
     }
     if (item.type === "web_search_call") {
       const found = item.action?.sources || item.sources || [];
-      for (const s of found) {
-        const url = s.url || s.uri;
-        if (url && /^https?:\/\//i.test(url)) sources.set(url, { url, title: s.title || url });
+      for (const source of Array.isArray(found) ? found : []) {
+        addSource(source?.url || source?.uri, source?.title);
       }
     }
   }
