@@ -4,7 +4,11 @@ const clean = (v, max = 12000) => typeof v === "string" ? v.trim().slice(0, max)
 const kinds = new Set(["research", "diagnostic", "parts", "job"]);
 const dbHeaders = (key, extra = {}) => ({ apikey: key, authorization: "Bearer " + key, ...extra });
 async function auth(req) {
-  const base = env("SUPABASE_URL"), anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), key = env("SUPABASE_SERVICE_ROLE_KEY");
+  const rawBase = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co";
+  const base = /^https?:\/\//i.test(rawBase) ? rawBase.replace(/\/+$/, "") : /^[a-z0-9-]+\.supabase\.co$/i.test(rawBase) ? "https://" + rawBase : /^[a-z0-9-]{15,40}$/i.test(rawBase) ? "https://" + rawBase + ".supabase.co" : rawBase;
+  // Keep account history aligned with public-config and research: this
+  // deployment uses SUPABASE_PUNISHABLE_KEY for its public client key.
+  const anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY"), key = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!base || !anon || !key) return { error: "Account history storage is not configured yet.", status: 503 };
   const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return { error: "Sign in to access your saved history.", status: 401 };
