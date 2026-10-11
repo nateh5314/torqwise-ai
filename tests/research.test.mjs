@@ -265,9 +265,18 @@ test("returns only valid HTTP(S) citation links with bounded titles", async () =
         { type: "url_citation", url: "javascript:alert(1)", title: "unsafe" },
         { type: "url_citation", url: "https://example.com/oem", title: "OEM manual" },
         { type: "url_citation", url: "https://example.com/other", title: "T".repeat(400) },
-        { type: "url_citation", url: "not-a-url", title: "invalid" }
+        { type: "url_citation", url: "not-a-url", title: "invalid" },
+        { type: "url_citation", url: "https://", title: "malformed URL" }
       ]
-    }] }],
+    }] }, {
+      type: "web_search_call",
+      action: { sources: [
+        { url: "javascript:alert(1)", title: "unsafe search source" },
+        { url: "https://example.com/search-source", title: "Search source" },
+        { url: "https://", title: "malformed search source" },
+        { url: "https://example.com/search-source", title: "Duplicate source" }
+      ] }
+    }],
     model: "gpt-5-mini"
   })});
   const result = await handler(request());
@@ -275,7 +284,8 @@ test("returns only valid HTTP(S) citation links with bounded titles", async () =
   const data = await result.json();
   assert.deepEqual(data.sources, [
     { url: "https://example.com/oem", title: "OEM manual" },
-    { url: "https://example.com/other", title: "T".repeat(240) }
+    { url: "https://example.com/other", title: "T".repeat(240) },
+    { url: "https://example.com/search-source", title: "Search source" }
   ]);
   assert.ok(calls.some(c => c.url === "https://api.openai.com/v1/responses"));
 });
