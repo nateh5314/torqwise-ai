@@ -10,7 +10,7 @@ export default async (req) => {
   const auth = req.headers.get("authorization") || "";
   const token = auth.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return json({ error: "Sign in to view subscription status." }, 401);
-  const url = env("SUPABASE_URL"), anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
+  const url = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co", anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !anon || !service) return json({ error: "Subscription status is not configured yet." }, 503);
   try {
     const ur = await fetch(url + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
