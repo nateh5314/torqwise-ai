@@ -66,7 +66,7 @@ export default async (req) => {
         stripe_subscription_id: sub.id,
         price_id: sub.items?.data?.[0]?.price?.id || null,
         status: sub.status,
-        current_period_end: isoUnix(sub.current_period_end),
+        current_period_end: isoUnix(sub.current_period_end || sub.items?.data?.[0]?.current_period_end),
         cancel_at_period_end: !!sub.cancel_at_period_end,
         updated_at: new Date().toISOString(),
       });
@@ -114,7 +114,7 @@ export default async (req) => {
         stripe_subscription_id: sub.id,
         price_id: sub.items?.data?.[0]?.price?.id || null,
         status: sub.status || (event.type.endsWith(".deleted") ? "canceled" : "unknown"),
-        current_period_end: isoUnix(sub.current_period_end),
+        current_period_end: isoUnix(sub.current_period_end || sub.items?.data?.[0]?.current_period_end),
         cancel_at_period_end: !!sub.cancel_at_period_end,
         updated_at: new Date().toISOString(),
       };
