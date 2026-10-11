@@ -124,7 +124,7 @@ async function lookupReviewedFitment(partNumber) {
       return {
         ...row,
         confidence: row.status === "cross_reference"
-          ? "HIGH-CONFIDENCE CROSS-REFERENCE"
+          ? "REVIEWED CROSS-REFERENCE — EXACT VEHICLE FITMENT NOT YET CONFIRMED"
           : "VERIFIED CATALOG RECORD — EXACT VEHICLE FITMENT NOT YET CONFIRMED",
         evidenceWarnings,
         missingApplicationDetails,
