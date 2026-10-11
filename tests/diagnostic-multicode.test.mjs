@@ -61,3 +61,11 @@ test("does not switch to multi-code mode for a single code", () => {
   h.search("P0300");
   assert.doesNotMatch(h.output.innerHTML, /Multi-code research/);
 });
+
+test("adds safe network-code guidance when a U-code definition is missing", () => {
+  const h = harness([]);
+  h.search("U0121");
+  assert.match(h.output.innerHTML, /Network-code caution/);
+  assert.match(h.output.innerHTML, /scan all modules/);
+  assert.match(h.output.innerHTML, /researchMissingCode/);
+});
