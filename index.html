@@ -721,9 +721,12 @@ async function torqAskFollowUp(button){
   const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify({...torqLastResearch.context,question,followUp:true,previousAnswer:torqLastResearch.answer})});
   let data={};try{data=await response.json()}catch(_){}
   if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));
-  torqLastResearch.answer=data.answer;try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}
-  torqRenderAiResult({answer:data.answer,sources:[],isPro:data.isPro,remaining:data.remaining});
-  torqSaveAccountHistory({kind:'research',title:(torqLastResearch.context.asset||'General research')+' — Follow-up: '+question,asset:torqLastResearch.context.asset,serial:torqLastResearch.context.serial,topic:torqLastResearch.context.topic,prompt:question,result:data.answer,sources:[],metadata:{model:data.model||'',savedFrom:'ai-follow-up'}});
+  torqLastResearch.answer=data.answer;
+  const followUpSources=Array.isArray(data.sources)&&data.sources.length?data.sources:(torqLastResearch.sources||[]);
+  torqLastResearch.sources=followUpSources;
+  try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}
+  torqRenderAiResult({answer:data.answer,sources:followUpSources,isPro:data.isPro,remaining:data.remaining});
+  torqSaveAccountHistory({kind:'research',title:(torqLastResearch.context.asset||'General research')+' — Follow-up: '+question,asset:torqLastResearch.context.asset,serial:torqLastResearch.context.serial,topic:torqLastResearch.context.topic,prompt:question,result:data.answer,sources:followUpSources,metadata:{model:data.model||'',savedFrom:'ai-follow-up'}});
   status.textContent='Follow-up answered using the same equipment context. No additional monthly research report was used.';status.classList.add('success');
  }catch(err){status.textContent='Follow-up could not complete: '+(err.message||'unknown error')+'. Your original report is still available.';if(/sign in to use AI research|session expired/i.test(err.message||'')&&typeof window.openAuth==='function')window.openAuth('signin');}
  finally{button.disabled=false;button.textContent='Ask follow-up ↗';}
