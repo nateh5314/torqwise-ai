@@ -200,7 +200,19 @@ export default async (req) => {
   const partCandidate = topic === "parts" ? (question.match(/\b[A-Z]{1,8}[- ]?\d{3,}[A-Z0-9-]*\b/i)?.[0] || "") : "";
   const fitmentMatches = partCandidate ? await lookupReviewedFitment(partCandidate) : [];
   const input = followUp
-    ? [`Asset / vehicle / equipment: ${asset || "Not provided"}`, `VIN / serial / PIN: ${serial || "Not provided"}`, `Research category: ${topicNames[topic] || topicNames.general}`, `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`, `Technician follow-up question: ${question}`].join("\n\n")
+    ? [
+        `Asset / vehicle / equipment: ${asset || "Not provided"}`,
+        `VIN / serial / PIN: ${serial || "Not provided"}`,
+        `Research category: ${topicNames[topic] || topicNames.general}`,
+        `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
+        ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
+        ...(dtcs ? [`Diagnostic trouble codes and status: ${dtcs}`] : []),
+        ...(freezeFrame ? [`Freeze-frame / snapshot data: ${freezeFrame}`] : []),
+        ...(liveData ? [`Scan-tool live data and units: ${liveData}`] : []),
+        ...(testsPerformed ? [`Tests already performed and measured results: ${testsPerformed}`] : []),
+        ...(repairsAttempted ? [`Repairs or parts already tried: ${repairsAttempted}`] : []),
+        `Technician follow-up question: ${question}`,
+      ].join("\n\n")
     : [
         `Asset / vehicle / equipment: ${asset || "Not provided"}`,
         `VIN / serial / PIN: ${serial || "Not provided"}`,
