@@ -103,3 +103,30 @@ test("create-request returns success if the insert succeeds but its representati
   assert.equal(body.request.email, "test@example.com");
   assert.equal(body.request.vehicle, "2018 pickup");
 });
+
+
+test("list-requests rejects malformed history JSON without crashing", async () => {
+  setup(response({ id: "verified-user" }));
+  globalThis.fetch = async (url) => {
+    if (String(url) === base + "/auth/v1/user") return response({ id: "verified-user" });
+    if (String(url).includes("/rest/v1/customer_requests?")) return new Response("not-json", { status: 200 });
+    throw new Error("Unexpected provider request: " + String(url));
+  };
+  const result = await listRequests(req("list-requests", "GET"));
+  assert.equal(result.status, 503);
+  assert.deepEqual(await result.json(), { error: "Request history returned an unreadable response. Please retry shortly." });
+});
+
+test("list-requests rejects unexpected history response shapes", async () => {
+  for (const body of [{ request_code: "TQ-1" }, [null], "not-an-array"]) {
+    setup(response({ id: "verified-user" }));
+    globalThis.fetch = async (url) => {
+      if (String(url) === base + "/auth/v1/user") return response({ id: "verified-user" });
+      if (String(url).includes("/rest/v1/customer_requests?")) return response(body);
+      throw new Error("Unexpected provider request: " + String(url));
+    };
+    const result = await listRequests(req("list-requests", "GET"));
+    assert.equal(result.status, 503);
+    assert.deepEqual(await result.json(), { error: "Request history returned an unexpected response. Please retry shortly." });
+  }
+});
