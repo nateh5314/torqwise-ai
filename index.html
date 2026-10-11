@@ -95,7 +95,7 @@
 </style></head>
 <body>
 <div class="topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
-<header class="wrap nav"><a class="brand" href="#home"><span class="mark">T</span><span>TORQWISE<small>AUTOMOTIVE RESEARCH</small></span></a><nav class="navlinks"><a href="#account" aria-label="My Account">My Account</a><a href="#research-hub">Research</a><a href="#diagnostics">Diagnostics</a><a href="#vin-lookup">VIN lookup</a><a href="#parts-market">Parts</a><a href="#services">Services</a><a href="#request">Request research</a></nav><button onclick="openAuth('signup')">Create account ↗</button></header>
+<header class="wrap nav"><a class="brand" href="#home"><span class="mark">T</span><span>TORQWISE<small>AUTOMOTIVE RESEARCH</small></span></a><nav class="navlinks"><a href="#account" aria-label="My Account">My Account</a><a href="#research-hub">Research</a><a href="#diagnostics">Diagnostics</a><a href="#vin-lookup">VIN lookup</a><a href="#parts-market">Parts</a><a href="#services">Services</a><a href="#request">Request research</a></nav><button id="headerAccountAction" onclick="openAuth('signin')">Sign in / Create account</button></header>
 <main>
 <section class="hero" id="home"><div class="wrap"><div class="eyebrow">Research before you wrench</div><h1>Know what you're buying.<br><span>Know what fits.</span></h1><p>AI-assisted diagnostics, automotive and equipment parts research, VIN lookup, and supplier comparisons — organized in plain language with sources you can check.</p><div class="heroactions"><a class="btn" href="#research-hub">Try AI research <span>→</span></a><a class="btn secondary" href="#request">Request expert research</a></div><div class="trust"><span>Upfront pricing</span><span>Source-linked research</span><span>No parts markup</span><span>Made for drivers & shops</span></div></div></section>
 
@@ -1051,8 +1051,8 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
   window.signout=async function(){if(client)await client.auth.signOut();currentUser=null;pro=false;try{const d=JSON.parse(localStorage.getItem('torqwise_demo_v1')||'{}');d.profile=null;d.orders=[];localStorage.setItem('torqwise_demo_v1',JSON.stringify(d));}catch{}refreshAccountUI();if(typeof window.render==='function')window.render();};
   async function refreshAccountUI(){
     const identity=byId('accountIdentity'),accountStatus=byId('accountSubscriptionStatus'); if(!identity)return;
-    const authActions=byId('accountAuthActions'),createButton=byId('accountCreateButton'),signInButton=byId('accountSignInButton'),headerAuthButton=byId('accountHeaderAuthButton');
-    const syncAuthActions=()=>{const signedIn=!!currentUser;if(authActions)authActions.style.display=signedIn?'none':'flex';if(headerAuthButton){headerAuthButton.textContent=signedIn?'My Account':'Sign in';headerAuthButton.onclick=()=>document.getElementById('account')?.scrollIntoView({behavior:'smooth'});}};
+    const authActions=byId('accountAuthActions'),headerAuthButton=byId('accountHeaderAuthButton'),headerAction=byId('headerAccountAction');
+    const syncAuthActions=()=>{const signedIn=!!currentUser;if(authActions)authActions.style.display=signedIn?'none':'flex';if(headerAuthButton){headerAuthButton.textContent=signedIn?'My Account':'Sign in / Create account';headerAuthButton.onclick=()=>document.getElementById('account')?.scrollIntoView({behavior:'smooth'});}if(headerAction){headerAction.textContent=signedIn?'Sign out':'Sign in / Create account';headerAction.onclick=signedIn?()=>window.signout():()=>openAuth('signin');}};
     syncAuthActions();
     if(!ready||!client){
       identity.textContent='Secure account service is not connected to this preview.';
