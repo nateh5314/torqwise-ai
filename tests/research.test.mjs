@@ -113,6 +113,21 @@ test("passes structured diagnostic evidence into the AI research request", async
   ]) assert.ok(payload.input.includes(detail), "Missing structured diagnostic detail: " + detail);
 });
 
+test("passes detected DTC tokens as a group without inventing code status", async () => {
+  const calls = configure();
+  const result = await handler(request({ body: {
+    asset: "2018 Ford F-150 5.0L",
+    question: "Intermittent misfire with P0302 and P0171",
+    dtcs: "P0302 current; P0171 pending"
+  }}));
+  assert.equal(result.status, 200);
+  const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+  const payload = JSON.parse(aiCall.options.body);
+  assert.ok(payload.input.includes("P0302, P0171"));
+  assert.ok(payload.input.includes("status not inferred"));
+  assert.ok(payload.input.includes("Analyze relationships across codes"));
+});
+
 test("blocks exhausted monthly allowance without calling the AI provider", async () => {
   const calls = configure({ reservation: response({ allowed: false, remaining: 0 }) });
   const result = await handler(request());
