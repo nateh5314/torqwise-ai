@@ -1,6 +1,11 @@
 function supabaseBase() {
-  const raw = (process.env.SUPABASE_URL || "").trim();
-  return /^[a-z0-9]{20}$/i.test(raw) ? `https://${raw}.supabase.co` : raw;
+  const raw = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const host = raw.match(/^([a-z0-9-]+\.supabase\.co)$/i);
+  if (host) return "https://" + host[1];
+  const ref = raw.match(/^([a-z0-9-]{15,40})$/i);
+  if (ref) return "https://" + ref[1] + ".supabase.co";
+  return raw;
 }
 
 const MAX_FIELD = 1800;
