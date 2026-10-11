@@ -922,12 +922,13 @@ async function torqImportCases(input){
    return entry;
   });
   if(!clean.length)throw new Error('No valid saved job contexts were found in that backup.');
-  const current=torqLoadCases(),ids=new Set(current.map(row=>String(row.id)));
-  const imported=clean.filter(row=>!ids.has(String(row.id)));
+  const current=torqLoadCases(),ids=new Set(current.map(row=>String(row.id))),imported=[];
+  for(const row of clean){const key=String(row.id);if(ids.has(key))continue;ids.add(key);imported.push(row);}
   const merged=[...imported,...current].slice(0,100);
+  const added=Math.max(0,merged.length-current.length);
   localStorage.setItem(TORQ_CASES_KEY,JSON.stringify(merged));
   torqRenderCases();
-  if(status){status.textContent='Imported '+Math.max(0,merged.length-current.length)+' saved job context(s). Existing local cases were kept.';status.classList.add('success');}
+  if(status){status.textContent='Imported '+added+' saved job context(s). Existing local cases were kept; total saved locally: '+merged.length+'.';status.classList.add('success');}
  }catch(err){if(status){status.textContent=err.message||'Could not import this backup.';status.classList.remove('success');}else alert(err.message||'Could not import this backup.');}
  finally{input.value='';}
 }
