@@ -20,11 +20,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
       - name: Install dependencies
         run: npm install
-      - name: Build bundled diagnostic database
-        run: npm run build
       - name: Deploy built site and Netlify Functions to production
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
@@ -35,3 +32,21 @@ jobs:
             exit 1
           fi
           npx --yes netlify-cli@latest deploy --prod --build --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN"
+      - name: Verify production homepage and bundled diagnostic database
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base = 'https://torqwiseauto.netlify.app';
+          const home = await fetch(base, { signal: AbortSignal.timeout(15000) });
+          assert.equal(home.status, 200, 'Production homepage should return HTTP 200');
+          const html = await home.text();
+          assert.match(html, /TORQWISE/i, 'Production homepage should identify TORQWISE');
+          const response = await fetch(new URL('/assets/dtc-database.json', base), { signal: AbortSignal.timeout(30000) });
+          assert.equal(response.status, 200, 'Bundled DTC database should be served successfully');
+          const records = await response.json();
+          assert.ok(Array.isArray(records), 'Bundled DTC database should be a JSON array');
+          assert.ok(records.length >= 9000, `Expected at least 9,000 bundled DTC records, got ${records.length}`);
+          const codes = new Set(records.map(row => row?.code));
+          for (const code of ['P0300', 'P0420', 'P0171']) assert.ok(codes.has(code), `Missing common DTC ${code}`);
+          console.log(`PASS: production is serving TORQWISE and ${records.length} bundled DTC records.`);
+          NODE
