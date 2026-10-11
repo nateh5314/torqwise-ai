@@ -37,5 +37,13 @@ export default async () => {
       checks.quotaFunctionError = e instanceof Error ? e.message.slice(0,180) : "Network request failed";
     }
   }
-  return json({ healthVersion: "2026-10-11-diagnostics-v2", configured: env.supabaseUrl && env.supabaseAnonKey, environment: env, checks });
+  return json({
+    healthVersion: "2026-10-11-diagnostics-v3",
+    deployContext: process.env.CONTEXT || "unknown",
+    branch: process.env.BRANCH || "unknown",
+    commitRef: (process.env.COMMIT_REF || "unknown").slice(0, 12),
+    configured: env.supabaseUrl && env.supabaseAnonKey,
+    environment: env,
+    checks
+  });
 }

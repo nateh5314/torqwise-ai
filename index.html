@@ -94,16 +94,17 @@
 
 <section class="section alt" id="diagnostics"><div class="wrap">
  <div class="sectionhead"><div><div class="eyebrow">TORQWISE diagnostic workspace · Beta</div><h2>Start with the evidence.</h2><p class="sub">Search common OBD-II trouble codes or choose a symptom. Guided follow-up questions help prioritize the next checks, with an optional advanced test sequence for experienced technicians. Results are not a confirmed diagnosis.</p></div></div>
+ <div id="dtcDatabaseStatus" class="card" role="status" aria-live="polite" style="margin:0 0 14px;padding:12px 16px">Loading bundled generic OBD-II database…</div>
  <div class="diag-shell">
   <div class="card"><div class="diag-label">Step 1 · Vehicle context</div><div class="formgrid" style="margin-top:12px"><div class="field"><label for="diagYear">Year</label><input id="diagYear" inputmode="numeric" placeholder="e.g. 2018"></div><div class="field"><label for="diagMake">Make</label><input id="diagMake" placeholder="e.g. Ford"></div><div class="field"><label for="diagModel">Model</label><input id="diagModel" placeholder="e.g. F-150"></div><div class="field"><label for="diagEngine">Engine</label><input id="diagEngine" placeholder="e.g. 5.0L V8"></div></div><div class="notice" style="margin-top:12px">Vehicle details help frame the case, but this offline beta does not yet retrieve factory service information or vehicle-specific specifications.</div></div>
   <div class="card"><div class="diag-label">Step 2 · Find a starting point</div><div class="diag-tabs"><button type="button" id="tabCode" aria-pressed="true" onclick="diagSetMode('code')">Trouble code</button><button type="button" id="tabSymptom" aria-pressed="false" onclick="diagSetMode('symptom')">Symptoms</button></div>
-   <div id="diagCodePane"><form id="diagSearchForm"><label for="diagQuery">Code or keyword</label><div class="diag-search"><input id="diagQuery" placeholder="P0420, misfire, lean, no start" autocomplete="off"><button type="submit">Search</button></div><p class="tiny">Try P0300, P0171, P0420, P0455, P0442, P0128, P0135, P0101, P0401, P0700, P0562, P0016, or P0340.</p></form></div>
+   <div id="diagCodePane"><form id="diagSearchForm"><label for="diagQuery">Code or keyword</label><div class="diag-search"><input id="diagQuery" placeholder="P0420 or P0300, P0171, U0100" autocomplete="off"><button type="submit">Research code(s)</button></div><input id="diagVin" type="hidden" value=""><p class="tiny">Enter one code or a comma/space-separated list to review multiple codes together. VIN decoding adds vehicle context; it does not replace OEM service data. Try P0300, P0171, P0420, P0455, P0442, P0128, P0135, P0101, P0401, P0700, P0562, P0016, or P0340.</p></form></div>
    <div id="diagSymptomPane" class="hidden"><label for="diagSymptom">What is the vehicle doing?</label><select id="diagSymptom"><option value="nostart">Cranks but will not start</option><option value="crankno">No crank / no start</option><option value="misfire">Rough running or misfire</option><option value="overheat">Overheating</option><option value="stall">Stalls while running</option><option value="brake">Brake pedal / braking concern</option><option value="battery">Battery repeatedly goes dead</option><option value="power">Loss of power</option></select><button type="button" style="margin-top:12px" onclick="diagRunSymptom()">Build troubleshooting path</button></div>
   </div>
  </div>
  <div id="diagOutput" class="diag-results" aria-live="polite"><div class="diag-empty">Search a code or choose a symptom to get started. Add the vehicle details above for a more useful case summary.</div></div>
- <div class="card diag-history" style="margin-top:18px"><div class="sectionhead"><div><h3>Saved diagnostic cases</h3><p class="sub">Cases are saved only in this browser on this device. Do not use this feature to store customer-identifying information.</p></div><button class="secondary" type="button" onclick="diagClearHistory()">Clear history</button></div><div id="diagHistory"><div class="empty">No saved cases yet.</div></div></div>
- <p class="tiny" style="margin-top:14px">Coverage note: this beta uses a small, curated offline starter library. It does not query a live database, scan a vehicle, read freeze-frame data, or confirm repairs. Always verify code definitions, wiring, test values, service bulletins and procedures against trusted information for the exact vehicle.</p>
+ <div class="card diag-history" style="margin-top:18px"><div class="sectionhead"><div><h3>Saved diagnostic cases</h3><p class="sub">Cases are saved only in this browser on this device. Do not use this feature to store customer-identifying information.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" type="button" onclick="diagExportHistory()">Export backup</button><button class="secondary" type="button" onclick="document.getElementById(&quot;diagImportFile&quot;).click()">Import backup</button><input id="diagImportFile" type="file" accept=".json,application/json" hidden onchange="diagImportHistory(event)"><button class="secondary" type="button" onclick="diagClearHistory()">Clear history</button></div></div><div id="diagHistory"><div class="empty">No saved cases yet.</div></div></div>
+ <p class="tiny" style="margin-top:14px">The generic OBD-II reference database is bundled with this website build and loads from TORQWISE assets, not a third-party API. Generic code definitions are not OEM repair procedures. Confirm applicability, test values, wiring and safety precautions using service information for the exact vehicle.</p>
 </div></section>
 
 
@@ -191,7 +192,39 @@ battery:{title:'Battery repeatedly goes dead',urgency:'Stop if the battery is ho
 power:{title:'Loss of engine power',urgency:'If power loss makes merging or traffic unsafe, pull over when safe. Stop if there is overheating, oil-pressure warning, severe knocking or smoke.',first:['Scan all modules and record codes/freeze-frame; note limp mode messages.','Check basic fluids and visible intake/charge-air hoses when safe.','Compare requested vs actual boost/throttle/airflow and fuel pressure using the right scan tool.','Check for exhaust restriction, misfire, fuel delivery or sensor issues guided by data.','Do not replace a turbo, MAF or catalytic converter without confirming the failure.'],causes:['Limp mode due to stored fault','Air/boost leak or airflow measurement','Fuel delivery restriction','Exhaust restriction','Ignition/misfire or mechanical problem']}}
 function diagSetMode(mode){document.getElementById('diagCodePane').classList.toggle('hidden',mode!=='code');document.getElementById('diagSymptomPane').classList.toggle('hidden',mode!=='symptom');document.getElementById('tabCode').setAttribute('aria-pressed',String(mode==='code'));document.getElementById('tabSymptom').setAttribute('aria-pressed',String(mode==='symptom'));}
 function diagVehicle(){return [document.getElementById('diagYear').value,document.getElementById('diagMake').value,document.getElementById('diagModel').value,document.getElementById('diagEngine').value].map(x=>x.trim()).filter(Boolean).join(' ')||'Vehicle details not supplied'}
-function diagRunSearch(q){q=(q||'').trim().toUpperCase();const out=document.getElementById('diagOutput');if(!q){out.innerHTML='<div class="diag-empty">Enter a trouble code or keyword to search the starter library.</div>';return}const normalized=q.replace(/\s+/g,'');let matches=DIAG_DB.filter(d=>d.code.includes(normalized)||d.title.toUpperCase().includes(q)||d.system.toUpperCase().includes(q)||d.summary.toUpperCase().includes(q)||d.causes.some(c=>c.toUpperCase().includes(q)));if(/^P[0-9A-F]{4}$/.test(normalized))matches=DIAG_DB.filter(d=>d.code===normalized);if(!matches.length){out.innerHTML='<div class="diag-empty"><strong>No exact match in the offline starter library.</strong><p>This does not mean the code is invalid. Check the full code and search a descriptive keyword, then verify the definition with trusted service information for the exact vehicle.</p></div>';return}out.innerHTML=matches.map(d=>'<article class="diag-result"><div class="diag-label">'+escapeHtml(d.code)+' · '+escapeHtml(d.system)+'</div><h3>'+escapeHtml(d.title)+'</h3><p>'+escapeHtml(d.summary)+'</p><button type="button" onclick="diagShowDetail(\''+d.code+'\')">Open diagnostic path →</button></article>').join('');}
+function diagRunSearch(q){
+ q=(q||'').trim().toUpperCase();const out=document.getElementById('diagOutput');
+ if(!q){out.innerHTML='<div class="diag-empty">Enter a trouble code or keyword to search diagnostic references.</div>';return}
+ const requested=[...new Set((q.match(/[PBCU][0-9A-F]{4}/g)||[]))];
+ if(requested.length>12){out.innerHTML='<div class="diag-empty"><strong>Please research up to 12 codes at a time.</strong><p>Split larger scan reports into smaller groups so each code can be reviewed clearly and the combined research stays focused.</p></div>';return}
+ if(requested.length>1){const make=(document.getElementById('diagMake')?.value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');const vehicle=diagVehicle();out.innerHTML='<div class="diag-label">Multi-code research · '+requested.length+' codes</div><p>Vehicle context: '+escapeHtml(vehicle)+'. Generic definitions are references, not proof of a failed component.</p><div class="formbuttons"><button type="button" id="researchAllCodes">Research all '+requested.length+' codes with TORQWISE AI →</button></div>'+requested.map(code=>{let rows=DIAG_DB.filter(d=>String(d.code||'').toUpperCase()===code);if(make){const specific=rows.filter(d=>String(d.manufacturer||'').toUpperCase().replace(/[^A-Z0-9]/g,'')===make);if(specific.length)rows=[...specific,...rows.filter(d=>!d.manufacturer||d.isGeneric)];}const d=rows[0];const definitionLabel=d?(d.manufacturer&&!d.isGeneric?'Manufacturer-specific · '+d.manufacturer:'Generic OBD-II reference'):'';const networkNote=code[0]==='U'?'<p class="tiny"><strong>Network-code caution:</strong> identify which module reported the code, scan all modules, check related communication codes and module power/grounds before condemning a control module. Follow the vehicle-specific network test procedure.</p>':'';return '<article class="diag-result"><div class="diag-label">'+escapeHtml(code)+'</div>'+(d?'<p class="tiny">'+escapeHtml(definitionLabel)+'</p><h3>'+escapeHtml(d.title)+'</h3><p>'+escapeHtml(d.summary)+'</p>'+networkNote+'<button type="button" data-open-code="'+escapeHtml(code)+'" data-open-make="'+escapeHtml(d.manufacturer||'')+'">Open diagnostic path →</button>':'<h3>No bundled definition found</h3><p>This code may be manufacturer-specific or absent from the current generic dataset. Confirm the reporting module and consult vehicle-specific service information.</p>'+networkNote)+'</article>';}).join('');out.querySelectorAll('[data-open-code]').forEach(button=>button.addEventListener('click',()=>diagShowDetail(button.getAttribute('data-open-code'),button.getAttribute('data-open-make')||'')));document.getElementById('researchAllCodes')?.addEventListener('click',()=>diagResearchMultiple(requested));return}
+ const normalized=q.replace(/\s+/g,'');const make=(document.getElementById('diagMake')?.value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+ let matches=DIAG_DB.filter(d=>String(d.code||'').toUpperCase().includes(normalized)||String(d.title||'').toUpperCase().includes(q)||String(d.system||'').toUpperCase().includes(q)||String(d.summary||'').toUpperCase().includes(q)||(d.causes||[]).some(c=>String(c).toUpperCase().includes(q))||(d.symptoms||[]).some(c=>String(c).toUpperCase().includes(q)));
+ if(/^[PBCU][0-9A-F]{4}$/.test(normalized)){matches=DIAG_DB.filter(d=>String(d.code||'').toUpperCase()===normalized);if(make){const specific=matches.filter(d=>String(d.manufacturer||'').toUpperCase().replace(/[^A-Z0-9]/g,'')===make);const generic=matches.filter(d=>!d.manufacturer||d.isGeneric);if(specific.length)matches=[...specific,...generic];}}
+ matches=matches.slice(0,40);
+ if(!matches.length){
+  const phrase=q.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const symptomIntent=[
+   {key:'nostart',patterns:[/\bcranks? but (?:wont|won t|will not|does not|doesnt) start\b/,/\bcranks? no start\b/,/\bturns over but (?:wont|will not) start\b/,/\bengine (?:cranks|turns over) but (?:wont|will not) start\b/]},
+   {key:'crankno',patterns:[/\bno crank\b/,/\bdoes not crank\b/,/\bwont crank\b/,/\bwill not crank\b/]},
+   {key:'misfire',patterns:[/\bmisfire\b/,/\brough idle\b/,/\bengine running rough\b/]},
+   {key:'overheat',patterns:[/\boverheat(?:ing)?\b/,/\bengine too hot\b/]},
+   {key:'stall',patterns:[/\bstall(?:s|ing|ed)?\b/,/\bshuts off while driving\b/]},
+   {key:'brake',patterns:[/\bbrake pedal\b/,/\bbrakes? (?:feel|are)\b/]},
+   {key:'battery',patterns:[/\bdead battery\b/,/\bbattery keeps dying\b/,/\bbattery goes dead\b/]},
+   {key:'power',patterns:[/\bloss of power\b/,/\bno power\b/,/\bpoor acceleration\b/]}
+  ];
+  const intent=symptomIntent.find(item=>item.patterns.some(pattern=>pattern.test(phrase)));
+  if(intent&&Object.prototype.hasOwnProperty.call(DIAG_SYMPTOMS,intent.key)){
+   diagSetMode('symptom');document.getElementById('diagSymptom').value=intent.key;diagRunSymptom(intent.key);
+   const note=document.createElement('p');note.className='tiny';note.textContent='We recognized a symptom rather than a trouble code and opened the matching guided workflow.';
+   out.prepend(note);return;
+  }
+  if(/^[PBCU][0-9A-F]{4}$/.test(normalized)){const networkNote=normalized[0]==='U'?'<p><strong>Network-code caution:</strong> confirm the reporting module, scan all modules and check related communication codes, power and grounds before condemning a module.</p>':'';out.innerHTML='<div class="diag-empty"><strong>'+escapeHtml(normalized)+' is not in the bundled diagnostic library.</strong><p>This does not mean the code is invalid. It may be manufacturer-specific or require a reporting-module description. TORQWISE can still research the code using the vehicle context, but the result must be verified against service information.</p>'+networkNote+'<div class="formbuttons"><button type="button" id="researchMissingCode">Research '+escapeHtml(normalized)+' with TORQWISE AI →</button></div></div>';document.getElementById('researchMissingCode')?.addEventListener('click',()=>diagResearchMultiple([normalized]));return}
+  out.innerHTML='<div class="diag-empty"><strong>No match in the bundled diagnostic library.</strong><p>This does not mean the code is invalid. Confirm the full code and reporting module, then check vehicle-specific service information.</p><p>Searching for a symptom instead? Select the Symptoms tab or describe the symptom (for example, “cranks but won’t start”) and TORQWISE will try to open the matching guided workflow.</p></div>';return
+ }
+ out.innerHTML=matches.map(d=>'<article class="diag-result"><div class="diag-label">'+escapeHtml(d.code)+' · '+escapeHtml(d.system)+(d.manufacturer?' · '+escapeHtml(d.manufacturer):'')+'</div><h3>'+escapeHtml(d.title)+'</h3><p>'+escapeHtml(d.summary)+'</p><button type="button" onclick="diagShowDetail(\''+d.code+'\',\''+String(d.manufacturer||'').replace(/'/g,'')+'\')">Open diagnostic path →</button></article>').join('');
+}
 let diagCurrentCode=null;
 const DIAG_GUIDES={
  P0171:{
@@ -243,6 +276,159 @@ const DIAG_GUIDES={
   advanced:["Capture freeze-frame, Mode $06 where supported, cylinder misfire counters and all related DTCs.","Inspect plugs/coils/boots and verify ignition control/primary-secondary behavior using the approved procedure.","Compare fuel trims, MAF/load and intake integrity; smoke-test if indicated.","Verify injector balance/current and fuel pressure/volume using OEM specifications.","If indicated, perform compression/leak-down and valve-train/timing checks; consider catalyst protection if active misfire persists."]
  }
 };
+/* Additional guided paths built into the existing diagnostic workspace.
+   Branches prioritize tests only; they never declare a failed part. */
+function torqGuidePair(config){
+ const makeBranch=(topic,yes,no,unknown,next)=>({
+  "0:yes":{title:topic+" — evidence found",text:yes,next},
+  "0:no":{title:topic+" — no evidence yet",text:no,next},
+  "0:unknown":{title:"Collect the missing baseline",text:unknown,next},
+  "1:yes":{title:"Verify the suspected issue",text:yes,next:"Confirm the condition with the specified test and repair only what the evidence supports."},
+  "1:no":{title:"Continue to the next test",text:no,next:"Use the exact vehicle's diagnostic chart and measured values before replacing parts."},
+  "1:unknown":{title:"Inspect or measure before deciding",text:unknown,next:"Record results and follow the manufacturer test sequence."}
+ });
+ return {
+  beginner:config.beginner,
+  questions:[
+   {q:config.q1,opts:[["yes",config.yes1],["no",config.no1],["unknown","Not checked / not sure"]]},
+   {q:config.q2,opts:[["yes",config.yes2],["no",config.no2],["unknown","Not checked / not sure"]]}
+  ],
+  branches:makeBranch(config.topic,config.yesText,config.noText,config.unknownText,config.next),
+  advanced:config.advanced
+ };
+}
+Object.assign(DIAG_GUIDES,{
+ P0455:torqGuidePair({
+  beginner:"P0455 indicates a large EVAP-system leak was detected. It does not by itself identify the leak location or prove the fuel cap is the cause.",
+  topic:"EVAP leak check",q1:"Is the fuel cap loose, damaged, or missing its seal?",yes1:"Yes, cap/seal looks suspect",no1:"No obvious cap issue",
+  q2:"Has the EVAP system been tested with an approved smoke/pressure procedure?",yes2:"Yes, a leak test was performed",no2:"No leak test yet",
+  yesText:"Inspect the cap seal and filler-neck sealing surfaces; confirm the leak with the specified test before replacing anything.",
+  noText:"A cap can appear normal and still fail to seal. Test the EVAP system using the vehicle-specific procedure and correct pressure limits.",
+  unknownText:"Check the cap and filler-neck area with the engine off; do not introduce unregulated shop air or smoke.",
+  next:"If the leak is not at the cap, isolate hoses, purge/vent valves and tank connections using the OEM test.",
+  advanced:["Read stored, pending and permanent codes plus freeze-frame.","Inspect cap, filler neck, EVAP hoses and accessible connections.","Run the manufacturer-approved EVAP leak test at its specified pressure.","Command purge/vent valves with a capable scan tool if supported.","Verify monitor completion after repair; do not assume a generic smoke result covers every leak path."]
+ }),
+ P0442:torqGuidePair({
+  beginner:"P0442 indicates a small EVAP leak. A small leak can be difficult to locate visually, and the code alone does not identify a failed valve or hose.",
+  topic:"Small EVAP leak",q1:"Is the fuel cap seal or filler-neck area visibly damaged?",yes1:"Visible cap/filler-neck concern",no1:"No visible concern",
+  q2:"Has a low-pressure EVAP smoke test located a leak?",yes2:"Yes, leak location found",no2:"Not tested / not located",
+  yesText:"Confirm the exact leak point and sealing condition; inspect adjacent fittings before replacing parts.",
+  noText:"Use the correct low-pressure smoke procedure. Avoid over-pressurizing the EVAP system or using unsafe improvised methods.",
+  unknownText:"Start with a careful visual check, then use the manufacturer-approved leak test.",
+  next:"Inspect the purge valve, vent valve, hoses and seals only as indicated by the test results.",
+  advanced:["Record all codes and freeze-frame.","Inspect cap seal and filler neck.","Perform approved EVAP leak detection within specified pressure limits.","Check purge/vent valve sealing and commanded operation.","Repeat the required EVAP monitor after the repair."]
+ }),
+ P0128:torqGuidePair({
+  beginner:"P0128 means coolant temperature did not reach the expected thermostat-regulated range within the expected conditions. A thermostat is one possibility, not a confirmed failure.",
+  topic:"Engine warm-up",q1:"Does live coolant temperature rise normally from a cold start?",yes1:"Temperature rises steadily",no1:"Temperature stays low or behaves erratically",
+  q2:"Has coolant level and the coolant-temperature sensor reading been checked against ambient temperature?",yes2:"Yes, readings/level checked",no2:"Not checked yet",
+  yesText:"Compare warm-up time and thermostat operation with the vehicle's specifications; verify cooling-fan strategy and operating conditions.",
+  noText:"Check coolant level only when safe/cool, inspect for leaks, and compare scan-tool temperature to a reliable temperature measurement.",
+  unknownText:"With the engine cold, verify coolant level and compare the sensor's cold reading to ambient conditions before warm-up testing.",
+  next:"Confirm sensor plausibility and thermostat performance using the OEM procedure before replacing either component.",
+  advanced:["Record ambient temperature, freeze-frame and coolant-temperature PID.","Compare cold-soak ECT to intake-air/ambient temperature.","Check coolant level and system integrity when cold.","Monitor warm-up and fan operation against OEM data.","Test thermostat and ECT circuit using specified procedures."]
+ }),
+ P0101:torqGuidePair({
+  beginner:"P0101 indicates a mass-airflow signal outside the expected range. It may involve air leaks, contamination, wiring, restrictions or engine condition—not just the MAF sensor.",
+  topic:"Air metering",q1:"Is the intake duct/filter housing damaged or leaking after the air meter?",yes1:"Intake damage/leak found",no1:"No visible intake damage",
+  q2:"Do live MAF/load values match the manufacturer's expected range for this engine and condition?",yes2:"Values appear plausible",no2:"Values are out of range / not checked",
+  yesText:"Repair confirmed intake leaks and retest; verify that the fault returns under the original conditions before moving on.",
+  noText:"Inspect connector, power/ground, wiring, intake restriction and sensor contamination using the OEM procedure.",
+  unknownText:"Save freeze-frame, inspect the intake tract, and compare live data against vehicle-specific specifications.",
+  next:"Check for intake leaks and restrictions before condemning the MAF; use approved cleaning procedures only if specified.",
+  advanced:["Read companion DTCs and freeze-frame.","Inspect filter, ducting and clamps downstream of the MAF.","Check MAF power, ground and signal integrity.","Compare MAF/load values under defined RPM/load conditions.","Check intake/exhaust restrictions and engine mechanical condition if readings remain implausible."]
+ }),
+ P0135:torqGuidePair({
+  beginner:"P0135 typically indicates an upstream oxygen-sensor heater circuit fault on Bank 1 Sensor 1. Verify the exact vehicle definition and circuit before replacing a sensor.",
+  topic:"Oxygen-sensor heater circuit",q1:"Is there visible damage, corrosion or a loose connection at the sensor harness?",yes1:"Harness/connector issue visible",no1:"No visible harness issue",
+  q2:"Have heater power, ground/control and resistance been tested to the OEM specification?",yes2:"Circuit tests completed",no2:"Circuit tests not completed",
+  yesText:"Repair wiring/connector faults confirmed by testing, then clear and verify using the specified monitor procedure.",
+  noText:"Check the correct fuse/feed, grounds, control side and heater element using the wiring diagram and safe test method.",
+  unknownText:"Identify the exact sensor and wiring diagram; exhaust components may be hot, so allow safe cooling before inspection.",
+  next:"Test the heater circuit and sensor against vehicle-specific values; do not infer sensor failure from the code alone.",
+  advanced:["Confirm bank/sensor location from service information.","Inspect harness routing, connector pins and heat damage.","Verify fuse and heater supply under load.","Test control/ground and heater resistance using OEM limits.","Repair, clear if appropriate, and confirm monitor completion."]
+ }),
+ P0401:torqGuidePair({
+  beginner:"P0401 indicates insufficient EGR flow under the monitor conditions. Carbon restriction, valve operation, passages, controls or sensor feedback may be involved.",
+  topic:"EGR flow",q1:"Are there signs of restricted EGR passages or a valve that cannot move as commanded?",yes1:"Restriction/operation concern found",no1:"No obvious restriction or binding",
+  q2:"Does commanded EGR operation produce the expected sensor/engine response?",yes2:"Expected response observed",no2:"Response missing / not tested",
+  yesText:"Confirm the restriction or actuator issue with the vehicle's specified flow test before cleaning or replacing parts.",
+  noText:"Check command circuit, vacuum supply if fitted, feedback sensors and passage restriction using the correct diagram.",
+  unknownText:"Record companion codes and use scan-tool active tests only when supported by the service procedure.",
+  next:"Confirm actual flow with the manufacturer's test; avoid applying generic actuator assumptions across different systems.",
+  advanced:["Identify EGR architecture and read companion codes.","Inspect related passages and cooler where fitted, when cool and safe.","Command the valve and monitor feedback using a capable scan tool.","Check control wiring, vacuum supply or actuator circuit as applicable.","Verify flow with the OEM procedure and complete the specified drive cycle."]
+ }),
+ P0562:torqGuidePair({
+  beginner:"P0562 indicates system voltage below the control module's expected range. The battery, connections, charging system, wiring or excessive load may be responsible.",
+  topic:"Low system voltage",q1:"Are battery terminals, grounds or main power connections loose or corroded?",yes1:"Connection issue visible",no1:"Connections look sound",
+  q2:"Have battery condition and charging voltage been tested under the specified conditions?",yes2:"Battery/charging tests done",no2:"Not tested yet",
+  yesText:"Clean/repair only confirmed connection faults using safe battery procedures, then retest voltage and stored codes.",
+  noText:"Load-test the battery and test the charging system, cables, grounds and voltage drop to manufacturer specifications.",
+  unknownText:"Check battery condition and connections safely; avoid shorting terminals and follow battery handling precautions.",
+  next:"Record voltage at the battery and relevant module feeds under load; don't replace an alternator solely from this code.",
+  advanced:["Record freeze-frame and all low-voltage/network codes.","Inspect battery posts, grounds and high-current connections.","Test battery state/health with the correct procedure.","Measure charging output and voltage drop under load.","Check parasitic draw or wiring faults if the supply system passes."]
+ }),
+ P0016:torqGuidePair({
+  beginner:"P0016 indicates a crankshaft/camshaft correlation mismatch. Possible causes include timing, oil/VVT operation, sensor circuits or mechanical issues. Incorrect timing can cause engine damage.",
+  topic:"Cam/crank correlation",q1:"Did the fault begin after timing-chain/belt or engine work, or is there abnormal mechanical noise?",yes1:"Recent work/noise concern",no1:"No recent work or unusual noise",
+  q2:"Have oil level/condition and cam/crank signal data been checked using the OEM procedure?",yes2:"Oil and signal checks completed",no2:"Not checked yet",
+  yesText:"If timing work or mechanical noise is involved, stop unnecessary running and verify mechanical timing before further operation.",
+  noText:"Check oil level/specification and VVT control, then evaluate sensor signals and timing using the exact engine procedure.",
+  unknownText:"Avoid extended running if there is abnormal noise or severe drivability trouble. Preserve codes and inspect oil condition safely.",
+  next:"Use engine-specific timing marks, correlation data and service steps; do not replace sensors as a substitute for checking mechanical timing.",
+  advanced:["Check all cam/crank/VVT codes and freeze-frame.","Verify oil level, condition and correct specification.","Inspect sensor connectors and signal integrity.","Compare cam/crank correlation and VVT commanded/actual values.","Verify mechanical timing with engine-specific procedures if indicated."]
+ }),
+ P0340:torqGuidePair({
+  beginner:"P0340 typically indicates a camshaft-position sensor circuit fault. The cause may be the sensor, wiring, power/ground, signal target or a timing/mechanical issue.",
+  topic:"Camshaft signal",q1:"Is there visible damage or a loose/corroded connection at the cam sensor circuit?",yes1:"Harness/connector concern",no1:"No visible connection concern",
+  q2:"Has the sensor's supply, ground and signal been tested against the wiring diagram?",yes2:"Circuit tests completed",no2:"Not tested yet",
+  yesText:"Repair a verified wiring/connector issue and confirm a stable signal before replacing the sensor.",
+  noText:"Test supply, ground and signal with the specified equipment; check related crank-sensor/timing codes.",
+  unknownText:"Identify sensor location and circuit from the exact vehicle information; keep clear of moving engine components.",
+  next:"Confirm circuit integrity and signal pattern, then consider reluctor/timing checks if the circuit passes.",
+  advanced:["Record companion DTCs and freeze-frame.","Inspect connector pins, harness routing and oil/coolant contamination.","Verify power, ground and reference/signal using the correct diagram.","Check signal during cranking/running with approved equipment.","Investigate reluctor and mechanical timing only when indicated."]
+ }),
+ P0118:torqGuidePair({
+  beginner:"P0118 typically means the engine coolant-temperature input is reporting an abnormally high electrical signal, often interpreted as very cold coolant. The circuit must be tested before replacing the sensor.",
+  topic:"Coolant temperature circuit",q1:"After a true cold soak, does scan-tool coolant temperature match ambient temperature reasonably?",yes1:"Cold reading is plausible",no1:"Reading is implausible / not checked",
+  q2:"Have the sensor connector, reference circuit and wiring been tested to the wiring diagram?",yes2:"Circuit checks completed",no2:"Not checked yet",
+  yesText:"If the cold reading is plausible, monitor the signal through warm-up and check intermittent wiring faults under the approved procedure.",
+  noText:"Inspect connector corrosion/open circuits and compare sensor resistance/signal with OEM temperature charts.",
+  unknownText:"Start with a cold-soak plausibility check and inspect the circuit with ignition off as directed by service information.",
+  next:"Use the exact sensor type and circuit diagram; never jumper unknown terminals or assume the sensor itself is faulty.",
+  advanced:["Record freeze-frame and compare cold-soak ECT to ambient/IAT.","Inspect connector pins, harness damage and open/high-resistance circuits.","Test reference voltage and return/signal circuit per diagram.","Measure sensor response using the OEM temperature/resistance chart.","Verify stable readings through warm-up and confirm monitor behavior."]
+ }),
+ P0174:torqGuidePair({
+  beginner:"P0174 indicates a lean correction limit on Bank 2. Air leaks, air metering, fuel delivery, exhaust leaks or sensor feedback may contribute; the code doesn't identify a part.",
+  topic:"Bank 2 lean condition",q1:"Are fuel trims much worse at idle than at a steady elevated RPM?",yes1:"Lean correction worse at idle",no1:"Lean correction similar across RPM",
+  q2:"Have intake/PCV leaks and fuel pressure/volume been checked?",yes2:"Leak/fuel tests performed",no2:"Not checked yet",
+  yesText:"Prioritize unmetered air leaks affecting Bank 2 and confirm with a suitable smoke test.",
+  noText:"Check MAF plausibility, fuel delivery and exhaust/sensor integrity using the correct engine-specific procedure.",
+  unknownText:"Save freeze-frame and compare bank-to-bank trims at idle and elevated RPM before selecting a test.",
+  next:"Use measured trims and OEM fuel-pressure/air-metering specifications; do not replace sensors or injectors from the code alone.",
+  advanced:["Read all DTCs and preserve freeze-frame.","Compare STFT/LTFT on both banks at idle and elevated RPM.","Inspect intake/PCV/vacuum circuits and smoke-test as appropriate.","Compare MAF/load and fuel pressure/volume with OEM data.","Check exhaust leaks and upstream sensor response if earlier tests pass."]
+ }),
+ P0301:torqGuidePair({
+  beginner:"P0301 indicates a misfire detected on cylinder 1. It does not identify whether the cause is ignition, fuel, compression, wiring or another engine fault.",
+  topic:"Cylinder 1 misfire",q1:"Is the check-engine light flashing or is the misfire severe?",yes1:"Flashing light / severe misfire",no1:"No severe active misfire",
+  q2:"Do ignition, injector and mechanical tests identify a cylinder 1 issue?",yes2:"A test points to a system",no2:"No test result yet",
+  yesText:"Stop or limit operation if the misfire is severe; follow the test result to confirm the cause without unnecessary driving.",
+  noText:"Compare cylinder-specific ignition/injector data, inspect connectors and follow the engine-specific diagnostic chart.",
+  unknownText:"Read companion codes and freeze-frame, then determine whether the misfire is active before running further tests.",
+  next:"Use approved cylinder contribution, ignition, fuel and compression tests as applicable; do not swap parts without tracking the result.",
+  advanced:["Assess severity; avoid driving with a flashing MIL/severe misfire.","Record misfire counters, freeze-frame and related codes.","Inspect cylinder 1 ignition components and wiring using OEM procedure.","Test injector control/fuel delivery if indicated.","Perform compression/leak-down and valve-train checks if ignition/fuel tests pass."]
+ }),
+ P0302:torqGuidePair({
+  beginner:"P0302 indicates a misfire detected on cylinder 2. The code identifies the cylinder being flagged, not the failed component.",
+  topic:"Cylinder 2 misfire",q1:"Is the check-engine light flashing or is the misfire severe?",yes1:"Flashing light / severe misfire",no1:"No severe active misfire",
+  q2:"Do ignition, injector and mechanical tests identify a cylinder 2 issue?",yes2:"A test points to a system",no2:"No test result yet",
+  yesText:"Stop or limit operation if the misfire is severe; follow the test result to confirm the cause without unnecessary driving.",
+  noText:"Compare cylinder-specific ignition/injector data, inspect connectors and follow the engine-specific diagnostic chart.",
+  unknownText:"Read companion codes and freeze-frame, then determine whether the misfire is active before running further tests.",
+  next:"Use approved cylinder contribution, ignition, fuel and compression tests as applicable; do not swap parts without tracking the result.",
+  advanced:["Assess severity; avoid driving with a flashing MIL/severe misfire.","Record misfire counters, freeze-frame and related codes.","Inspect cylinder 2 ignition components and wiring using OEM procedure.","Test injector control/fuel delivery if indicated.","Perform compression/leak-down and valve-train checks if ignition/fuel tests pass."]
+ })
+});
 function diagGuidedHtml(code){
  const g=DIAG_GUIDES[code];
  if(!g)return '<div class="guided-box"><h3>Guided follow-up</h3><p>This code has a general test sequence above. Guided branching is currently available for P0171, P0420 and P0300; more paths will be added after validation.</p></div>';
@@ -272,44 +458,176 @@ function diagRenderGuideQuestion(){
  const q=g.questions[index];
  host.innerHTML='<p><strong>Question '+(index+1)+' of '+g.questions.length+':</strong> '+escapeHtml(q.q)+'</p><div class="guided-options">'+q.opts.map(o=>'<button type="button" onclick="diagAnswerGuide('+index+',\''+o[0]+'\')">'+escapeHtml(o[1])+'</button>').join('')+'</div>';
 }
-function diagAnswerGuide(index,value){diagGuideAnswers[index]=value;diagRenderGuideQuestion();}
-function diagShowDetail(code){const d=DIAG_DB.find(x=>x.code===code);if(!d)return;diagCurrentCode=code;diagGuideAnswers={};const out=document.getElementById('diagOutput');out.innerHTML='<article class="card diag-detail"><div class="diag-label">Diagnostic case · '+escapeHtml(d.code)+'</div><h2>'+escapeHtml(d.title)+'</h2><p class="sub"><strong>Vehicle:</strong> '+escapeHtml(diagVehicle())+'</p><p>'+escapeHtml(d.summary)+'</p><div class="diag-warning">'+escapeHtml(d.urgent)+'</div><h3>Possible causes — not a parts verdict</h3><ul>'+d.causes.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul><h3>Suggested diagnostic sequence</h3><ol>'+d.checks.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ol>'+diagGuidedHtml(code)+'<div class="diag-meta"><span class="diag-chip">Offline starter data</span><span class="diag-chip">Vehicle procedure required</span></div><div class="formbuttons"><button type="button" onclick="diagSaveCase(\''+d.code+'\')">Save case to this browser</button><button type="button" class="secondary" onclick="diagResearchCase(\''+d.code+'\')">Research this case with AI</button><button type="button" class="secondary" onclick="diagFindParts(\''+d.code+'\')">Explore related parts</button><button type="button" class="secondary" onclick="diagRunSearch(\''+d.code+'\')">Back to results</button></div></article>';if(DIAG_GUIDES[code])diagRenderGuideQuestion();}
-function diagRunSymptom(){const key=document.getElementById('diagSymptom').value,s=DIAG_SYMPTOMS[key];if(!s)return;const out=document.getElementById('diagOutput');out.innerHTML='<article class="card diag-detail"><div class="diag-label">Symptom workflow · first-pass checks</div><h2>'+escapeHtml(s.title)+'</h2><p class="sub"><strong>Vehicle:</strong> '+escapeHtml(diagVehicle())+'</p><div class="diag-warning">'+escapeHtml(s.urgency)+'</div><h3>Common possibilities</h3><ul>'+s.causes.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul><h3>Suggested order of checks</h3><ol>'+s.first.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ol><p class="tiny">This workflow narrows what to test next; it cannot confirm a failed part without measurements and vehicle-specific information.</p><div class="formbuttons"><button type="button" onclick="diagSaveCase(\''+key+'\')">Save case to this browser</button><button type="button" class="secondary" onclick="diagResearchCase(\''+key+'\')">Research this case with AI</button><button type="button" class="secondary" onclick="diagFindParts(\''+key+'\')">Explore related parts</button><button type="button" class="secondary" onclick="diagSetMode(\'code\');document.getElementById(\'diagQuery\').focus()">Search a code too</button></div></article>';}
+function diagAnswerGuide(index,value){diagGuideAnswers[index]=value;diagStoreSession(diagCurrentCode,{answers:{...diagGuideAnswers}});diagRenderGuideQuestion();diagRenderSession(diagCurrentCode);}
+
+const DIAG_SESSION_KEY='torqwise_diag_sessions_v1';
+function diagReadSessions(){try{return JSON.parse(localStorage.getItem(DIAG_SESSION_KEY))||{}}catch(e){return {}}}
+function diagSessionKey(code){return String(code||'unknown')+'|'+diagVehicle();}
+function diagGetSession(code){return diagReadSessions()[diagSessionKey(code)]||{answers:{},findings:'',updatedAt:null};}
+function diagStoreSession(code,patch){const all=diagReadSessions(),key=diagSessionKey(code),old=all[key]||{answers:{},findings:'',updatedAt:null};all[key]={...old,...patch,updatedAt:new Date().toISOString(),code,vehicle:diagVehicle()};try{localStorage.setItem(DIAG_SESSION_KEY,JSON.stringify(all));return true}catch(e){return false}}
+function diagSessionSummary(code){const session=diagGetSession(code),guide=DIAG_GUIDES[code];const answers=guide?Object.keys(session.answers||{}).sort((a,b)=>Number(a)-Number(b)).map(k=>{const q=guide.questions[Number(k)],value=session.answers[k],option=q&&q.opts.find(o=>o[0]===value);return q?q.q+' '+(option?option[1]:value):''}).filter(Boolean):[];return {answers,findings:String(session.findings||'').trim(),updatedAt:session.updatedAt||null}}
+function diagRenderSession(code){const host=document.getElementById('diagSessionPanel');if(!host)return;const session=diagGetSession(code),summary=diagSessionSummary(code);host.innerHTML='<h3>Diagnostic session notes</h3><p class="guided-small">Record actual observations and test results here. Notes stay in this browser until browser data is cleared.</p>'+(summary.answers.length?'<h4>Guided answers so far</h4><ul>'+summary.answers.map(a=>'<li>'+escapeHtml(a)+'</li>').join('')+'</ul>':'<p class="guided-small">No guided answers recorded yet.</p>')+'<label for="diagTestFindings">Test findings / measurements / repairs attempted</label><textarea id="diagTestFindings" rows="4" placeholder="Example: warm idle STFT +18%, 2500 RPM +4%; smoke test showed a leak at the PCV elbow…">'+escapeHtml(session.findings||'')+'</textarea><div class="formbuttons"><button type="button" onclick="diagSaveFindings()">Save findings</button><button type="button" class="secondary" onclick="diagClearFindings()">Clear findings</button></div><p class="guided-small" id="diagSessionSaveStatus" aria-live="polite">'+(session.updatedAt?'Last saved locally: '+escapeHtml(new Date(session.updatedAt).toLocaleString()):'No saved session notes yet.')+'</p>'}
+function diagSaveFindings(){const field=document.getElementById('diagTestFindings');if(!field||!diagCurrentCode)return;const ok=diagStoreSession(diagCurrentCode,{findings:field.value});const status=document.getElementById('diagSessionSaveStatus');if(status)status.textContent=ok?'Test findings saved in this browser.':'Could not save: browser storage may be full or disabled.'}
+function diagClearFindings(){if(!diagCurrentCode)return;const ok=diagStoreSession(diagCurrentCode,{findings:'',answers:{}});if(ok){diagGuideAnswers={};diagRenderSession(diagCurrentCode);if(DIAG_GUIDES[diagCurrentCode])diagRenderGuideQuestion()}}
+function diagShowDetail(code,manufacturer){
+ const d=DIAG_DB.find(x=>x.code===code&&(manufacturer?String(x.manufacturer||'').toUpperCase()===String(manufacturer).toUpperCase():!x.manufacturer))||DIAG_DB.find(x=>x.code===code);
+ if(!d)return;
+ diagCurrentCode=code;diagGuideAnswers={...diagGetSession(code).answers};
+ const out=document.getElementById('diagOutput');
+ const list=items=>Array.isArray(items)&&items.length?'<ul>'+items.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul>':'';
+ const symptoms=list(d.symptoms);
+ const components=list(d.affected_components);
+ const related=list(d.related_codes);
+ const extras=list(d.extraDetails);
+ const sources=Array.isArray(d.sources)?d.sources.filter(u=>typeof u==='string'&&/^https?:\/\//i.test(u)):[];
+ out.innerHTML='<article class="card diag-detail"><div class="diag-label">Diagnostic reference · '+escapeHtml(d.code)+(d.manufacturer?' · '+escapeHtml(d.manufacturer):'')+'</div><h2>'+escapeHtml(d.title)+'</h2><p class="sub"><strong>Vehicle:</strong> '+escapeHtml(diagVehicle())+'</p><p>'+escapeHtml(d.summary)+'</p><div class="diag-warning">'+escapeHtml(d.urgent||'Verify applicability with service information for the exact vehicle.')+'</div>'+
+ (symptoms?'<h3>Associated symptoms in the reference</h3>'+symptoms:'')+
+ (components?'<h3>Affected components to inspect — not confirmed failures</h3>'+components:'')+
+ '<h3>Possible causes — not a parts verdict</h3>'+list(d.causes)+
+ '<h3>Suggested diagnostic sequence</h3><ol>'+(d.checks||[]).map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ol>'+
+ (related?'<h3>Related codes</h3>'+related:'')+
+ (extras?'<h3>Additional source notes</h3>'+extras:'')+
+ diagGuidedHtml(code)+'<section class="guided-box" id="diagSessionPanel"></section>'+
+ (sources.length?'<h3>Reference sources</h3><ul>'+sources.map(u=>'<li><a href="'+escapeHtml(u)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(u)+'</a></li>').join('')+'</ul>':'')+
+ '<div class="diag-meta"><span class="diag-chip">'+(d.isGeneric?'Bundled generic DTC reference':'Curated guided reference')+'</span><span class="diag-chip">Vehicle procedure required</span></div><div class="formbuttons"><button type="button" onclick="diagSaveCase(\''+d.code+'\')">Save case to this browser</button><button type="button" class="secondary" onclick="diagResearchCase(\''+d.code+'\')">Research this case with AI</button><button type="button" class="secondary" onclick="diagFindParts(\''+d.code+'\')">Explore related parts</button><button type="button" class="secondary" onclick="diagRunSearch(\''+d.code+'\')">Back to results</button></div></article>';
+ if(DIAG_GUIDES[code])diagRenderGuideQuestion();
+diagRenderSession(code);
+}
+function diagRunSymptom(resumeKey){const key=resumeKey&&Object.prototype.hasOwnProperty.call(DIAG_SYMPTOMS,resumeKey)?resumeKey:document.getElementById('diagSymptom').value;if(resumeKey&&Object.prototype.hasOwnProperty.call(DIAG_SYMPTOMS,resumeKey))document.getElementById('diagSymptom').value=resumeKey;const s=DIAG_SYMPTOMS[key];if(!s)return;const out=document.getElementById('diagOutput');out.innerHTML='<article class="card diag-detail"><div class="diag-label">Symptom workflow · first-pass checks</div><h2>'+escapeHtml(s.title)+'</h2><p class="sub"><strong>Vehicle:</strong> '+escapeHtml(diagVehicle())+'</p><div class="diag-warning">'+escapeHtml(s.urgency)+'</div><h3>Common possibilities</h3><ul>'+s.causes.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul><h3>Suggested order of checks</h3><ol>'+s.first.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ol><p class="tiny">This workflow narrows what to test next; it cannot confirm a failed part without measurements and vehicle-specific information.</p><div class="formbuttons"><button type="button" onclick="diagSaveCase(\''+key+'\')">Save case to this browser</button><button type="button" class="secondary" onclick="diagResearchCase(\''+key+'\')">Research this case with AI</button><button type="button" class="secondary" onclick="diagFindParts(\''+key+'\')">Explore related parts</button><button type="button" class="secondary" onclick="diagSetMode(\'code\');document.getElementById(\'diagQuery\').focus()">Search a code too</button></div></article>';}
 function diagFindParts(id){
  const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPTOMS[id];
  if(!code&&!sym)return;
  const part=document.getElementById('marketPart'),vehicle=document.getElementById('marketVehicle'),message=document.getElementById('marketMessage');
  const title=code?code.code+' '+code.title:sym.title;
- if(part)part.value=title+' — investigate repair-related parts only after confirming the fault';
+ const session=diagSessionSummary(id);
+ if(part)part.value=title+' — technician findings: '+(session.findings||'not recorded')+' — investigate repair-related parts only after confirming the fault';
  if(vehicle)vehicle.value=diagVehicle()==='Vehicle details not supplied'?'':diagVehicle();
  if(message){message.classList.remove('hidden','success');message.textContent='Case context copied. This is a research starting point, not a diagnosis or a parts replacement recommendation. Confirm the cause and exact fitment before ordering.'}
  document.getElementById('parts-market')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function diagResearchMultiple(codes){
+ const asset=document.getElementById('researchAsset'),serial=document.getElementById('researchSerial'),topic=document.getElementById('researchTopic'),question=document.getElementById('researchQuestion');
+ const vin=(document.getElementById('diagVin')?.value||document.getElementById('vinInput')?.value||'').trim().toUpperCase();
+ const vehicle=diagVehicle();
+ if(asset)asset.value=vehicle==='Vehicle details not supplied'?'':vehicle;
+ if(serial&&/^[A-HJ-NPR-Z0-9]{17}$/.test(vin))serial.value=vin;
+ if(topic)topic.value='diagnostic';
+ const entries=[...new Set(codes)].map(code=>{const d=DIAG_DB.find(x=>String(x.code||'').toUpperCase()===code);return code+': '+(d?d.title+'. '+d.summary:'No bundled definition found; determine whether manufacturer-specific service information is required.');});
+ if(question)question.value='Research these diagnostic trouble codes as one vehicle-level case. Vehicle: '+vehicle+'. VIN: '+(vin||'not supplied')+'. Codes and bundled references:\n- '+entries.join('\n- ')+'\n\nPlease correlate the codes and identify likely shared causes versus independent faults. Rank hypotheses by evidence, explain what each code does and does not establish, and give a safe ordered test plan with expected observations and decision branches. Identify which OEM service information, module scan results, freeze-frame data, wiring diagrams, and live data are needed. Do not invent vehicle-specific specifications, pinouts, test limits, citations, or part numbers. Do not recommend parts replacement without test evidence. Flag any safety-critical condition and distinguish generic code definitions from confirmed vehicle-specific facts.';
+ document.getElementById('research-hub')?.scrollIntoView({behavior:'smooth',block:'start'});
+ const status=document.getElementById('torqAiStatus');
+ if(status){status.textContent='Multi-code case prepared for AI research. Review the vehicle/VIN context, then select Ask TORQWISE AI.';status.classList.remove('hidden')}
 }
 function diagResearchCase(id){
  const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPTOMS[id];
  if(!code&&!sym)return;
  const asset=document.getElementById('researchAsset'),serial=document.getElementById('researchSerial'),topic=document.getElementById('researchTopic'),question=document.getElementById('researchQuestion');
  if(asset)asset.value=diagVehicle()==='Vehicle details not supplied'?'':diagVehicle();
- const vin=document.getElementById('vinInput')?.value.trim().toUpperCase()||'';
+ const vin=(document.getElementById('diagVin')?.value||document.getElementById('vinInput')?.value||'').trim().toUpperCase();
  if(serial&&/^[A-HJ-NPR-Z0-9]{17}$/.test(vin))serial.value=vin;
  if(topic)topic.value='diagnostic';
  const title=code?code.code+' — '+code.title:sym.title;
  const summary=code?code.summary:'Symptom-led case: '+sym.title+'. Urgency: '+sym.urgency;
  const checks=code?code.checks:sym.first;
- if(question)question.value='Continue this TORQWISE diagnostic case. Vehicle/equipment: '+diagVehicle()+'. Case: '+title+'. Context: '+summary+'.\n\nSuggested checks already shown:\n- '+checks.join('\n- ')+'\n\nPlease: (1) ask only the most important missing questions, (2) rank plausible causes by evidence and explain what would distinguish them, (3) give a safe, ordered next-test plan, including what result would support or rule out each branch, (4) identify the vehicle-specific service data needed. Do not invent specifications, wiring pinouts, test limits, citations, or part numbers. Do not recommend replacing a part unless tests support that conclusion. Flag safety-critical conditions and clearly distinguish verified facts from hypotheses.';
+ const session=diagSessionSummary(id);
+ if(question)question.value='Continue this TORQWISE diagnostic case. Vehicle/equipment: '+diagVehicle()+'. Case: '+title+'. Context: '+summary+'.\n\nGuided answers: '+(session.answers.join(' | ')||'None recorded')+'.\n\nTechnician test findings: '+(session.findings||'None recorded')+'.\n\nSuggested checks already shown:\n- '+checks.join('\n- ')+'\n\nPlease: (1) ask only the most important missing questions, (2) rank plausible causes by evidence and explain what would distinguish them, (3) give a safe, ordered next-test plan, including what result would support or rule out each branch, (4) identify the vehicle-specific service data needed. Do not invent specifications, wiring pinouts, test limits, citations, or part numbers. Do not recommend replacing a part unless tests support that conclusion. Flag safety-critical conditions and clearly distinguish verified facts from hypotheses.';
  document.getElementById('research-hub')?.scrollIntoView({behavior:'smooth',block:'start'});
  const status=document.getElementById('torqAiStatus');
  if(status){status.textContent='Diagnostic case prepared for AI research. Review the vehicle details and case question, then select Ask TORQWISE AI.';status.classList.remove('hidden')}
 }
 function diagReadHistory(){try{return JSON.parse(localStorage.getItem('torqwise_diag_history_v1'))||[]}catch(e){return[]}}
-function diagSaveCase(id){const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPTOMS[id],item={id:'D-'+Date.now().toString().slice(-8),title:code?code.code+' — '+code.title:sym?sym.title:id,vehicle:diagVehicle(),created:new Date().toISOString(),kind:code?'code':'symptom'};const h=diagReadHistory();h.unshift(item);localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(h.slice(0,25)));diagRenderHistory();const out=document.getElementById('diagOutput');const msg=document.createElement('p');msg.className='notice';msg.textContent='Case saved locally. If signed in, it is also being saved to account history.';out.querySelector('.diag-detail')?.appendChild(msg);const checks=code?code.checks:sym?sym.first:[];torqSaveAccountHistory({kind:'diagnostic',title:item.title,asset:item.vehicle,prompt:code?code.summary:sym?sym.urgency:'Diagnostic case',result:(code?code.checks:sym?sym.first:[]).join('\\n'),metadata:{code:code?.code||null,symptomId:sym?id:null,causes:code?code.causes:sym?sym.causes:[],checks}});}
-function diagRenderHistory(){const h=diagReadHistory(),el=document.getElementById('diagHistory');if(!h.length){el.innerHTML='<div class="empty">No saved cases yet.</div>';return}el.innerHTML=h.map(x=>'<div class="order"><div class="orderhead"><span>'+escapeHtml(x.title)+'</span><span class="status">Saved locally</span></div><p>'+escapeHtml(x.vehicle)+' · '+new Date(x.created).toLocaleString()+'</p></div>').join('')}
+function diagSaveCase(id){const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPTOMS[id],session=diagSessionSummary(id),item={id:'D-'+Date.now().toString().slice(-8),title:code?code.code+' — '+code.title:sym?sym.title:id,vehicle:diagVehicle(),created:new Date().toISOString(),kind:code?'code':'symptom',code:code?.code||null,symptomId:sym?id:null,session,sessionState:diagGetSession(id)};const h=diagReadHistory();h.unshift(item);localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(h.slice(0,25)));diagRenderHistory();const out=document.getElementById('diagOutput');const msg=document.createElement('p');msg.className='notice';msg.textContent='Case saved locally. If signed in, it is also being saved to account history.';out.querySelector('.diag-detail')?.appendChild(msg);const checks=code?code.checks:sym?sym.first:[];torqSaveAccountHistory({kind:'diagnostic',title:item.title,asset:item.vehicle,prompt:code?code.summary:sym?sym.urgency:'Diagnostic case',result:(code?code.checks:sym?sym.first:[]).join('\\n'),metadata:{code:code?.code||null,symptomId:sym?id:null,causes:code?code.causes:sym?sym.causes:[],checks,session}});}
+function diagRenderHistory(){
+ const h=diagReadHistory(),el=document.getElementById('diagHistory');
+ if(!h.length){el.innerHTML='<div class="empty">No saved cases yet.</div>';return}
+ el.innerHTML=h.map(x=>{
+  const session=x.session||{},answers=Array.isArray(session.answers)?session.answers:[];
+  const findings=String(session.findings||'').trim();
+  const resume=(x.code||x.symptomId)?"<button type=\"button\" class=\"secondary\" data-resume-case=\""+escapeHtml(x.id)+"\">"+(x.code?'Resume diagnostic':'Resume symptom checks')+"</button>":"";
+  return '<div class="order"><div class="orderhead"><span>'+escapeHtml(x.title)+'</span><span class="status">Saved locally</span></div><p>'+escapeHtml(x.vehicle)+' · '+escapeHtml(new Date(x.created).toLocaleString())+'</p>'+
+   (answers.length?'<p><strong>Guided answers:</strong> '+escapeHtml(answers.join(' · '))+'</p>':'')+
+   (findings?'<p><strong>Test findings:</strong> '+escapeHtml(findings.length>240?findings.slice(0,240)+'…':findings)+'</p>':'<p class="guided-small">No test findings saved.</p>')+
+   resume+'</div>';
+ }).join('');
+ el.querySelectorAll('[data-resume-case]').forEach(button=>button.addEventListener('click',()=>diagResumeCase(button.getAttribute('data-resume-case'))));
+}
+function diagResumeCase(caseId){
+ const item=diagReadHistory().find(row=>row.id===caseId);if(!item)return;
+ if(item.code){
+  const all=diagReadSessions(),key=diagSessionKey(item.code),saved=item.sessionState&&typeof item.sessionState==='object'?item.sessionState:{};
+  all[key]={answers:saved.answers&&typeof saved.answers==='object'&&!Array.isArray(saved.answers)?saved.answers:{},findings:typeof saved.findings==='string'?saved.findings:'',updatedAt:saved.updatedAt||null,code:item.code,vehicle:diagVehicle()};
+  try{localStorage.setItem(DIAG_SESSION_KEY,JSON.stringify(all))}catch(e){}
+  diagSetMode('code');diagShowDetail(item.code);
+ }else if(item.symptomId&&Object.prototype.hasOwnProperty.call(DIAG_SYMPTOMS,item.symptomId)){
+  diagSetMode('symptom');diagRunSymptom(item.symptomId);
+ }
+ document.getElementById('diagOutput')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
 function diagClearHistory(){if(!confirm('Clear saved diagnostic cases from this browser?'))return;localStorage.removeItem('torqwise_diag_history_v1');diagRenderHistory()}
+function diagExportHistory(){const cases=diagReadHistory();if(!cases.length){alert('There are no saved diagnostic cases to export yet.');return}const backup={format:'TORQWISE-DIAGNOSTIC-BACKUP',version:1,exportedAt:new Date().toISOString(),cases};const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-diagnostic-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+async function diagImportHistory(event){
+ const input=event&&event.target,file=input&&input.files&&input.files[0];if(!file)return;
+ try{
+  if(file.size>2*1024*1024)throw new Error('Backup file is larger than 2 MB.');
+  const backup=JSON.parse(await file.text());
+  if(!backup||backup.format!=='TORQWISE-DIAGNOSTIC-BACKUP'||backup.version!==1||!Array.isArray(backup.cases))throw new Error('Unsupported TORQWISE diagnostic backup format or version.');
+  if(backup.cases.length>500)throw new Error('Backup contains too many records to import safely.');
+  const imported=backup.cases.map(row=>{
+   if(!row||typeof row!=='object'||Array.isArray(row)||typeof row.id!=='string'||!row.id.trim()||typeof row.title!=='string'||!row.title.trim()||typeof row.created!=='string'||!Number.isFinite(Date.parse(row.created)))throw new Error('Backup contains an invalid case. Nothing was imported.');
+   const session=row.session&&typeof row.session==='object'&&!Array.isArray(row.session)?row.session:{},state=row.sessionState&&typeof row.sessionState==='object'&&!Array.isArray(row.sessionState)?row.sessionState:{};
+   return {id:row.id.slice(0,100),title:row.title.slice(0,300),vehicle:typeof row.vehicle==='string'?row.vehicle.slice(0,500):'Vehicle not specified',created:new Date(row.created).toISOString(),kind:row.kind==='symptom'?'symptom':'code',code:typeof row.code==='string'&&/^[PBCU][0-9A-F]{4}$/i.test(row.code)?row.code.toUpperCase():null,symptomId:typeof row.symptomId==='string'&&Object.prototype.hasOwnProperty.call(DIAG_SYMPTOMS,row.symptomId)?row.symptomId:null,session:{answers:Array.isArray(session.answers)?session.answers.filter(v=>typeof v==='string').slice(0,100).map(v=>v.slice(0,500)):[],findings:typeof session.findings==='string'?session.findings.slice(0,10000):''},sessionState:{answers:state.answers&&typeof state.answers==='object'&&!Array.isArray(state.answers)?Object.fromEntries(Object.entries(state.answers).filter(([k,v])=>/^\d{1,3}$/.test(k)&&typeof v==='string').slice(0,100).map(([k,v])=>[k,v.slice(0,100)])):{},findings:typeof state.findings==='string'?state.findings.slice(0,10000):'',updatedAt:typeof state.updatedAt==='string'&&Number.isFinite(Date.parse(state.updatedAt))?new Date(state.updatedAt).toISOString():null}};
+  });
+  const existing=diagReadHistory(),known=new Set(existing.map(row=>row.id)),fresh=[];for(const row of imported){if(known.has(row.id))continue;known.add(row.id);fresh.push(row)}
+  const merged=[...fresh,...existing].sort((a,b)=>Date.parse(b.created)-Date.parse(a.created)).slice(0,25);
+  localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(merged));diagRenderHistory();
+  alert('Imported '+fresh.length+' new diagnostic case'+(fresh.length===1?'':'s')+'. Existing case IDs were skipped; up to 25 recent cases are kept in this browser.');
+ }catch(error){alert('Could not import diagnostic backup: '+String(error&&error.message||error));}
+ finally{if(input)input.value='';}
+}
 document.getElementById('diagSearchForm').addEventListener('submit',e=>{e.preventDefault();diagRunSearch(document.getElementById('diagQuery').value)});diagRenderHistory();
 
+/* Load generic OBD-II records from the bundled build asset. No runtime third-party fetch. */
+async function torqLoadBundledDtcDatabase(){
+ const status=document.getElementById('dtcDatabaseStatus');
+ try{
+  const response=await fetch('./assets/dtc-database.json',{cache:'force-cache'});
+  if(!response.ok)throw new Error('Bundled data file returned HTTP '+response.status);
+  const records=await response.json();
+  if(!Array.isArray(records)||records.length<9000)throw new Error('Bundled data failed completeness validation');
+  const seen=new Set(DIAG_DB.map(d=>String(d.code).toUpperCase()+'|'+String(d.manufacturer||'').toUpperCase()));let added=0,makeSpecificAdded=0;
+  for(const r of records){
+   const code=String(r.code||'').toUpperCase(),manufacturer=String(r.manufacturer||'').toUpperCase();if(!/^[PBCU][0-9A-F]{4}$/.test(code))continue;const key=code+'|'+manufacturer;if(seen.has(key))continue;
+   const localize=v=>typeof v==='string'?v:(v&&typeof v==='object'?(v.en||v.de||''):'');
+   const title=localize(r.title)||code,description=localize(r.description)||title;
+   const causes=(r.common_causes||[]).map(c=>localize(c.label||c)).filter(Boolean).slice(0,10);
+   const symptoms=(r.symptoms||[]).map(localize).filter(Boolean).slice(0,10);
+   const components=(r.affected_components||[]).map(x=>String(x).replace(/_/g,' ')).slice(0,10);
+   const sourceLinks=(r.sources||[]).filter(x=>typeof x==='string'&&(x.startsWith('https://')||x.startsWith('http://'))).slice(0,5);
+   const related=Array.isArray(r.related_codes)?r.related_codes:[];
+   const repair=r.repair||{},cost=Array.isArray(repair.estimated_cost_eur)?repair.estimated_cost_eur:null,hours=Array.isArray(repair.estimated_hours)?repair.estimated_hours:null;
+   const extras=[];
+   if(components.length)extras.push('Affected components: '+components.join(', ')+'.');
+   if(related.length)extras.push('Related codes: '+related.join(', ')+'.');
+   if(repair.difficulty)extras.push('Reference repair difficulty: '+String(repair.difficulty)+'.');
+   if(cost)extras.push('Source-provided estimated cost: €'+cost.join('–')+' (not a local quote).');
+   if(hours)extras.push('Source-provided estimated labor: '+hours.join('–')+' hours (not a vehicle-specific labor guide).');
+   const isGeneric=!manufacturer||Boolean(r.is_generic);const codeTitle=title||code;DIAG_DB.push({code,manufacturer:isGeneric?'':manufacturer,title:codeTitle,system:(isGeneric?'Generic OBD-II':manufacturer+' manufacturer-specific')+' · '+String(r.category||'diagnostic').replace(/_/g,' '),summary:description,causes:causes.length?causes:['A diagnostic code does not by itself prove a part has failed.'],checks:['Confirm exact code, status and reporting module with a capable scan tool.','Save freeze-frame data and companion codes before clearing anything.',...(components.length?['Inspect/test relevant systems: '+components.join(', ')+'.']:[]),...(causes.length?['Use measurements and the exact vehicle service procedure to distinguish possible causes: '+causes.slice(0,5).join('; ')+'.']:[]),'Verify the repair with the specified test and a rescan.'],urgent:'Code definition reference only. Follow the exact vehicle service procedure and safety precautions.',source:isGeneric?'Bundled OBDex generic DTC dataset (CC0 data)':'Bundled manufacturer DTC database (MIT)',sources:sourceLinks,symptoms,affected_components:components,related_codes:related,extraDetails:extras,repair,category:r.category,isGeneric});
+   seen.add(key);added++;if(!isGeneric)makeSpecificAdded++;
+  }
+  window.TORQWISE_DTC_STATUS={bundled:true,sourceRecords:records.length,indexedEntries:DIAG_DB.length,added,makeSpecificAdded};
+  if(status)status.textContent='Bundled generic OBD-II database loaded locally: '+records.length.toLocaleString()+' source definitions; '+added.toLocaleString()+' entries indexed. Manufacturer-specific definitions are not included in this dataset. Code descriptions are not OEM repair procedures.';
+  const q=document.getElementById('diagQuery')?.value?.trim();if(q)diagRunSearch(q);
+ }catch(error){
+  window.TORQWISE_DTC_STATUS={bundled:false,error:String(error&&error.message||error)};
+  if(status)status.textContent='Bundled generic DTC database did not load: '+String(error&&error.message||error)+'. Curated diagnostic guides remain available; expanded coverage is not confirmed.';
+ }
+}
+torqLoadBundledDtcDatabase();
 
 
-document.getElementById('vinForm').addEventListener('submit',async e=>{e.preventDefault();const vin=document.getElementById('vinInput').value.trim().toUpperCase(),msg=document.getElementById('vinMessage'),result=document.getElementById('vinResult'),btn=document.getElementById('vinSubmit');msg.classList.remove('hidden');msg.classList.remove('success');result.innerHTML='';if(!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)){msg.textContent='Enter a valid-looking 17-character VIN. The letters I, O and Q are not used in standard VINs.';return}btn.disabled=true;btn.textContent='Looking up…';msg.textContent='Contacting the public VIN decoder…';try{const response=await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValuesExtended/'+encodeURIComponent(vin)+'?format=json');if(!response.ok)throw new Error('The VIN service returned HTTP '+response.status);const payload=await response.json(),v=payload.Results&&payload.Results[0];if(!v)throw new Error('No decoded record was returned.');const fields=[['Year',v.ModelYear],['Make',v.Make],['Model',v.Model],['Trim',v.Trim],['Engine',([v.DisplacementL?v.DisplacementL+' L':null,v.EngineCylinders?v.EngineCylinders+' cylinders':null,v.EngineModel||null].filter(Boolean).join(' · '))],['Fuel type',v.FuelTypePrimary],['Drive type',v.DriveType],['Transmission',v.TransmissionStyle],['Body class',v.BodyClass],['Plant',v.PlantCountry]].filter(x=>x[1]&&String(x[1]).trim());msg.textContent='VIN lookup complete. Confirm the result against the vehicle label and trusted parts/service data.';msg.classList.add('success');result.innerHTML='<div class="diag-result"><div class="diag-label">Decoded vehicle</div><h3>'+escapeHtml([v.ModelYear,v.Make,v.Model].filter(Boolean).join(' ')||'Partial result')+'</h3><div class="formgrid">'+fields.map(f=>'<div><div class="tiny">'+escapeHtml(f[0])+'</div><strong>'+escapeHtml(f[1])+'</strong></div>').join('')+'</div><p class="tiny" style="margin-top:12px">VIN: '+escapeHtml(v.VIN||vin)+'</p></div>'; }catch(err){msg.textContent='VIN lookup could not complete: '+err.message+'. Check the internet connection and try again. You can still use the offline diagnostic library.';}finally{btn.disabled=false;btn.textContent='Decode VIN';}});
+
+
+document.getElementById('vinForm').addEventListener('submit',async e=>{e.preventDefault();const vin=document.getElementById('vinInput').value.trim().toUpperCase(),msg=document.getElementById('vinMessage'),result=document.getElementById('vinResult'),btn=document.getElementById('vinSubmit');msg.classList.remove('hidden');msg.classList.remove('success');result.innerHTML='';if(!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)){msg.textContent='Enter a valid-looking 17-character VIN. The letters I, O and Q are not used in standard VINs.';return}btn.disabled=true;btn.textContent='Looking up…';msg.textContent='Contacting the public VIN decoder…';try{const response=await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValuesExtended/'+encodeURIComponent(vin)+'?format=json');if(!response.ok)throw new Error('The VIN service returned HTTP '+response.status);const payload=await response.json(),v=payload.Results&&payload.Results[0];if(!v)throw new Error('No decoded record was returned.');const fields=[['Year',v.ModelYear],['Make',v.Make],['Model',v.Model],['Trim',v.Trim],['Engine',([v.DisplacementL?v.DisplacementL+' L':null,v.EngineCylinders?v.EngineCylinders+' cylinders':null,v.EngineModel||null].filter(Boolean).join(' · '))],['Fuel type',v.FuelTypePrimary],['Drive type',v.DriveType],['Transmission',v.TransmissionStyle],['Body class',v.BodyClass],['Plant',v.PlantCountry]].filter(x=>x[1]&&String(x[1]).trim());msg.textContent='VIN lookup complete. Confirm the result against the vehicle label and trusted parts/service data.';msg.classList.add('success');result.innerHTML='<div class="diag-result"><div class="diag-label">Decoded vehicle</div><h3>'+escapeHtml([v.ModelYear,v.Make,v.Model].filter(Boolean).join(' ')||'Partial result')+'</h3><div class="formgrid">'+fields.map(f=>'<div><div class="tiny">'+escapeHtml(f[0])+'</div><strong>'+escapeHtml(f[1])+'</strong></div>').join('')+'</div><p class="tiny" style="margin-top:12px">VIN: '+escapeHtml(v.VIN||vin)+'</p><button type="button" id="useVinForDiagnostics" style="margin-top:12px">Use this vehicle in diagnostics →</button><p class="tiny">Next: enter one or several trouble codes (for example, P0300, P0171, U0100) to review each result.</p></div>';document.getElementById('useVinForDiagnostics').addEventListener('click',()=>{document.getElementById('diagYear').value=v.ModelYear||'';document.getElementById('diagMake').value=v.Make||'';document.getElementById('diagModel').value=v.Model||'';document.getElementById('diagEngine').value=[v.DisplacementL?v.DisplacementL+' L':null,v.EngineCylinders?v.EngineCylinders+' cylinders':null,v.EngineModel||null].filter(Boolean).join(' ');document.getElementById('diagVin').value=vin;document.getElementById('diagQuery').focus();document.getElementById('diagnostics').scrollIntoView({behavior:'smooth',block:'start'});}); }catch(err){msg.textContent='VIN lookup could not complete: '+err.message+'. Check the internet connection and try again. You can still use the offline diagnostic library.';}finally{btn.disabled=false;btn.textContent='Decode VIN';}});
 
 </script>
 

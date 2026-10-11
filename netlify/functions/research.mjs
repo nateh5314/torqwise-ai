@@ -48,9 +48,17 @@ async function getResearchAccess(req) {
   try { user = await userResponse.json(); } catch { return { error: 'Your session could not be verified. Please sign in again.', status: 401 }; }
   if (!user || typeof user.id !== 'string' || !user.id) return { error: 'Your session could not be verified. Please sign in again.', status: 401 };
   const headers = { apikey: service, authorization: 'Bearer ' + service };
+  // Billing is optional for free-tier research. If the subscriptions table has
+  // not been installed yet, fail closed to the free tier rather than blocking
+  // every signed-in user. Unexpected server errors still fail safely.
+  let subs = [];
   const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status&order=updated_at.desc&limit=1', { headers });
-  if (!subsResponse.ok) throw new Error('Subscription lookup failed');
-  const subs = await subsResponse.json();
+  if (subsResponse.ok) {
+    const result = await subsResponse.json();
+    if (Array.isArray(result)) subs = result;
+  } else if (![400, 404, 406].includes(subsResponse.status)) {
+    console.error('Subscription lookup unavailable; refusing to assume Pro:', subsResponse.status);
+  }
   if (subs.some(row => ['active', 'trialing'].includes(row.status))) return { userId: user.id, isPro: true, remaining: null };
   const reserveResponse = await fetch(base + '/rest/v1/rpc/reserve_research_usage', {
     method: 'POST',
@@ -117,7 +125,20 @@ export default async (req) => {
 
   if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
   let access;
-  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); const detail=String(e?.message||""); if(detail.includes("apply supabase/research-usage.sql")) return json({ error: "AI research setup is incomplete: the Supabase research-usage migration is missing. Run supabase/research-usage.sql in the connected Supabase SQL Editor, then redeploy." }, 503); return json({ error: "Could not verify your AI research allowance. Check Netlify variables and Supabase function logs, then use the Check setup status tool in the account panel." }, 503); }
+  try { access = await getResearchAccess(req); } catch (e) {
+    console.error("Research access lookup failed:", e?.message || "unknown");
+    const detail = String(e?.message || "");
+    if (detail.includes("apply supabase/research-usage.sql")) {
+      return json({ error: "AI research setup is incomplete: the Supabase research-usage migration is missing. Run supabase/research-usage.sql in the connected Supabase SQL Editor, then retry." }, 503);
+    }
+    if (detail.includes("Subscription lookup failed")) {
+      return json({ error: "AI research setup is incomplete: the public.subscriptions table is missing or inaccessible. Run supabase/subscriptions.sql in the connected Supabase SQL Editor, then retry." }, 503);
+    }
+    if (detail.includes("Usage reservation failed")) {
+      return json({ error: "AI research setup is incomplete: the research quota function is missing or inaccessible. Run supabase/research-usage.sql in the connected Supabase SQL Editor, then retry." }, 503);
+    }
+    return json({ error: "Could not verify your AI research allowance. Check the Supabase subscriptions and research-usage migrations and the Supabase logs." }, 503);
+  }
   if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",

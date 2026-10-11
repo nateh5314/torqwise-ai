@@ -1,0 +1,19 @@
+name: Bundled diagnostic database
+on:
+  push:
+    branches: [feature/bundled-diagnostic-database]
+  pull_request:
+    branches: [main]
+jobs:
+  build-dtc-database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run build
+      - name: Verify bundled diagnostic database
+        run: |
+          node --input-type=module -e "import fs from 'node:fs'; const rows=JSON.parse(fs.readFileSync('assets/dtc-database.json','utf8')); const generic=new Set(rows.filter(r=>!r.manufacturer).map(r=>String(r.code).toUpperCase())); if(rows.length<9000||generic.size<9000) throw new Error('Bundled generic DTC database failed coverage checks'); if(rows.some(r=>!r.title||!r.description||!r.sources?.length)) throw new Error('DTC definitions missing required fields'); console.log({entries:rows.length,genericCodes:generic.size});"

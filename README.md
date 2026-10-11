@@ -2,6 +2,10 @@
 
 TORQWISE is a mobile-friendly automotive/heavy-equipment research and diagnostic workspace. The goal is to combine guided diagnostics, VIN lookup, source-linked AI research, customer workflows, and a trusted multi-supplier parts marketplace.
 
+## Bundled diagnostic data
+
+The diagnostic workspace builds a local static asset at `assets/dtc-database.json` from the CC0 generic OBDex dataset (about 9,500 generic P-, B-, C- and U-family code definitions). The build validates source structure and code coverage; GitHub Actions repeats those checks. At runtime the website reads the generated asset from its own deployed origin instead of querying a third-party DTC API. The build needs network access to fetch the source YAML files, and the generated asset is created during the build rather than hand-maintained. Manufacturer-specific definitions and OEM repair procedures are not included in this bundle. Generic descriptions are references, not confirmed diagnoses.
+
 ## Website features in this release candidate
 
 - Black/red responsive website design
@@ -26,7 +30,7 @@ The repository deploys from the root; there is no required `public/` directory.
 - `netlify/functions/` — server-side AI research, account history, customer requests, and billing endpoints
 - `supabase/` — SQL schema files that must be applied to the intended Supabase project
 
-The Netlify configuration intentionally uses `publish = "."` and `functions = "netlify/functions"`. **Do not change the publish directory to `public` unless the site files are moved into that folder.** No frontend build step is currently required.
+The Netlify configuration intentionally uses `publish = "."` and `functions = "netlify/functions"`. **Do not change the publish directory to `public` unless the site files are moved into that folder.** Netlify runs `npm run build` to generate the bundled diagnostic database before publishing the root directory.
 
 ## Deploy / recover the public site
 
