@@ -37,6 +37,66 @@ export default function App() {
   const [vehicles, setVehicles] = useState<string[]>([]);
   const [garageLoaded, setGarageLoaded] = useState(false);
   const [notice, setNotice] = useState("");
+  const [bundledDtc, setBundledDtc] = useState<Record<string, Dtc>>({});
+  const [databaseReady, setDatabaseReady] = useState(false);
+  const [databaseCount, setDatabaseCount] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const normalizeDatabase = (rows: unknown): Record<string, Dtc> => {
+      if (!Array.isArray(rows)) return {};
+      const normalized: Record<string, Dtc> = {};
+      for (const raw of rows as DtcRecord[]) {
+        const key = typeof raw?.code === "string" ? raw.code.toUpperCase() : "";
+        const title = raw?.title?.en;
+        const meaning = raw?.description?.en;
+        if (!/^[PBCU][0-9A-F]{4}$/.test(key) || typeof title !== "string" || typeof meaning !== "string") continue;
+        const causes = Array.isArray(raw.common_causes)
+          ? raw.common_causes.map((item) => item?.label?.en).filter((item): item is string => typeof item === "string" && !!item.trim()).slice(0, 6)
+          : [];
+        const symptoms = Array.isArray(raw.symptoms)
+          ? raw.symptoms.map((item) => item?.en).filter((item): item is string => typeof item === "string" && !!item.trim()).slice(0, 6)
+          : [];
+        normalized[key] = {
+          title,
+          meaning,
+          steps: "Use vehicle-specific service information and confirm the fault with testing before replacing parts.",
+          causes,
+          symptoms,
+          sources: Array.isArray(raw.sources) ? raw.sources.filter((item): item is string => typeof item === "string" && item.startsWith("https://")).slice(0, 5) : []
+        };
+      }
+      return normalized;
+    };
+    const loadDatabase = async () => {
+      try {
+        const cached = await AsyncStorage.getItem("@torqwise/dtc-database/v1");
+        if (cached) {
+          const parsed = normalizeDatabase(JSON.parse(cached));
+          if (mounted && Object.keys(parsed).length > 0) {
+            setBundledDtc(parsed);
+            setDatabaseCount(Object.keys(parsed).length);
+          }
+        }
+      } catch { /* Ignore a corrupt cache; the starter code list remains available. */ }
+      try {
+        const response = await fetch(WEB + "assets/dtc-database.json");
+        if (!response.ok) throw new Error("Diagnostic library is not available from the current website deployment.");
+        const rows: unknown = await response.json();
+        const parsed = normalizeDatabase(rows);
+        const count = Object.keys(parsed).length;
+        if (count < 9000) throw new Error("The hosted diagnostic database did not pass the minimum-size check.");
+        if (mounted) {
+          setBundledDtc(parsed);
+          setDatabaseCount(count);
+        }
+        try { await AsyncStorage.setItem("@torqwise/dtc-database/v1", JSON.stringify(rows)); } catch { /* Cache storage is optional. */ }
+      } catch { /* Keep cached or starter data available when offline. */ }
+      finally { if (mounted) setDatabaseReady(true); }
+    };
+    void loadDatabase();
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -132,7 +192,10 @@ export default function App() {
             <Text style={s.panelTitle}>{dtc.title}</Text><Text style={s.label}>WHAT IT MEANS</Text><Text style={s.body}>{dtc.meaning}</Text>
             {!!dtc.causes?.length && <><Text style={s.label}>POSSIBLE CAUSES IN THE REFERENCE DATA</Text><Text style={s.body}>{dtc.causes.join(" · ")}</Text></>}
             {!!dtc.symptoms?.length && <><Text style={s.label}>ASSOCIATED SYMPTOMS</Text><Text style={s.body}>{dtc.symptoms.join(" · ")}</Text></>}
+            {!!dtc.causes?.length && <><Text style={s.label}>POSSIBLE CAUSES IN THE REFERENCE DATA</Text><Text style={s.body}>{dtc.causes.join(" · ")}</Text></>}
+            {!!dtc.symptoms?.length && <><Text style={s.label}>ASSOCIATED SYMPTOMS</Text><Text style={s.body}>{dtc.symptoms.join(" · ")}</Text></>}
             <Text style={s.label}>SUGGESTED NEXT STEPS</Text><Text style={s.body}>{dtc.steps}</Text>
+            {!!dtc.sources?.length && <><Text style={s.label}>REFERENCE SOURCES</Text>{dtc.sources.map(source => <TouchableOpacity key={source} onPress={() => Linking.openURL(source)}><Text style={s.sourceLink}>{source}</Text></TouchableOpacity>)}</>}
             {!!dtc.sources?.length && <><Text style={s.label}>REFERENCE SOURCES</Text>{dtc.sources.map(source => <TouchableOpacity key={source} onPress={() => Linking.openURL(source)}><Text style={s.sourceLink}>{source}</Text></TouchableOpacity>)}</>}
             <TouchableOpacity style={s.primary} onPress={openWeb}><Text style={s.primaryText}>OPEN FULL RESEARCH HUB  ↗</Text></TouchableOpacity>
           </View> : <View style={s.panel}><Text style={s.panelTitle}>No starter definition found</Text><Text style={s.body}>The full library is not available on this connection. Try again later or open the TORQWISE workspace to continue researching other codes.</Text><TouchableOpacity style={s.secondary} onPress={openWeb}><Text style={s.secondaryText}>OPEN TORQWISE WEB</Text></TouchableOpacity></View>}
@@ -197,7 +260,10 @@ const s = StyleSheet.create({
   body:{color:"#b1bac6",fontSize:13,lineHeight:20,marginBottom:12},
   pageTitle:{color:"#fff",fontSize:29,lineHeight:35,fontWeight:"900",letterSpacing:-0.7,marginBottom:10},
   input:{backgroundColor:"#141820",borderColor:"#343b47",borderWidth:1,borderRadius:12,paddingHorizontal:15,paddingVertical:14,color:"#fff",fontSize:15,marginTop:10,marginBottom:10},
-  databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},\n  databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},\n  sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},\n  codeBadge:{alignSelf:"flex-start",backgroundColor:"#3a171c",borderWidth:1,borderColor:"#8d2d35",borderRadius:7,paddingHorizontal:10,paddingVertical:6,marginBottom:13},
+  databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},\n  databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},\n  sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},\n  databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},
+  databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},
+  sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},
+  codeBadge:{alignSelf:"flex-start",backgroundColor:"#3a171c",borderWidth:1,borderColor:"#8d2d35",borderRadius:7,paddingHorizontal:10,paddingVertical:6,marginBottom:13},
   codeBadgeText:{color:"#ff7b82",fontWeight:"900",fontSize:12,letterSpacing:1},
   label:{color:"#ef646b",fontSize:9,letterSpacing:1.3,fontWeight:"900",marginTop:9,marginBottom:7},
   secondary:{borderWidth:1,borderColor:"#555d6a",borderRadius:10,minHeight:45,alignItems:"center",justifyContent:"center",paddingHorizontal:12,marginTop:7},
