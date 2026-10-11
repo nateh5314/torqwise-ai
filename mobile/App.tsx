@@ -3,7 +3,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ActivityIndicator, Linking, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type Tab = "Home" | "Diagnose" | "VIN" | "Garage";
-type Dtc = { title: string; meaning: string; steps: string };
+type Dtc = { title: string; meaning: string; steps: string; causes?: string[]; symptoms?: string[]; sources?: string[] };
+type DtcRecord = {
+  code: string;
+  title?: { en?: string };
+  description?: { en?: string };
+  common_causes?: { label?: { en?: string } }[];
+  symptoms?: { en?: string }[];
+  affected_components?: string[];
+  sources?: string[];
+};
 const WEB = "https://torqwiseauto.netlify.app/";
 const CODES: Record<string, Dtc> = {
   P0300: { title: "Random / multiple-cylinder misfire", meaning: "The engine computer detected misfires on multiple cylinders or could not isolate one cylinder.", steps: "Review freeze-frame data and misfire counters. Inspect ignition, fuel delivery, intake leaks, and mechanical condition before replacing parts." },
@@ -55,7 +64,7 @@ export default function App() {
     AsyncStorage.setItem("@torqwise/garage/v1", JSON.stringify(vehicles))
       .catch(() => setNotice("Garage changes could not be saved on this device."));
   }, [vehicles, garageLoaded]);
-  const dtc = useMemo(() => CODES[code.trim().toUpperCase()], [code]);
+  const dtc = useMemo(() => bundledDtc[code.trim().toUpperCase()] || CODES[code.trim().toUpperCase()], [code, bundledDtc]);
 
   async function openWeb() { await Linking.openURL(WEB); }
   async function decodeVin() {
@@ -116,14 +125,17 @@ export default function App() {
 
         {tab === "Diagnose" && <>
           <Text style={s.eyebrow}>DIAGNOSTIC WORKSPACE</Text><Text style={s.pageTitle}>Fault code lookup</Text>
-          <Text style={s.body}>Start with a code, then verify the cause with testing.</Text>
+          <Text style={s.body}>Search the generic OBD-II library, then verify the cause with testing.</Text>\n          <View style={s.databasePill}><View style={[s.dot, databaseCount >= 9000 ? {backgroundColor:"#58cf9a"} : {backgroundColor:"#e9ad58"}]}/><Text style={s.databaseText}>{databaseCount >= 9000 ? `${databaseCount.toLocaleString()} GENERIC CODES AVAILABLE` : databaseReady ? "STARTER CODE SET · FULL LIBRARY UNAVAILABLE" : "LOADING DIAGNOSTIC LIBRARY…"}</Text></View>
           <TextInput style={s.input} value={code} onChangeText={setCode} autoCapitalize="characters" autoCorrect={false} placeholder="Enter code, e.g. P0300" placeholderTextColor="#7e8794" accessibilityLabel="OBD-II diagnostic trouble code"/>
           {dtc ? <View style={s.panel}>
             <View style={s.codeBadge}><Text style={s.codeBadgeText}>{code.trim().toUpperCase()}</Text></View>
             <Text style={s.panelTitle}>{dtc.title}</Text><Text style={s.label}>WHAT IT MEANS</Text><Text style={s.body}>{dtc.meaning}</Text>
+            {!!dtc.causes?.length && <><Text style={s.label}>POSSIBLE CAUSES IN THE REFERENCE DATA</Text><Text style={s.body}>{dtc.causes.join(" · ")}</Text></>}
+            {!!dtc.symptoms?.length && <><Text style={s.label}>ASSOCIATED SYMPTOMS</Text><Text style={s.body}>{dtc.symptoms.join(" · ")}</Text></>}
             <Text style={s.label}>SUGGESTED NEXT STEPS</Text><Text style={s.body}>{dtc.steps}</Text>
+            {!!dtc.sources?.length && <><Text style={s.label}>REFERENCE SOURCES</Text>{dtc.sources.map(source => <TouchableOpacity key={source} onPress={() => Linking.openURL(source)}><Text style={s.sourceLink}>{source}</Text></TouchableOpacity>)}</>}
             <TouchableOpacity style={s.primary} onPress={openWeb}><Text style={s.primaryText}>OPEN FULL RESEARCH HUB  ↗</Text></TouchableOpacity>
-          </View> : <View style={s.panel}><Text style={s.panelTitle}>No starter definition found</Text><Text style={s.body}>This mobile prototype includes a small set of common codes. Open the full TORQWISE workspace to research other codes.</Text><TouchableOpacity style={s.secondary} onPress={openWeb}><Text style={s.secondaryText}>OPEN TORQWISE WEB</Text></TouchableOpacity></View>}
+          </View> : <View style={s.panel}><Text style={s.panelTitle}>No starter definition found</Text><Text style={s.body}>The full library is not available on this connection. Try again later or open the TORQWISE workspace to continue researching other codes.</Text><TouchableOpacity style={s.secondary} onPress={openWeb}><Text style={s.secondaryText}>OPEN TORQWISE WEB</Text></TouchableOpacity></View>}
           <Text style={s.disclaimer}>Generic OBD-II guidance only. Definitions and test procedures vary by vehicle; this is not a confirmed diagnosis.</Text>
         </>}
 
@@ -185,7 +197,7 @@ const s = StyleSheet.create({
   body:{color:"#b1bac6",fontSize:13,lineHeight:20,marginBottom:12},
   pageTitle:{color:"#fff",fontSize:29,lineHeight:35,fontWeight:"900",letterSpacing:-0.7,marginBottom:10},
   input:{backgroundColor:"#141820",borderColor:"#343b47",borderWidth:1,borderRadius:12,paddingHorizontal:15,paddingVertical:14,color:"#fff",fontSize:15,marginTop:10,marginBottom:10},
-  codeBadge:{alignSelf:"flex-start",backgroundColor:"#3a171c",borderWidth:1,borderColor:"#8d2d35",borderRadius:7,paddingHorizontal:10,paddingVertical:6,marginBottom:13},
+  databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},\n  databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},\n  sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},\n  codeBadge:{alignSelf:"flex-start",backgroundColor:"#3a171c",borderWidth:1,borderColor:"#8d2d35",borderRadius:7,paddingHorizontal:10,paddingVertical:6,marginBottom:13},
   codeBadgeText:{color:"#ff7b82",fontWeight:"900",fontSize:12,letterSpacing:1},
   label:{color:"#ef646b",fontSize:9,letterSpacing:1.3,fontWeight:"900",marginTop:9,marginBottom:7},
   secondary:{borderWidth:1,borderColor:"#555d6a",borderRadius:10,minHeight:45,alignItems:"center",justifyContent:"center",paddingHorizontal:12,marginTop:7},
