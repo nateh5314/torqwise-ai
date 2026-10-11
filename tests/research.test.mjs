@@ -302,5 +302,7 @@ test("labels incomplete reviewed fitment records as insufficient to verify fitme
   assert.equal(data.fitmentMatches[0].confidence, "INCOMPLETE CATALOG RECORD — NOT SUFFICIENT TO VERIFY FITMENT");
   assert.ok(data.fitmentMatches[0].evidenceWarnings.length >= 1);
   assert.ok(data.fitmentMatches[0].missingApplicationDetails.includes("trim"));
-  assert.ok(calls.some(c => c.url.includes("/rest/v1/fitment_applications?")));
+  const fitmentCall = calls.find(c => c.url.includes("/rest/v1/fitment_applications?"));
+  assert.ok(fitmentCall, "fitment lookup should run");
+  assert.equal(new URL(fitmentCall.url).searchParams.get("part_number"), "eq.ABC123");
 });
