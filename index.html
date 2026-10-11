@@ -722,6 +722,13 @@ function torqRenderAiResult(data){
  if(sources.length){const list=document.createElement('ol');list.style.paddingLeft='22px';sources.forEach(src=>{const li=document.createElement('li');li.style.marginBottom='8px';const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title||src.url;a.style.color='#ff686d';li.appendChild(a);list.appendChild(li)});host.appendChild(list)}
  else{const sourceNote=document.createElement('p');sourceNote.className='tiny';sourceNote.textContent='Treat the answer as an unverified lead. Retry with a narrower question or verify key claims against manufacturer service information before acting.';host.appendChild(sourceNote)}
  const note=document.createElement('p');note.className='tiny';note.style.marginTop='16px';note.textContent='Research aid, not a confirmed diagnosis or substitute for OEM service information. Verify year, model, engine, serial/VIN, market, options and service procedure before repair or parts ordering.';host.appendChild(note);
+ const copyButton=document.createElement('button');copyButton.type='button';copyButton.className='secondary';copyButton.style.marginTop='10px';copyButton.textContent='Copy report + source links';
+ copyButton.addEventListener('click',async()=>{
+  const textToCopy=['TORQWISE RESEARCH REPORT','',String(data.answer||''),'',...(sources.length?['SOURCES',...sources.map(src=>src.title+' — '+src.url)]:['No source links were supplied with this response.']),'','Verify exact vehicle/equipment applicability and OEM service information before acting.'].join('\\n');
+  try{await navigator.clipboard.writeText(textToCopy);copyButton.textContent='Copied report ✓';}
+  catch(_){const area=document.createElement('textarea');area.value=textToCopy;area.setAttribute('readonly','');area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();const copied=document.execCommand('copy');area.remove();copyButton.textContent=copied?'Copied report ✓':'Copy unavailable — select the report text';}
+ });
+ host.appendChild(copyButton);
 }
 let torqLastResearch=null;
 try{const saved=JSON.parse(localStorage.getItem('torqwise_last_research_v1')||'null');if(saved&&saved.answer&&saved.context)torqLastResearch=saved;}catch(_){}
