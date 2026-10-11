@@ -157,6 +157,12 @@ export default async (req) => {
   const serial = clean(body.serial, 100);
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
+  const symptoms = clean(body.symptoms, 1200);
+  const dtcs = clean(body.dtcs || body.faultCodes, 800);
+  const freezeFrame = clean(body.freezeFrame, 1200);
+  const liveData = clean(body.liveData, 1800);
+  const testsPerformed = clean(body.testsPerformed, 1200);
+  const repairsAttempted = clean(body.repairsAttempted, 800);
   const followUp = body.followUp === true;
   const previousAnswer = clean(body.previousAnswer, 8000);
   if (followUp && (!question || !previousAnswer)) return json({ error: "A follow-up needs a question and the previous research report." }, 400);
@@ -197,6 +203,12 @@ export default async (req) => {
         `VIN / serial / PIN: ${serial || "Not provided"}`,
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
+        ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
+        ...(dtcs ? [`Diagnostic trouble codes (preserve exact codes and status): ${dtcs}`] : []),
+        ...(freezeFrame ? [`Freeze-frame / snapshot data: ${freezeFrame}`] : []),
+        ...(liveData ? [`Scan-tool live data and units: ${liveData}`] : []),
+        ...(testsPerformed ? [`Tests already performed and measured results: ${testsPerformed}`] : []),
+        ...(repairsAttempted ? [`Repairs or parts already tried: ${repairsAttempted}`] : []),
         ...(fitmentMatches.length ? [`TORQWISE reviewed first-party fitment catalog records (use exact status and restrictions; do not overstate):\n${JSON.stringify(fitmentMatches)}`] : []),
       ].join("\n");
   const instructions = `You are TORQWISE, a careful automotive and heavy-equipment research assistant for technicians. Use web search to research the exact machine or vehicle and prioritize OEM/manufacturer sources, government recall databases, reputable technical sources, and clearly identified parts catalogs. Do not claim access to paid OEM service databases, proprietary wiring diagrams, or complete catalogs unless a source genuinely provides them. Never invent torque values, capacities, pinouts, wire colours, part numbers, bulletins, procedures, or citations. If exact year/model/engine/serial applicability cannot be confirmed, clearly say what remains unverified, but do not stop at asking for details: always give useful general first steps that are safe without the missing details, then ask only the most important follow-up questions. For vague symptom descriptions, infer likely systems from plain language and state that this is a preliminary interpretation. Give a short decision tree starting with simple observations before specialized testing. If the wording could describe multiple systems, briefly list the likely interpretations and ask which matches. Distinguish verified facts, likely causes, and hypotheses. For diagnosis, give a safe, evidence-led sequence: preserve codes/freeze-frame, check basics, test before replacing parts, and state what each test proves. Flag hazards and when the correct OEM procedure or professional equipment is required. For parts and fitment, lead with one explicit status: VERIFIED MATCH, HIGH-CONFIDENCE CROSS-REFERENCE, or NOT YET VERIFIED. Use VERIFIED MATCH only when credible source evidence explicitly supports the exact supplied year/make/model/engine/drive/axle/ABS/options. Use HIGH-CONFIDENCE CROSS-REFERENCE only when multiple credible independent catalog listings agree, and disclose that this is not OEM-confirmed. Never imply guaranteed fitment from a part-number search, broad model family, or seller snippet alone. If the evidence is incomplete, perform as much comparison as available sources allow and give the best supported candidate(s) directly in TORQWISE; do not merely tell the technician to go search another website or contact a dealer. Links support our answer, they do not replace it. State the exact missing detail that prevents a stronger fitment status. For specifications, state applicability and uncertainty clearly. Explain in practical language with a concise report: Summary; What sources indicate; Recommended checks or research steps; What remains unverified. Cite sources in the answer where possible and return source links. No source means no claim of verification. This is research support, not a confirmed diagnosis.`;
