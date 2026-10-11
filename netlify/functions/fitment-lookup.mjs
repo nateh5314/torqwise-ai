@@ -57,8 +57,13 @@ export default async (req) => {
     if (year !== null && row.vehicle_year_end !== null && row.vehicle_year_end !== undefined && year > row.vehicle_year_end) return false;
     return true;
   }).filter(row => {
-    const ok = (requested, listed) => !requested || !listed || normalize(listed) === requested;
-    return ok(engine, row.engine) && ok(trim, row.trim) && ok(driveType, row.drive_type) && ok(axlePosition, row.axle_position) && ok(absType, row.abs_type);
+    // Exclude known contradictions; retain missing details as uncertain candidates.
+    const conflicts = (requested, listed) => Boolean(requested && listed && normalize(listed) !== requested);
+    return !conflicts(engine, row.engine)
+      && !conflicts(trim, row.trim)
+      && !conflicts(driveType, row.drive_type)
+      && !conflicts(axlePosition, row.axle_position)
+      && !conflicts(absType, row.abs_type);
   }).map(row => {
     const vehicleSpecified = year !== null && Boolean(make) && Boolean(model);
     const coreVehicleMatch = vehicleSpecified && Number.isInteger(row.vehicle_year_start) && Number.isInteger(row.vehicle_year_end) && year >= row.vehicle_year_start && year <= row.vehicle_year_end && normalize(row.make) === make && normalize(row.model) === model;
@@ -80,6 +85,11 @@ export default async (req) => {
     if (!Array.isArray(row.evidence) || row.evidence.length === 0) evidenceWarnings.push("No source evidence attached to this record.");
     if (!row.reviewed_at) evidenceWarnings.push("Review timestamp is missing.");
     if (!row.source_checked_at) evidenceWarnings.push("Source-check timestamp is missing.");
+    if (engine && !row.engine) evidenceWarnings.push("The catalog does not specify an engine, so the requested engine cannot be confirmed.");
+    if (trim && !row.trim) evidenceWarnings.push("The catalog does not specify a trim, so the requested trim cannot be confirmed.");
+    if (driveType && !row.drive_type) evidenceWarnings.push("The catalog does not specify drivetrain, so the requested drivetrain cannot be confirmed.");
+    if (axlePosition && !row.axle_position) evidenceWarnings.push("The catalog does not specify axle/position, so the requested position cannot be confirmed.");
+    if (absType && !row.abs_type) evidenceWarnings.push("The catalog does not specify ABS/brake configuration, so that configuration cannot be confirmed.");
     const confidence = row.status === "cross_reference" ? "HIGH-CONFIDENCE CROSS-REFERENCE" : coreVehicleMatch && specificityMissing.length === 0 && evidenceWarnings.length === 0 ? "REVIEWED VEHICLE MATCH - CONFIRM SOURCE RESTRICTIONS" : "REVIEWED CATALOG RECORD - VEHICLE DETAILS STILL NEED CONFIRMATION";
     const guaranteeNote = row.status === "cross_reference"
       ? "Reviewed cross-reference record; not an OEM-confirmed guarantee. Check configuration restrictions before ordering."
