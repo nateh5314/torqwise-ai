@@ -27,7 +27,7 @@ export default async (req) => {
     let user;
     try { user = await ur.json(); } catch { return json({ error: "Your session could not be verified. Sign in again." }, 401); }
     if (!user || typeof user.id !== "string" || !user.id) return json({ error: "Your session could not be verified. Sign in again." }, 401);
-    const sr = await fetch(supabaseUrl + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) + "&select=stripe_customer_id,status,price_id&order=updated_at.desc&limit=10", {
+    const sr = await fetch(supabaseUrl + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) + "&select=stripe_customer_id,stripe_subscription_id,status,price_id&order=updated_at.desc&limit=10", {
       headers: { apikey: service, authorization: "Bearer " + service }
     });
     if (!sr.ok) throw new Error("Subscription lookup failed");
@@ -35,7 +35,15 @@ export default async (req) => {
     // Prefer the verified account mapping. If the webhook has not yet written
     // the subscription row, reconcile against Stripe using this authenticated
     // user's verified email and only accept a matching Pro subscription.
-    let customer = Array.isArray(rows) ? rows.find(row => row.price_id === proPriceId && row.stripe_customer_id && ["active","trialing","past_due","unpaid"].includes(row.status))?.stripe_customer_id : null;
+    const proRow = Array.isArray(rows) ? rows.find(row => row.price_id === proPriceId && ["active","trialing","past_due","unpaid"].includes(row.status)) : null;
+    let customer = proRow?.stripe_customer_id || null;
+    if (!customer && proRow?.stripe_subscription_id) {
+      const lookup = await fetch("https://api.stripe.com/v1/subscriptions/" + encodeURIComponent(proRow.stripe_subscription_id), { headers: { authorization: "Bearer " + stripeKey } });
+      const sub = await lookup.json();
+      if (lookup.ok && ["active","trialing","past_due","unpaid"].includes(sub.status) && sub.items?.data?.some(item => item.price?.id === proPriceId)) {
+        customer = typeof sub.customer === "string" ? sub.customer : sub.customer?.id || null;
+      }
+    }
     if (!customer) {
       // Stripe checkout records the authenticated Supabase user ID in
       // subscription metadata. Use that stable link before falling back to email.
