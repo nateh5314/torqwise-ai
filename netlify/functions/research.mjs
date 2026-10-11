@@ -136,7 +136,21 @@ async function lookupReviewedFitment(partNumber) {
     if (!Array.isArray(rows)) return [];
     return rows.map(row => {
       const evidenceWarnings = [];
-      if (!Array.isArray(row.evidence) || row.evidence.length === 0) evidenceWarnings.push("No source evidence attached.");
+      if (!Array.isArray(row.evidence) || row.evidence.length === 0) {
+        evidenceWarnings.push("No source evidence attached.");
+      } else {
+        const hasUsableEvidenceUrl = row.evidence.some((item) => {
+          const candidate = typeof item === "string" ? item : item && typeof item.url === "string" ? item.url : item && typeof item.uri === "string" ? item.uri : "";
+          if (!candidate) return false;
+          try {
+            const parsed = new URL(candidate.trim());
+            return (parsed.protocol === "https:" || parsed.protocol === "http:") && Boolean(parsed.hostname);
+          } catch {
+            return false;
+          }
+        });
+        if (!hasUsableEvidenceUrl) evidenceWarnings.push("Source evidence has no valid HTTP(S) URL to inspect.");
+      }
       if (!row.reviewed_at) evidenceWarnings.push("Review timestamp missing.");
       if (!row.source_checked_at) evidenceWarnings.push("Source-check timestamp missing.");
       const now = Date.now();
