@@ -59,6 +59,15 @@ test("configured active Pro subscription bypasses free research quota", async ()
   assert.ok(calls.some(c => c.url === "https://api.openai.com/v1/responses"));
 });
 
+test("does not consume free quota when subscription lookup has a server error", async () => {
+  const calls = configure({ subscriptions: response({ error: "temporary database failure" }, 500) });
+  const result = await handler(request());
+  assert.equal(result.status, 503);
+  assert.match((await result.json()).error, /could not verify your subscription/i);
+  assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
+  assert.ok(!calls.some(c => c.url === "https://api.openai.com/v1/responses"));
+});
+
 test("active subscription for another price does not grant Pro research access", async () => {
   const calls = configure({
     proPriceId: "price_pro_monthly",
