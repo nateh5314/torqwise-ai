@@ -359,3 +359,21 @@ test("flags tire and restraint-system safety risks without claiming a diagnosis"
     assert.ok(payload.input.includes("heuristic only, not a diagnosis"));
   }
 });
+
+
+test("flags exhaust exposure and unintended acceleration risks", async () => {
+  for (const [symptoms, expected] of [
+    ["Exhaust fumes inside the cabin", "exhaust intrusion or carbon-monoxide exposure"],
+    ["Engine has unintended acceleration", "unintended acceleration or throttle-control fault"],
+  ]) {
+    const calls = configure();
+    const result = await handler(request({ body: {
+      asset: "Passenger vehicle", question: "Assess this symptom", symptoms,
+    }}));
+    assert.equal(result.status, 200);
+    const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+    const payload = JSON.parse(upstream.options.body);
+    assert.ok(payload.input.includes("Potential safety-critical language detected"));
+    assert.ok(payload.input.includes(expected));
+  }
+});
