@@ -121,3 +121,17 @@ test("does not preserve unknown symptom IDs from imported backup data", async ()
   assert.equal(h.getCases().length, 1);
   assert.equal(h.getCases()[0].symptomId, null);
 });
+
+test("preserves valid numeric guided-answer keys and drops malformed keys", async () => {
+  const h = harness();
+  const item = { ...record("session-state"), sessionState: {
+    answers: { "0": "yes", "12": "no", bad: "ignore", "2x": "ignore", "9999": "ignore", "1": 42 },
+    findings: "Measured 18% short-term fuel trim",
+    updatedAt: "2026-10-10T12:30:00.000Z"
+  }};
+  await h.run(backup([item]));
+  const saved = h.getCases()[0].sessionState;
+  assert.deepEqual(saved.answers, { "0": "yes", "12": "no" });
+  assert.equal(saved.findings, "Measured 18% short-term fuel trim");
+  assert.equal(saved.updatedAt, "2026-10-10T12:30:00.000Z");
+});
