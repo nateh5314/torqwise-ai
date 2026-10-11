@@ -30,7 +30,7 @@ export default async () => {
   };
   const billing = {
     stripeSecretKey: Boolean(env("STRIPE_SECRET_KEY")),
-    stripeProPriceId: Boolean(env("STRIPE_PRO_PRICE_ID") || env("STRIPE_PRICE_PRO")),
+    stripeProPriceId: Boolean(env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID")),
     stripeWebhookSecret: Boolean(env("STRIPE_WEBHOOK_SECRET")),
     siteUrl: Boolean(env("SITE_URL") || "https://torqwiseauto.netlify.app"),
   };
