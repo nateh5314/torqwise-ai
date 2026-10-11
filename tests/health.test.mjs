@@ -11,11 +11,7 @@ function restoreEnv(){
 test.afterEach(()=>{globalThis.fetch=originalFetch;restoreEnv();});
 
 test("health endpoint reports missing server configuration without exposing secrets",async()=>{
-  delete process.env.SUPABASE_URL;
-  delete process.env.SUPABASE_ANON_KEY;
-  delete process.env.SUPABASE_PUBLISHABLE_KEY;
-  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-  delete process.env.OPENAI_API_KEY;
+  for (const key of ["SUPABASE_URL","SUPABASE_ANON_KEY","SUPABASE_PUBLISHABLE_KEY","SUPABASE_SERVICE_ROLE_KEY","OPENAI_API_KEY","STRIPE_SECRET_KEY","STRIPE_PRO_PRICE_ID","STRIPE_PRICE_PRO","STRIPE_WEBHOOK_SECRET"]) delete process.env[key];
   globalThis.fetch=async()=>{throw new Error("fetch should not be called")};
   const response=await handler();
   assert.equal(response.status,200);
@@ -23,6 +19,10 @@ test("health endpoint reports missing server configuration without exposing secr
   assert.equal(data.configured,false);
   assert.equal(data.environment.openaiApiKey,false);
   assert.equal(data.environment.supabaseServiceRoleKey,false);
+  assert.equal(data.billing.stripeSecretKey,false);
+  assert.equal(data.billing.stripeProPriceId,false);
+  assert.equal(data.billing.stripeWebhookSecret,false);
+  assert.equal(data.checks.billingConfiguration,false);
   assert.equal(JSON.stringify(data).includes("secret"),false);
 });
 
@@ -32,6 +32,9 @@ test("health endpoint verifies usage table and reports whether quota function is
     SUPABASE_ANON_KEY:"public-test-key",
     SUPABASE_SERVICE_ROLE_KEY:"server-test-secret",
     OPENAI_API_KEY:"openai-test-secret",
+    STRIPE_SECRET_KEY:"sk_test_placeholder",
+    STRIPE_PRO_PRICE_ID:"price_test_placeholder",
+    STRIPE_WEBHOOK_SECRET:"whsec_test_placeholder",
   });
   const calls=[];
   globalThis.fetch=async(url,options={})=>{
@@ -44,9 +47,35 @@ test("health endpoint verifies usage table and reports whether quota function is
   assert.equal(response.status,200);
   const data=await response.json();
   assert.equal(data.environment.openaiApiKey,true);
+  assert.equal(data.billing.stripeSecretKey,true);
+  assert.equal(data.billing.stripeProPriceId,true);
+  assert.equal(data.billing.stripeWebhookSecret,true);
+  assert.equal(data.checks.billingConfiguration,true);
   assert.equal(data.checks.usageTable,"ready");
   assert.equal(data.checks.quotaFunction,"reachable");
   assert.equal(JSON.stringify(data).includes("server-test-secret"),false);
   assert.equal(JSON.stringify(data).includes("openai-test-secret"),false);
+  assert.equal(JSON.stringify(data).includes("whsec_test_placeholder"),false);
   assert.equal(calls.length,2);
+});
+
+test("health endpoint accepts the supported Pro price alias",async()=>{
+  Object.assign(process.env,{
+    SUPABASE_URL:"https://supabase.example",
+    SUPABASE_ANON_KEY:"public-test-key",
+    SUPABASE_SERVICE_ROLE_KEY:"server-test-key",
+    OPENAI_API_KEY:"openai-test-key",
+    STRIPE_SECRET_KEY:"sk_test_placeholder",
+    STRIPE_PRICE_PRO:"price_test_alias",
+    STRIPE_WEBHOOK_SECRET:"whsec_test_placeholder",
+  });
+  delete process.env.STRIPE_PRO_PRICE_ID;
+  globalThis.fetch=async(url,options={})=>{
+    if(String(url).includes("/rest/v1/research_usage?"))return new Response("[]",{status:200});
+    if(String(url).endsWith("/rest/v1/rpc/reserve_research_usage"))return new Response(null,{status:204});
+    throw new Error("Unexpected URL "+url);
+  };
+  const data=await (await handler()).json();
+  assert.equal(data.billing.stripeProPriceId,true);
+  assert.equal(data.checks.billingConfiguration,true);
 });
