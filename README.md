@@ -2,6 +2,10 @@
 
 TORQWISE is a mobile-friendly automotive/heavy-equipment research and diagnostic workspace. The goal is to combine guided diagnostics, VIN lookup, source-linked AI research, customer workflows, and a trusted multi-supplier parts marketplace.
 
+## Bundled diagnostic data
+
+The diagnostic workspace builds a local static asset at `assets/dtc-database.json` from the CC0 generic OBDex dataset and the MIT-licensed English DTC definitions in Wal33D/dtc-database. The build validates the dataset structure, minimum coverage and manufacturer count; GitHub Actions repeats those checks. At runtime the website reads the generated asset from its own deployed origin instead of querying a third-party DTC API. The data build needs network access when the site is built, and the generated asset is created during the build rather than hand-maintained. Generic descriptions are references, not OEM repair procedures.
+
 ## Website features in this release candidate
 
 - Black/red responsive website design
