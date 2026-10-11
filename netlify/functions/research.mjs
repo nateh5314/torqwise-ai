@@ -1,3 +1,8 @@
+function supabaseBase() {
+  const raw = (process.env.SUPABASE_URL || "").trim();
+  return /^[a-z0-9]{20}$/i.test(raw) ? `https://${raw}.supabase.co` : raw;
+}
+
 const MAX_FIELD = 1800;
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 30;
@@ -26,7 +31,7 @@ function tooManyRequests(key) {
   return item.count > MAX_REQUESTS_PER_WINDOW;
 }
 async function getResearchAccess(req) {
-  const base = (process.env.SUPABASE_URL || '').trim();
+  const base = supabaseBase();
   const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || '').trim();
   const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!base || !anon || !service) return { error: 'Research accounts are not configured yet.', status: 503 };
