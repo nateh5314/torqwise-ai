@@ -200,7 +200,7 @@ function diagRunSearch(q){
  if(/^[PBCU][0-9A-F]{4}$/.test(normalized)){matches=DIAG_DB.filter(d=>String(d.code||'').toUpperCase()===normalized);if(make){const specific=matches.filter(d=>String(d.manufacturer||'').toUpperCase().replace(/[^A-Z0-9]/g,'')===make);const generic=matches.filter(d=>!d.manufacturer||d.isGeneric);if(specific.length)matches=[...specific,...generic];}}
  matches=matches.slice(0,40);
  if(!matches.length){out.innerHTML='<div class="diag-empty"><strong>No match in the bundled diagnostic library.</strong><p>This does not mean the code is invalid. Confirm the full code and reporting module, then check vehicle-specific service information.</p></div>';return}
- out.innerHTML=matches.map(d=>'<article class="diag-result"><div class="diag-label">'+escapeHtml(d.code)+' · '+escapeHtml(d.system)+(d.manufacturer?' · '+escapeHtml(d.manufacturer):'')+'</div><h3>'+escapeHtml(d.title)+'</h3><p>'+escapeHtml(d.summary)+'</p><button type="button" onclick="diagShowDetail(\\''+d.code+'\\',\\''+String(d.manufacturer||'').replace(/\\'/g,'')+'\\')">Open diagnostic path →</button></article>').join('');
+ out.innerHTML=matches.map(d=>`<article class="diag-result"><div class="diag-label">${escapeHtml(d.code)} · ${escapeHtml(d.system)}${d.manufacturer?' · '+escapeHtml(d.manufacturer):''}</div><h3>${escapeHtml(d.title)}</h3><p>${escapeHtml(d.summary)}</p><button type="button" onclick="diagShowDetail('${escapeHtml(d.code)}')">Open diagnostic path →</button></article>`).join('');
 }
 let diagCurrentCode=null;
 const DIAG_GUIDES={
