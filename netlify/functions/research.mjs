@@ -117,7 +117,20 @@ export default async (req) => {
 
   if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
   let access;
-  try { access = await getResearchAccess(req); } catch (e) { console.error("Research access lookup failed:", e?.message || "unknown"); const detail=String(e?.message||""); if(detail.includes("apply supabase/research-usage.sql")) return json({ error: "AI research setup is incomplete: the Supabase research-usage migration is missing. Run supabase/research-usage.sql in the connected Supabase SQL Editor, then redeploy." }, 503); return json({ error: "Could not verify your AI research allowance. Check Netlify variables and Supabase function logs, then use the Check setup status tool in the account panel." }, 503); }
+  try { access = await getResearchAccess(req); } catch (e) {
+    console.error("Research access lookup failed:", e?.message || "unknown");
+    const detail = String(e?.message || "");
+    if (detail.includes("apply supabase/research-usage.sql")) {
+      return json({ error: "AI research setup is incomplete: the Supabase research-usage migration is missing. Run supabase/research-usage.sql in the connected Supabase SQL Editor, then retry." }, 503);
+    }
+    if (detail.includes("Subscription lookup failed")) {
+      return json({ error: "AI research setup is incomplete: the public.subscriptions table is missing or inaccessible. Run supabase/subscriptions.sql in the connected Supabase SQL Editor, then retry." }, 503);
+    }
+    if (detail.includes("Usage reservation failed")) {
+      return json({ error: "AI research setup is incomplete: the research quota function is missing or inaccessible. Run supabase/research-usage.sql in the connected Supabase SQL Editor, then retry." }, 503);
+    }
+    return json({ error: "Could not verify your AI research allowance. Check the Supabase subscriptions and research-usage migrations and the Supabase logs." }, 503);
+  }
   if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
