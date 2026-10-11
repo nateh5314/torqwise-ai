@@ -68,8 +68,14 @@ async function getResearchAccess(req, followUp = false) {
   let subs = [];
   const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status,price_id&order=updated_at.desc&limit=10', { headers });
   if (subsResponse.ok) {
-    const result = await subsResponse.json();
-    if (Array.isArray(result)) subs = result;
+    let result;
+    try { result = await subsResponse.json(); } catch {
+      return { error: 'We could not verify your subscription right now. Your free research allowance has not been used. Please retry shortly.', status: 503 };
+    }
+    if (!Array.isArray(result)) {
+      return { error: 'We could not verify your subscription right now. Your free research allowance has not been used. Please retry shortly.', status: 503 };
+    }
+    subs = result;
   } else if (![400, 404, 406].includes(subsResponse.status)) {
     // A transient billing lookup failure must not silently treat a paid Pro
     // customer as free and consume their monthly allowance.
