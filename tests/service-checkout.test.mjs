@@ -141,3 +141,14 @@ test("does not create a replacement checkout when Stripe cannot verify the previ
   assert.match((await result.json()).error, /could not verify the previous checkout session/i);
   assert.equal(calls.some(c => c.url === "https://api.stripe.com/v1/checkout/sessions" && c.options.method === "POST"), false);
 });
+
+
+test("rejects null and non-object JSON bodies without throwing", async () => {
+  configure();
+  const nullResult = await handler(request("POST", null));
+  assert.equal(nullResult.status, 400);
+  assert.match((await nullResult.json()).error, /valid saved request/i);
+  const arrayResult = await handler(request("POST", []));
+  assert.equal(arrayResult.status, 400);
+  assert.match((await arrayResult.json()).error, /valid saved request/i);
+});
