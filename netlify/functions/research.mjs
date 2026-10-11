@@ -107,7 +107,10 @@ async function lookupReviewedFitment(partNumber) {
     if (!Array.isArray(rows)) return [];
     return rows.map(row => ({
       ...row,
-      confidence: row.status === "verified" ? "VERIFIED MATCH" : "HIGH-CONFIDENCE CROSS-REFERENCE",
+      confidence: row.status === "cross_reference"
+        ? "HIGH-CONFIDENCE CROSS-REFERENCE"
+        : "VERIFIED CATALOG RECORD — EXACT VEHICLE FITMENT NOT YET CONFIRMED",
+      fitmentCaution: "This is a reviewed catalog application, not proof that it fits the vehicle in the current question. Compare year, make, model, engine, trim, drivetrain, axle/position, ABS, and market restrictions before recommending it.",
     }));
   } catch {
     return [];
