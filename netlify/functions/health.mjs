@@ -35,5 +35,5 @@ export default async () => {
       checks.quotaFunctionError = e instanceof Error ? e.message.slice(0,180) : "Network request failed";
     }
   }
-  return json({ configured: env.supabaseUrl && env.supabaseAnonKey, environment: env, checks });
+  return json({ healthVersion: "2026-10-11-diagnostics-v2", configured: env.supabaseUrl && env.supabaseAnonKey, environment: env, checks });
 }
