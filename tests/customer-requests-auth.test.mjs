@@ -69,3 +69,19 @@ test("list-requests rejects malformed auth JSON without querying request history
   assert.equal(result.status, 401);
   assert.equal(calls.length, 1);
 });
+
+
+test("create-request rejects null and array JSON bodies before contacting Supabase", async () => {
+  for (const raw of ["null", "[]"]) {
+    const calls = setup(response({ id: "verified-user", email: "test@example.com" }));
+    const result = await createRequest(new Request("https://torqwise.example/.netlify/functions/create-request", {
+      method: "POST",
+      headers: { authorization: "Bearer test-token", "content-type": "application/json" },
+      body: raw,
+    }));
+    assert.equal(result.status, 400);
+    assert.deepEqual(await result.json(), { error: "Request body must be a JSON object." });
+    assert.equal(calls.length, 0);
+    globalThis.fetch = originalFetch;
+  }
+});
