@@ -130,3 +130,24 @@ test("list-requests rejects unexpected history response shapes", async () => {
     assert.deepEqual(await result.json(), { error: "Request history returned an unexpected response. Please retry shortly." });
   }
 });
+
+
+test("create-request warns customers to check history when a write times out", async () => {
+  setup(response({ id: "verified-user", email: "test@example.com" }));
+  globalThis.fetch = async (url) => {
+    if (String(url) === base + "/auth/v1/user") return response({ id: "verified-user", email: "test@example.com" });
+    if (String(url) === base + "/rest/v1/customer_requests") {
+      const error = new Error("request timed out");
+      error.name = "TimeoutError";
+      throw error;
+    }
+    throw new Error("Unexpected provider request: " + String(url));
+  };
+  const result = await createRequest(req("create-request", "POST", {
+    service: "parts", vehicle: "2018 pickup", details: "Find front brake pads",
+  }));
+  assert.equal(result.status, 503);
+  assert.deepEqual(await result.json(), {
+    error: "We could not confirm whether your request was saved. Check your request history before submitting again to avoid a duplicate."
+  });
+});
