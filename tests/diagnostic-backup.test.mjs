@@ -27,15 +27,19 @@ function harness(initial = []) {
   };
   vm.createContext(context);
   vm.runInContext(source + "\nglobalThis.runImport = diagImportHistory;", context);
+  const input = { files: [], value: "selected.json" };
   return {
-    run: async payload => {
-      const file = { size: Buffer.byteLength(JSON.stringify(payload)), text: async () => JSON.stringify(payload) };
-      await context.runImport({ target: { files: [file], value: "selected.json" } });
-      return { cases: stored ? JSON.parse(stored) : [], alerts, renders, inputValue: "selected.json" };
+    run: async (payload, sizeOverride) => {
+      const serialized = JSON.stringify(payload);
+      const file = { size: sizeOverride ?? Buffer.byteLength(serialized), text: async () => serialized };
+      input.files = [file];
+      await context.runImport({ target: input });
+      return { cases: stored ? JSON.parse(stored) : [], alerts, renders, inputValue: input.value };
     },
     getCases: () => stored ? JSON.parse(stored) : [],
     alerts,
-    get renders() { return renders; }
+    get renders() { return renders; },
+    get inputValue() { return input.value; }
   };
 }
 
@@ -86,4 +90,25 @@ test("retains only the 25 most recent cases", async () => {
   assert.equal(h.getCases().length, 25);
   assert.equal(h.getCases()[0].id, "case-29");
   assert.equal(h.getCases().at(-1).id, "case-5");
+});
+
+test("rejects files larger than 2 MB and resets the file input", async () => {
+  const existing = [record("keep")];
+  const h = harness(existing);
+  const result = await h.run(backup([record("oversized")]), 2 * 1024 * 1024 + 1);
+  assert.deepEqual(h.getCases(), existing);
+  assert.equal(h.renders, 0);
+  assert.match(h.alerts[0], /larger than 2 MB/);
+  assert.equal(h.inputValue, "");
+  assert.equal(result.inputValue, "");
+});
+
+test("rejects backups over 500 records without partial import", async () => {
+  const existing = [record("keep")];
+  const h = harness(existing);
+  const tooMany = Array.from({ length: 501 }, (_, i) => record("bulk-" + i));
+  await h.run(backup(tooMany));
+  assert.deepEqual(h.getCases(), existing);
+  assert.equal(h.renders, 0);
+  assert.match(h.alerts[0], /too many records/);
 });
