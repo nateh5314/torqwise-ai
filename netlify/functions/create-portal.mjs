@@ -81,7 +81,7 @@ export default async (req) => {
     const portalConfiguration = env("STRIPE_PORTAL_CONFIGURATION_ID") || "bpc_1UPKu2IpQUHCdBSxPyaJHAfV";
     const form = new URLSearchParams({
       customer,
-      return_url: site.replace(/\/$/, "") + "/#account",
+      return_url: site.replace(/\/$/, "") + "/?billing_return=1#account",
       configuration: portalConfiguration
     });
     const pr = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
