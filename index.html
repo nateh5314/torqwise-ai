@@ -707,7 +707,7 @@ let torqLastResearch=null;
 try{const saved=JSON.parse(localStorage.getItem('torqwise_last_research_v1')||'null');if(saved&&saved.answer&&saved.context)torqLastResearch=saved;}catch(_){}
 function torqSetFollowUpContext(context,answer){
  if(!context||!answer)return;
- torqLastResearch={context:{asset:context.asset||'',serial:context.serial||'',topic:context.topic||'general',question:context.question||context.prompt||''},answer:String(answer),sources:[]};
+ torqLastResearch={context:{asset:context.asset||'',serial:context.serial||'',topic:context.topic||'general',question:context.question||context.prompt||'',symptoms:context.symptoms||'',dtcs:context.dtcs||'',freezeFrame:context.freezeFrame||'',liveData:context.liveData||'',testsPerformed:context.testsPerformed||'',repairsAttempted:context.repairsAttempted||''},answer:String(answer),sources:[]};
  try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}
  const el=document.getElementById('torqFollowUpContextStatus');if(el)el.textContent='Ready to follow up on: '+(torqLastResearch.context.asset||'General research')+' — '+(torqLastResearch.context.question||'Saved report')+'. This clarification does not reserve another monthly report.';
 }
