@@ -20,3 +20,29 @@ where not exists (
  and f.vehicle_year_start is not distinct from v.year_start
  and f.vehicle_year_end is not distinct from v.year_end
 );
+ 
+-- Additional starter variety: WIX oil filters and FRAM oil filters.
+-- Applications below are transcribed from the named filter manufacturers' published catalog listings.
+insert into public.fitment_applications
+(part_number,brand,part_name,vehicle_year_start,vehicle_year_end,make,model,engine,market,status,evidence,fitment_notes,reviewer,reviewed_at,source_checked_at)
+select v.part_number,v.brand,v.part_name,v.year_start,v.year_end,v.make,v.model,v.engine,'North America','verified',v.evidence::jsonb,v.notes,'TORQWISE catalog review',now(),now()
+from (values
+('51348','WIX','Spin-on oil filter',2007,2010,'Ford','C-Max','1.8L Duratec','[{"title":"WIX 51348 official catalog application","url":"https://www.wixfilters.com/en-nz/catalog/results/product.html/51348_wix.html"}]','WIX catalog lists 1.8L Duratec C-Max applications from 05/2007 to 08/2010. Confirm market and engine code.'),
+('51348','WIX','Spin-on oil filter',2014,null,'Ford','EcoSport','1.0L EcoBoost','[{"title":"WIX 51348 official catalog application","url":"https://www.wixfilters.com/en-nz/catalog/results/product.html/51348_wix.html"}]','WIX catalog lists 1.0L EcoBoost applications from 01/2014 onward in that catalog region. Verify model year and market-specific engine configuration.'),
+('51348','WIX','Spin-on oil filter',2007,2014,'Toyota','Corolla','1.4L D-4D 1ND-TV','[{"title":"WIX 51348 official catalog application","url":"https://www.wixfilters.com/en-nz/catalog/results/product.html/51348_wix.html"}]','WIX catalog lists Corolla 1.4 D-4D with 1ND-TV for 04/2007–07/2014. Regional catalog coverage may differ.'),
+('51348','WIX','Spin-on oil filter',1982,1993,'Toyota','Pickup','2.4L 22R','[{"title":"WIX 51348 official catalog application","url":"https://www.wixfilters.com/en-au/catalog/results/product.html/51348_wix.html"}]','Catalog lists engine code 22R for 04/1982–03/1993. Confirm exact vehicle naming, market and engine before order.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',1971,1971,'Mazda','616','1.6L','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM lists 1971 Mazda 616 with 1.6L engine. Confirm exact market and engine.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',1971,1971,'Mazda','R100','1.1L rotary','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM lists 1971 Mazda R100 with 1.1L engine. Confirm engine configuration.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',1972,1973,'Mazda','RX-2','1.1L rotary','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM application list includes 1972–1973 RX-2 with 1.1L rotary engine.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',1972,1975,'Mazda','RX-3','1.1L rotary','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM application list includes RX-3 model years shown for 1972–1975 with 1.1L rotary engine.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',1974,1975,'Mazda','RX-4','1.3L rotary','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM lists 1974–1975 RX-4 with 1.3L engine. Confirm market and exact variant.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',1972,1972,'Mazda','B1600','1.6L','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM lists 1972 B1600 with 1.6L engine. Confirm exact market and engine.')
+) as v(part_number,brand,part_name,year_start,year_end,make,model,engine,evidence,notes)
+where not exists (
+ select 1 from public.fitment_applications f
+ where lower(f.part_number)=lower(v.part_number)
+ and lower(coalesce(f.make,''))=lower(v.make)
+ and lower(coalesce(f.model,''))=lower(v.model)
+ and f.vehicle_year_start is not distinct from v.year_start
+ and f.vehicle_year_end is not distinct from v.year_end
+);
