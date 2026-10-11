@@ -17,7 +17,18 @@ export default async () => {
     supabaseServiceRoleKey: Boolean((process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim()),
     openaiApiKey: Boolean((process.env.OPENAI_API_KEY||"").trim()),
   };
-  const checks = { environment: Object.values(env).every(Boolean), usageTable: "not_checked", quotaFunction: "not_checked" };
+  // Report only whether billing settings exist; never return key or price values.
+  const billing = {
+    stripeSecretKey: Boolean((process.env.STRIPE_SECRET_KEY||"").trim()),
+    stripeProPriceId: Boolean((process.env.STRIPE_PRO_PRICE_ID||process.env.STRIPE_PRICE_PRO||"").trim()),
+    stripeWebhookSecret: Boolean((process.env.STRIPE_WEBHOOK_SECRET||"").trim()),
+  };
+  const checks = {
+    environment: Object.values(env).every(Boolean),
+    billingConfiguration: Object.values(billing).every(Boolean),
+    usageTable: "not_checked",
+    quotaFunction: "not_checked"
+  };
   if (env.supabaseUrl && env.supabaseServiceRoleKey) {
     const base=supabaseBase();
     const key=(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
@@ -38,12 +49,13 @@ export default async () => {
     }
   }
   return json({
-    healthVersion: "2026-10-11-diagnostics-v3",
+    healthVersion: "2026-10-11-billing-readiness-v1",
     deployContext: process.env.CONTEXT || "unknown",
     branch: process.env.BRANCH || "unknown",
     commitRef: (process.env.COMMIT_REF || "unknown").slice(0, 12),
     configured: env.supabaseUrl && env.supabaseAnonKey,
     environment: env,
+    billing,
     checks
   });
 }
