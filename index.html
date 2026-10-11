@@ -561,7 +561,7 @@ Object.assign(DIAG_GUIDES,{
 });
 function diagGuidedHtml(code){
  const g=DIAG_GUIDES[code];
- if(!g)return '<div class="guided-box"><h3>Guided follow-up</h3><p>This code has a general test sequence above. Guided branching is currently available for P0171, P0420 and P0300; more paths will be added after validation.</p></div>';
+ if(!g){const available=Object.keys(DIAG_GUIDES).sort();return '<div class="guided-box"><h3>Guided follow-up</h3><p>This code does not yet have a dedicated branching questionnaire. Use the general test sequence above and verify the exact vehicle procedure before replacing parts.</p><details><summary>Browse '+available.length+' available guided workflows</summary><p class="guided-small">'+available.map(escapeHtml).join(' · ')+'</p></details></div>';}
  return '<div class="guided-box" id="guidedBox"><h3>Guided troubleshooting</h3><p>'+escapeHtml(g.beginner)+'</p><div class="mode-row"><button type="button" aria-pressed="true" onclick="diagSetExpert(false)">Beginner view</button><button type="button" aria-pressed="false" onclick="diagSetExpert(true)">Advanced tests</button></div><div id="guidedBeginner"><div id="guidedQuestion" class="guided-question"></div><div id="guidedBranch" class="guided-result hidden" aria-live="polite"></div><button type="button" class="secondary" id="guidedReset" onclick="diagResetGuide()">Restart questions</button></div><div id="guidedAdvanced" class="advanced-panel hidden"><h4>Advanced test sequence</h4><ol>'+g.advanced.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ol><p class="guided-small">Advanced view assumes appropriate tools and training. Use factory service information for test setup, limits, pinouts and safety steps.</p></div></div>';
 }
 function diagSetExpert(advanced){
