@@ -396,3 +396,19 @@ test("flags damaged or overheating EV traction batteries", async () => {
     assert.ok(payload.input.includes("avoid hazardous testing"));
   }
 });
+
+
+test("adds specific emergency guidance for suspected EV traction battery failure", async () => {
+  const calls = configure();
+  const result = await handler(request({ body: {
+    asset: "Electric vehicle",
+    question: "Assess battery issue",
+    symptoms: "EV battery pack is smoking",
+  }}));
+  assert.equal(result.status, 200);
+  const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+  const payload = JSON.parse(upstream.options.body);
+  assert.ok(payload.input.includes("do not charge, restart, touch, or attempt to open it"));
+  assert.ok(payload.input.includes("move people away"));
+  assert.ok(payload.input.includes("contact emergency services"));
+});
