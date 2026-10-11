@@ -32,6 +32,9 @@ jobs:
           for (const marker of ['diagnostics', 'research-hub', 'parts-market', 'vin-lookup']) {
             assert.ok(homepage.includes(marker), `Homepage missing feature marker: ${marker}`);
           }
+          for (const marker of ['torqFitmentBrand', 'torqFitmentType', "brand:document.getElementById('torqFitmentBrand')", "partType:document.getElementById('torqFitmentType')"]) {
+            assert.ok(homepage.includes(marker), `Fitment search missing brand/category support: ${marker}`);
+          }
           for (const path of ['/privacy.html', '/terms.html', '/support.html']) {
             assert.match(await (await get(path)).text(), /<html[\s>]/i);
           }
