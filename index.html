@@ -103,7 +103,7 @@
   </div>
  </div>
  <div id="diagOutput" class="diag-results" aria-live="polite"><div class="diag-empty">Search a code or choose a symptom to get started. Add the vehicle details above for a more useful case summary.</div></div>
- <div class="card diag-history" style="margin-top:18px"><div class="sectionhead"><div><h3>Saved diagnostic cases</h3><p class="sub">Cases are saved only in this browser on this device. Do not use this feature to store customer-identifying information.</p></div><button class="secondary" type="button" onclick="diagClearHistory()">Clear history</button></div><div id="diagHistory"><div class="empty">No saved cases yet.</div></div></div>
+ <div class="card diag-history" style="margin-top:18px"><div class="sectionhead"><div><h3>Saved diagnostic cases</h3><p class="sub">Cases are saved only in this browser on this device. Do not use this feature to store customer-identifying information.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" type="button" onclick="diagExportHistory()">Export backup</button><button class="secondary" type="button" onclick="diagClearHistory()">Clear history</button></div></div><div id="diagHistory"><div class="empty">No saved cases yet.</div></div></div>
  <p class="tiny" style="margin-top:14px">The generic OBD-II reference database is bundled with this website build and loads from TORQWISE assets, not a third-party API. Generic code definitions are not OEM repair procedures. Confirm applicability, test values, wiring and safety precautions using service information for the exact vehicle.</p>
 </div></section>
 
@@ -515,6 +515,7 @@ function diagRenderHistory(){
  }).join('');
 }
 function diagClearHistory(){if(!confirm('Clear saved diagnostic cases from this browser?'))return;localStorage.removeItem('torqwise_diag_history_v1');diagRenderHistory()}
+function diagExportHistory(){const cases=diagReadHistory();if(!cases.length){alert('There are no saved diagnostic cases to export yet.');return}const backup={format:'TORQWISE-DIAGNOSTIC-BACKUP',version:1,exportedAt:new Date().toISOString(),cases};const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-diagnostic-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('diagSearchForm').addEventListener('submit',e=>{e.preventDefault();diagRunSearch(document.getElementById('diagQuery').value)});diagRenderHistory();
 
 /* Load generic OBD-II records from the bundled build asset. No runtime third-party fetch. */
