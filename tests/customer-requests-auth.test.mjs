@@ -85,3 +85,21 @@ test("create-request rejects null and array JSON bodies before contacting Supaba
     globalThis.fetch = originalFetch;
   }
 });
+
+
+test("create-request returns success if the insert succeeds but its representation is malformed", async () => {
+  setup(response({ id: "verified-user", email: "test@example.com" }));
+  globalThis.fetch = async (url) => {
+    if (String(url) === base + "/auth/v1/user") return response({ id: "verified-user", email: "test@example.com" });
+    if (String(url) === base + "/rest/v1/customer_requests") return new Response("not-json", { status: 201 });
+    throw new Error("Unexpected provider request: " + String(url));
+  };
+  const result = await createRequest(req("create-request", "POST", {
+    service: "parts", vehicle: "2018 pickup", details: "Find front brake pads",
+  }));
+  assert.equal(result.status, 201);
+  const body = await result.json();
+  assert.match(body.request.id, /^TQ-/);
+  assert.equal(body.request.email, "test@example.com");
+  assert.equal(body.request.vehicle, "2018 pickup");
+});
