@@ -70,8 +70,21 @@ export default async (req) => {
     });
     const data = await r.json();
     if (!r.ok || !data.url) {
-      console.error("Stripe checkout creation failed:", r.status, data?.error?.type || "unknown");
-      return json({ error: "Checkout could not be started. Check Stripe test-mode product and price settings." }, 502);
+      const stripeErrorCode = typeof data?.error?.code === "string" ? data.error.code : "unknown";
+      const stripeErrorParam = typeof data?.error?.param === "string" ? data.error.param : "none";
+      console.error("Stripe checkout creation failed:", JSON.stringify({ status: r.status, type: data?.error?.type || "unknown", code: stripeErrorCode, param: stripeErrorParam }));
+      // Return only safe, actionable diagnostics; never return the Stripe message, request body, key, or customer data.
+      let message = "Checkout could not be started. Please retry shortly.";
+      if (stripeErrorCode === "resource_missing" || stripeErrorCode === "price_not_found") {
+        message = "Stripe could not find this Pro price for the configured test account. The Netlify Stripe test key and Pro price must belong to the same Stripe account.";
+      } else if (stripeErrorCode === "api_key_expired" || stripeErrorCode === "invalid_api_key") {
+        message = "The Stripe test key configured in Netlify is invalid or expired. Update it with a valid test key for the Torqwise sandbox, then redeploy.";
+      } else if (stripeErrorCode === "account_invalid") {
+        message = "Stripe rejected the configured test account. Check that Netlify uses the Torqwise sandbox test key.";
+      } else if (stripeErrorCode === "parameter_invalid_empty" || stripeErrorCode === "parameter_invalid_string_empty") {
+        message = "Stripe rejected a required checkout setting. Verify the Pro price and checkout configuration.";
+      }
+      return json({ error: message, diagnostic: { stripeErrorCode, stripeErrorParam, stripeStatus: r.status } }, 502);
     }
     return json({ url: data.url });
   } catch (e) {
