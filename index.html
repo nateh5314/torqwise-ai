@@ -1075,6 +1075,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
     }
     const status=byId('torqProStatus'),button=byId('torqProButton'),portal=byId('torqPortalButton'),portalStatus=byId('torqPortalStatus');
     if(!status||!button)return;
+    status.style.whiteSpace='pre-wrap';status.style.overflowWrap='anywhere';
     if(portal){portal.style.display=pro?'block':'none';portal.onclick=async()=>{if(!currentUser)return;portal.disabled=true;portal.textContent='Opening secure portal…';if(portalStatus)portalStatus.textContent='';try{const session=(await client.auth.getSession()).data.session;const r=await fetch('/.netlify/functions/create-portal',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({})});const d=await r.json();if(!r.ok||!d.url)throw new Error(d.error||'Could not open subscription management.');location.assign(d.url);}catch(e){if(portalStatus)portalStatus.textContent=e.message||'Could not open subscription management.';portal.disabled=false;portal.textContent='Try managing subscription again';}};}
     status.textContent=pro?'Your Pro subscription is active.':currentUser?'Sign in verified. Start your subscription securely below.':'Create an account or sign in to start your subscription.';
     button.textContent=pro?'Pro Technician active':'Subscribe — $29.99 CAD/month';
@@ -1085,7 +1086,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       try{
         const session=(await client.auth.getSession()).data.session;
         const r=await fetch('/.netlify/functions/create-checkout',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({})});
-        const data=await r.json();if(!r.ok||!data.url){const d=data.diagnostic;const details=d?'\n\nDiagnostic: '+JSON.stringify(d):'';throw new Error((data.error||'Checkout could not be started.')+details);}
+        const data=await r.json();if(!r.ok||!data.url){const d=data.diagnostic;const details=d?'\n\nDiagnostic details\nStripe error: '+(d.stripeErrorCode||'unknown')+'\nHTTP status: '+(d.stripeStatus||'unknown')+'\nStripe account: '+(d.stripeAccountId||'unavailable')+'\nPrice setting: '+(d.priceSource||'unknown')+'\nPrice ID ending: '+(d.priceIdSuffix||'unknown')+'\nParameter: '+(d.stripeErrorParam||'none'):'';throw new Error((data.error||'Checkout could not be started.')+details);}
         location.assign(data.url);
       }catch(err){status.textContent=err.message||'Could not start checkout.';button.disabled=false;button.textContent='Try subscription checkout again';}
     };
