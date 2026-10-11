@@ -1,0 +1,11 @@
+node_modules/
+.expo/
+.expo-export/
+dist/
+build/
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
+*.orig.*
