@@ -152,3 +152,19 @@ test("rejects null and non-object JSON bodies without throwing", async () => {
   assert.equal(arrayResult.status, 400);
   assert.match((await arrayResult.json()).error, /valid saved request/i);
 });
+
+
+test("bounds identity, request lookup, previous-session, and checkout network waits", async () => {
+  const calls = configure({ requestRow: {
+    request_code: requestCode, user_id: userId, service: "parts", quoted_price: 15,
+    payment_status: "pending", status: "Awaiting customer", stripe_checkout_session_id: null,
+  } });
+  const result = await handler(request("POST", { requestCode }));
+  assert.equal(result.status, 200);
+  const authCall = calls.find(c => String(c.url).includes("/auth/v1/user"));
+  const lookupCall = calls.find(c => String(c.url).includes("/rest/v1/customer_requests?"));
+  const checkoutCall = calls.find(c => c.url === "https://api.stripe.com/v1/checkout/sessions" && c.options.method === "POST");
+  assert.ok(authCall?.options.signal, "identity request should have a timeout signal");
+  assert.ok(lookupCall?.options.signal, "request lookup should have a timeout signal");
+  assert.ok(checkoutCall?.options.signal, "Stripe checkout creation should have a timeout signal");
+});
