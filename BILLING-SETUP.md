@@ -15,8 +15,8 @@ Set these on the Netlify site, with Functions/runtime scope. Start with Stripe t
 - `SUPABASE_SERVICE_ROLE_KEY` (secret; server functions only)
 - `STRIPE_SECRET_KEY` (use a Stripe test-mode key first)
 - `STRIPE_PRO_PRICE_ID` (a recurring monthly Stripe Price ID for CA$29.99)
-- `STRIPE_WEBHOOK_SECRET` (signing secret for the staging webhook)
-- `SITE_URL` (the exact HTTPS origin of the staging website)
+- `STRIPE_WEBHOOK_SECRET` (signing secret for the enabled Stripe test-mode webhook)
+- `SITE_URL` (the exact HTTPS origin of the website)
 - `RESEND_API_KEY` (optional; enables request notification emails)
 - `SUPPORT_EMAIL` (optional; operator inbox for new request notifications)
 - `EMAIL_FROM` (optional; verified sender address for request notifications)
@@ -42,13 +42,13 @@ The Stripe sandbox account was inspected on 2026-10-11. These objects already ex
 
 Before accepting test purchases:
 1. Set Netlify `STRIPE_PRO_PRICE_ID=price_1UOqWAIpQUHCdBSxunv5OqtK` (or the supported `STRIPE_PRICE_PRO` alias) in the site environment, with Functions/runtime scope.
-2. Confirm the existing webhook endpoint subscribes to `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`.
+2. The existing test-mode webhook was checked on 2026-10-11 and is enabled for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`.
 3. Confirm its signing secret is stored as Netlify `STRIPE_WEBHOOK_SECRET`, and that `STRIPE_SECRET_KEY` is a test-mode secret key from the same Stripe account.
 4. Confirm `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`, and the public anon/publishable key are configured in Netlify. Secret values must never be committed or pasted into chat.
 5. Use Stripe test cards only; do not enable live mode.
 6. For one-time service payments, verify the request's server-stored price is used, users cannot pay for another user's request, a pending session is reused, cancelled checkout does not mark the request paid, and only a verified `checkout.session.completed` event with `mode=payment` and `payment_status=paid` marks the request paid.
 
-The Stripe sandbox product, price, webhook endpoint, and portal configuration were confirmed through Stripe's API. Netlify site-level environment values and a complete customer checkout/webhook round trip have **not** been verified yet.
+The Stripe sandbox product, price, enabled webhook endpoint/event list, and portal configuration were confirmed through Stripe's API. Regression tests now cover duplicate Pro checkout prevention, fail-closed subscription verification, signed subscription updates, invalid signature rejection, and failed-invoice status updates. Netlify site-level environment values and a complete customer checkout/webhook round trip have **not** been verified yet.
 
 ## Endpoints in this branch
 - `POST /.netlify/functions/create-checkout`: verifies the Supabase access token and creates a hosted Stripe Checkout subscription session.
