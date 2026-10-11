@@ -71,7 +71,10 @@ async function getResearchAccess(req, followUp = false) {
     const result = await subsResponse.json();
     if (Array.isArray(result)) subs = result;
   } else if (![400, 404, 406].includes(subsResponse.status)) {
-    console.error('Subscription lookup unavailable; refusing to assume Pro:', subsResponse.status);
+    // A transient billing lookup failure must not silently treat a paid Pro
+    // customer as free and consume their monthly allowance.
+    console.error('Subscription lookup unavailable:', subsResponse.status);
+    return { error: 'We could not verify your subscription right now. Your free research allowance has not been used. Please retry shortly.', status: 503 };
   }
   // Only the configured Pro Technician recurring price grants unlimited research.
   // Other active plans (including the lower-priced Driver plan) must not inherit Pro access.
