@@ -436,3 +436,26 @@ test("flags invalid and future fitment evidence timestamps", async () => {
   assert.equal(data.fitmentMatches[0].confidence, "INVALID EVIDENCE TIMESTAMP — REVALIDATE BEFORE RELYING ON THIS RECORD");
   assert.ok(data.fitmentMatches[0].evidenceWarnings.some(w => w.includes("more than 24 hours in the future")));
 });
+
+
+test("downgrades fitment evidence that has no inspectable source URL", async () => {
+  configure({
+    fitmentResponse: response([{
+      id: 10, part_number: "EVID123", brand: "Example", part_name: "Brake component",
+      vehicle_year_start: 2018, vehicle_year_end: 2020, make: "Example Motors",
+      model: "Pickup", trim: "LT", engine: "5.3L", drive_type: "4WD",
+      axle_position: "front", abs_type: "ABS", market: "CA", status: "verified",
+      evidence: [{ note: "checked against catalog" }],
+      reviewed_at: new Date().toISOString(), source_checked_at: new Date().toISOString(),
+    }]),
+    openaiResponse: response({ output: [{ type: "message", content: [{ type: "output_text", text: "Source URL is needed." }] }] })
+  });
+  const result = await handler(request({ body: {
+    asset: "2019 Example Motors Pickup 5.3L", topic: "parts",
+    question: "Check part EVID123 for this vehicle"
+  }}));
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.equal(data.fitmentMatches[0].confidence, "INCOMPLETE CATALOG RECORD — NOT SUFFICIENT TO VERIFY FITMENT");
+  assert.ok(data.fitmentMatches[0].evidenceWarnings.some(w => w.includes("valid HTTP(S) URL")));
+});
