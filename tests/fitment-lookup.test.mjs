@@ -109,3 +109,9 @@ test("rejects an invalid supplied year instead of silently broadening lookup", a
   const data = await response.json();
   assert.match(data.error, /valid four-digit vehicle year/i);
 });
+
+test("rejects a non-four-digit year even when JavaScript could coerce it to a number", async () => {
+  configure([catalogRow()]);
+  const response = await handler(request({ year: "2.021e3", make: "Ford", model: "F-150", partType: "brake pad" }));
+  assert.equal(response.status, 400);
+});
