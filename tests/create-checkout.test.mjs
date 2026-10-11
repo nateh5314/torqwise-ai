@@ -86,3 +86,12 @@ test("creates Pro checkout with server-configured price and account metadata", a
   assert.equal(form.get("metadata[supabase_user_id]"), userId);
   assert.equal(form.get("subscription_data[metadata][supabase_user_id]"), userId);
 });
+
+
+test("fails closed when subscription lookup returns a non-array JSON body", async () => {
+  const calls = configure({ subscriptions: response({ unexpected: true }) });
+  const result = await handler(request());
+  assert.equal(result.status, 503);
+  assert.match((await result.json()).error, /could not verify your current subscription/i);
+  assert.ok(!calls.some(c => c.url === "https://api.stripe.com/v1/checkout/sessions"));
+});
