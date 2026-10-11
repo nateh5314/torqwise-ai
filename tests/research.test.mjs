@@ -45,6 +45,33 @@ test.afterEach(() => {
   for (const [key, value] of Object.entries(originalEnv)) process.env[key] = value;
 });
 
+test("configured active Pro subscription bypasses free research quota", async () => {
+  const calls = configure({
+    proPriceId: "price_pro_monthly",
+    subscriptions: response([{ status: "active", price_id: "price_pro_monthly" }]),
+  });
+  const result = await handler(request());
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.equal(data.isPro, true);
+  assert.equal(data.remaining, null);
+  assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
+  assert.ok(calls.some(c => c.url === "https://api.openai.com/v1/responses"));
+});
+
+test("active subscription for another price does not grant Pro research access", async () => {
+  const calls = configure({
+    proPriceId: "price_pro_monthly",
+    subscriptions: response([{ status: "active", price_id: "price_driver_monthly" }]),
+  });
+  const result = await handler(request());
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.equal(data.isPro, false);
+  assert.equal(data.remaining, 2);
+  assert.ok(calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
+});
+
 test("rejects unsupported methods before calling providers", async () => {
   const calls = configure();
   const result = await handler(request({ method: "GET", body: null }));
