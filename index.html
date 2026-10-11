@@ -708,8 +708,19 @@ function torqRenderAiResult(data){
  const host=document.getElementById('torqAiOutput');host.style.display='block';host.innerHTML='';
  const heading=document.createElement('h3');heading.textContent='TORQWISE research report';host.appendChild(heading);
  const answer=document.createElement('div');answer.style.whiteSpace='pre-wrap';answer.style.lineHeight='1.65';answer.textContent=data.answer||'No answer text was returned.';host.appendChild(answer);
- const sources=Array.isArray(data.sources)?data.sources:[];
- if(sources.length){const h=document.createElement('h4');h.textContent='Sources to check';h.style.marginTop='18px';host.appendChild(h);const list=document.createElement('ol');list.style.paddingLeft='22px';sources.forEach(src=>{if(!src||!/^https?:\/\//i.test(src.url||''))return;const li=document.createElement('li');li.style.marginBottom='8px';const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title||src.url;a.style.color='#ff686d';li.appendChild(a);list.appendChild(li)});if(list.children.length)host.appendChild(list)}
+ const rawSources=Array.isArray(data.sources)?data.sources:[];
+ const seenSourceUrls=new Set();
+ const sources=rawSources.map(src=>{
+  if(typeof src==='string')return {url:src,title:src};
+  if(src&&typeof src==='object')return {url:typeof src.url==='string'?src.url:'',title:typeof src.title==='string'?src.title:(typeof src.source==='string'?src.source:'')};
+  return null;
+ }).filter(src=>{
+  if(!src||!/^https?:\\/\\//i.test(src.url))return false;
+  try{const parsed=new URL(src.url);if(!['http:','https:'].includes(parsed.protocol)||seenSourceUrls.has(parsed.href))return false;seenSourceUrls.add(parsed.href);src.url=parsed.href;src.title=(src.title||parsed.hostname).slice(0,240);return true;}catch(_){return false;}
+ });
+ const h=document.createElement('h4');h.textContent=sources.length?'Sources to check':'Source links were not supplied with this response';h.style.marginTop='18px';host.appendChild(h);
+ if(sources.length){const list=document.createElement('ol');list.style.paddingLeft='22px';sources.forEach(src=>{const li=document.createElement('li');li.style.marginBottom='8px';const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title||src.url;a.style.color='#ff686d';li.appendChild(a);list.appendChild(li)});host.appendChild(list)}
+ else{const sourceNote=document.createElement('p');sourceNote.className='tiny';sourceNote.textContent='Treat the answer as an unverified lead. Retry with a narrower question or verify key claims against manufacturer service information before acting.';host.appendChild(sourceNote)}
  const note=document.createElement('p');note.className='tiny';note.style.marginTop='16px';note.textContent='Research aid, not a confirmed diagnosis or substitute for OEM service information. Verify year, model, engine, serial/VIN, market, options and service procedure before repair or parts ordering.';host.appendChild(note);
 }
 let torqLastResearch=null;
