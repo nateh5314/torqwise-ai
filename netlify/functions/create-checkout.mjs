@@ -52,7 +52,11 @@ export default async (req) => {
       return json({ error: "Could not verify your current subscription. No new checkout was started; please retry shortly." }, 503);
     }
     const existing = await existingResponse.json();
-    if (Array.isArray(existing) && existing.length) {
+    if (!Array.isArray(existing)) {
+      console.error("Existing subscription check returned an unexpected response shape.");
+      return json({ error: "Could not verify your current subscription. No new checkout was started; please retry shortly." }, 503);
+    }
+    if (existing.length) {
       return json({ error: "Your Pro Technician subscription is already active. Use Manage subscription in your account to update or cancel it." }, 409);
     }
   } catch (e) {
