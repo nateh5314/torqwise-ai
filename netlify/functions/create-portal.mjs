@@ -7,8 +7,8 @@ function json(body, status = 200) {
 const env = (name) => (process.env[name] || "").trim();
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
-  const stripeKey = env("STRIPE_SECRET_KEY"), site = env("SITE_URL");
-  const supabaseUrl = env("SUPABASE_URL"), anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
+  const stripeKey = env("STRIPE_SECRET_KEY"), site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
+  const supabaseUrl = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co", anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!stripeKey || !site || !supabaseUrl || !anon || !service) return json({ error: "Billing management is not configured yet." }, 503);
   const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return json({ error: "Sign in to manage your subscription." }, 401);
