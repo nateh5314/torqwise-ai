@@ -27,7 +27,7 @@ export default async (req) => {
   });
   if (partNumber) query.set("part_number", "ilike." + partNumber.replace(/[%,]/g, ""));
   if (make) query.set("make", "ilike." + make);
-  if (model) query.set("model", "ilike." + model);
+  if (model) query.set("model", "ilike.*" + model.replace(/[*%]/g, "") + "*");
   let response;
   try {
     response = await fetch(base.replace(/\/+$/, "") + "/rest/v1/fitment_applications?" + query.toString(), {
