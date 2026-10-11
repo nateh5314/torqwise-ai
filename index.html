@@ -57,7 +57,7 @@
 @media(max-width:420px){.market-suppliers{grid-template-columns:1fr}}
 
 /* TORQWISE fitment form polish: larger, aligned, consistent light-gray controls */
-#torqFitmentBrand, #torqFitmentType, #torqFitmentPart, #torqFitmentYear, #torqFitmentMake, #torqFitmentModel,
+#torqFitmentBrand, #torqFitmentType, #torqFitmentPart, #torqFitmentYear, #torqFitmentMake, #torqFitmentModel, #torqFitmentEngine, #torqFitmentTrim, #torqFitmentDrive, #torqFitmentAxle, #torqFitmentAbs,
 #torqFitmentPart + input, .torq-fitment-form input, .torq-fitment-form select {
   box-sizing: border-box;
   width: 100%;
@@ -73,12 +73,12 @@
   box-shadow: inset 0 1px 2px rgba(15,23,42,.06);
 }
 #torqFitmentBrand::placeholder, #torqFitmentType::placeholder, #torqFitmentPart::placeholder,
-#torqFitmentYear::placeholder, #torqFitmentMake::placeholder, #torqFitmentModel::placeholder {
+#torqFitmentYear::placeholder, #torqFitmentMake::placeholder, #torqFitmentModel::placeholder, #torqFitmentEngine::placeholder, #torqFitmentTrim::placeholder, #torqFitmentDrive::placeholder, #torqFitmentAxle::placeholder, #torqFitmentAbs::placeholder {
   color: #667085;
   opacity: 1;
 }
 #torqFitmentBrand:focus, #torqFitmentType:focus, #torqFitmentPart:focus, #torqFitmentYear:focus,
-#torqFitmentMake:focus, #torqFitmentModel:focus {
+#torqFitmentMake:focus, #torqFitmentModel:focus, #torqFitmentEngine:focus, #torqFitmentTrim:focus, #torqFitmentDrive:focus, #torqFitmentAxle:focus, #torqFitmentAbs:focus {
   outline: 3px solid rgba(220,38,38,.25);
   border-color: #d94141;
 }
@@ -114,6 +114,11 @@
      <label>Vehicle year<input id="torqFitmentYear" inputmode="numeric" placeholder="e.g. 2018"></label>
      <label>Make<input id="torqFitmentMake" placeholder="e.g. Honda"></label>
      <label>Model<input id="torqFitmentModel" placeholder="e.g. Civic"></label>
+     <label>Engine<input id="torqFitmentEngine" placeholder="e.g. 2.0L turbo"></label>
+     <label>Trim / package<input id="torqFitmentTrim" placeholder="e.g. Sport"></label>
+     <label>Drivetrain<input id="torqFitmentDrive" placeholder="e.g. AWD, 4WD"></label>
+     <label>Axle / position<input id="torqFitmentAxle" placeholder="e.g. front left, rear"></label>
+     <label>ABS / brake configuration<input id="torqFitmentAbs" placeholder="e.g. electronic parking brake"></label>
     </div>
     <button type="button" class="secondary" style="margin-top:10px" onclick="torqLookupFitment(this)">Search internal fitment catalog ↗</button>
     <div id="torqFitmentResults" aria-live="polite" style="margin-top:10px"></div>
@@ -717,7 +722,7 @@ async function torqAskFollowUp(button){
 }
 async function torqLookupFitment(button){
  const result=document.getElementById('torqFitmentResults');
- const body={partNumber:document.getElementById('torqFitmentPart').value.trim(),brand:document.getElementById('torqFitmentBrand').value.trim(),partType:document.getElementById('torqFitmentType').value.trim(),year:document.getElementById('torqFitmentYear').value.trim(),make:document.getElementById('torqFitmentMake').value.trim(),model:document.getElementById('torqFitmentModel').value.trim()};
+ const body={partNumber:document.getElementById('torqFitmentPart').value.trim(),brand:document.getElementById('torqFitmentBrand').value.trim(),partType:document.getElementById('torqFitmentType').value.trim(),year:document.getElementById('torqFitmentYear').value.trim(),make:document.getElementById('torqFitmentMake').value.trim(),model:document.getElementById('torqFitmentModel').value.trim(),engine:document.getElementById('torqFitmentEngine').value.trim(),trim:document.getElementById('torqFitmentTrim').value.trim(),driveType:document.getElementById('torqFitmentDrive').value.trim(),axlePosition:document.getElementById('torqFitmentAxle').value.trim(),absType:document.getElementById('torqFitmentAbs').value.trim()};
  if(!body.partNumber&&!body.brand&&!body.partType&&!(body.year&&body.make&&body.model)){result.textContent='Enter a part number, brand, part category, or vehicle year, make and model.';return;}
  button.disabled=true;button.textContent='Searching catalog…';result.textContent='Checking TORQWISE reviewed fitment records…';
  try{
