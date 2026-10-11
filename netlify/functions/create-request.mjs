@@ -4,7 +4,15 @@ function json(body, status = 200) {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 }
-const env = (name) => (process.env[name] || "").trim();
+const env = (name) => {
+  try {
+    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {
+      const value = Netlify.env.get(name);
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {}
+  return (process.env[name] || "").trim();
+};
 const clean = (v, max = 1800) => typeof v === "string" ? v.trim().slice(0, max) : "";
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
@@ -14,6 +22,7 @@ export default async (req) => {
   if (!token) return json({ error: "Sign in to submit and track a customer request." }, 401);
   let body;
   try { body = await req.json(); } catch { return json({ error: "Request body must be valid JSON." }, 400); }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "Request body must be a JSON object." }, 400);
   try {
     const auth = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
     if (!auth.ok) return json({ error: "Your session expired. Please sign in again." }, 401);
