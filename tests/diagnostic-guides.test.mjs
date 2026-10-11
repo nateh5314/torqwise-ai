@@ -13,9 +13,9 @@ test("guided diagnostic catalogue has unique code entries", () => {
 
 test("high-value diagnostic workflows remain present", () => {
   for (const code of [
-    "P0101", "P0113", "P0133", "P0201", "P0299", "P0300", "P0301",
-    "P0304", "P0335", "P0340", "P0420", "P0446", "P0456", "P0507",
-    "P0700", "P2002", "U0100", "U0121"
+    "P0101", "P0113", "P0116", "P0131", "P0133", "P0171", "P0201", "P0299",
+    "P0300", "P0301", "P0304", "P0335", "P0340", "P0420", "P0440", "P0446",
+    "P0456", "P0507", "P0700", "P2002", "U0100", "U0121"
   ]) {
     assert.ok(codes.includes(code), `Missing guided diagnostic workflow: ${code}`);
   }
