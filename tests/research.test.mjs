@@ -474,3 +474,25 @@ test("adds no-drive guidance for critical braking, steering, and wheel faults", 
     assert.ok(payload.input.includes("qualified inspection or recovery"));
   }
 });
+
+
+test("detects DTCs supplied in freeze-frame, live data, and repair notes", async () => {
+  const cases = [
+    { freezeFrame: "P0302 captured at 1800 rpm", expected: "P0302" },
+    { liveData: "P0171 observed with positive fuel trims", expected: "P0171" },
+    { repairsAttempted: "Previously replaced part after P0420", expected: "P0420" },
+  ];
+  for (const fields of cases) {
+    const calls = configure();
+    const result = await handler(request({ body: {
+      asset: "2018 Ford F-150 5.0L",
+      question: "Interpret the recorded diagnostic evidence",
+      ...fields,
+    }}));
+    assert.equal(result.status, 200);
+    const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+    const payload = JSON.parse(aiCall.options.body);
+    assert.ok(payload.input.includes(fields.expected), "DTC should be passed to the model: " + fields.expected);
+    assert.ok(payload.input.includes("DTC tokens detected in the supplied text"));
+  }
+});
