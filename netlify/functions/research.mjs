@@ -257,6 +257,7 @@ export default async (req) => {
     { flag: "unintended acceleration or throttle-control fault", pattern: /unintended acceleration|vehicle accelerat(?:es|ing) without (?:input|command)|throttle stuck open|engine will not return to idle|runaway engine/ },
     { flag: "severe overheating", pattern: /overheating|temperature gauge (?:in red|pegged)|coolant boiling|coolant spraying/ },
     { flag: "high-voltage electric vehicle", pattern: /high[- ]voltage|orange cable|ev battery pack|hybrid battery|electric vehicle battery/ },
+    { flag: "battery thermal runaway or damaged traction battery", pattern: /battery (?:thermal runaway|swelling|swollen|venting|hissing)|ev battery (?:smoking|swollen|overheating)|lithium[- ]ion battery (?:smoking|swelling|venting)|traction battery (?:damaged|smoking|overheating)/ },
     { flag: "pressurized hydraulic or injection hazard", pattern: /hydraulic (?:hose|line) (?:burst|ruptured|leaking)|pinhole leak|high[- ]pressure (?:fuel|hydraulic)|diesel injection injury/ },
   ].filter(item => item.pattern.test(safetyText)).map(item => item.flag);
   const followUp = body.followUp === true;
