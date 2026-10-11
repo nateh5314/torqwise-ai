@@ -324,7 +324,7 @@ async function torqLoadBundledDtcDatabase(){
   const response=await fetch('./assets/dtc-database.json',{cache:'force-cache'});
   if(!response.ok)throw new Error('Bundled data file returned HTTP '+response.status);
   const records=await response.json();
-  if(!Array.isArray(records)||records.length<15000)throw new Error('Bundled data failed completeness validation');
+  if(!Array.isArray(records)||records.length<9000)throw new Error('Bundled data failed completeness validation');
   const seen=new Set(DIAG_DB.map(d=>String(d.code).toUpperCase()+'|'+String(d.manufacturer||'').toUpperCase()));let added=0,makeSpecificAdded=0;
   for(const r of records){
    const code=String(r.code||'').toUpperCase(),manufacturer=String(r.manufacturer||'').toUpperCase();if(!/^[PBCU][0-9A-F]{4}$/.test(code))continue;const key=code+'|'+manufacturer;if(seen.has(key))continue;
@@ -346,11 +346,11 @@ async function torqLoadBundledDtcDatabase(){
    seen.add(key);added++;if(!isGeneric)makeSpecificAdded++;
   }
   window.TORQWISE_DTC_STATUS={bundled:true,sourceRecords:records.length,indexedEntries:DIAG_DB.length,added,makeSpecificAdded};
-  if(status)status.textContent='Bundled diagnostic database loaded locally: '+records.length.toLocaleString()+' source definitions; '+added.toLocaleString()+' entries indexed ('+makeSpecificAdded.toLocaleString()+' make-specific). Enter a make to prioritize its definitions. Code descriptions are not OEM repair procedures.';
+  if(status)status.textContent='Bundled generic OBD-II database loaded locally: '+records.length.toLocaleString()+' source definitions; '+added.toLocaleString()+' entries indexed. Manufacturer-specific definitions are not included in this dataset. Code descriptions are not OEM repair procedures.';
   const q=document.getElementById('diagQuery')?.value?.trim();if(q)diagRunSearch(q);
  }catch(error){
   window.TORQWISE_DTC_STATUS={bundled:false,error:String(error&&error.message||error)};
-  if(status)status.textContent='Bundled database did not load: '+String(error&&error.message||error)+'. Curated diagnostic guides remain available; expanded coverage is not confirmed.';
+  if(status)status.textContent='Bundled generic DTC database did not load: '+String(error&&error.message||error)+'. Curated diagnostic guides remain available; expanded coverage is not confirmed.';
  }
 }
 torqLoadBundledDtcDatabase();
