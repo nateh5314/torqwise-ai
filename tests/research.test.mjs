@@ -412,3 +412,27 @@ test("adds specific emergency guidance for suspected EV traction battery failure
   assert.ok(payload.input.includes("move people away"));
   assert.ok(payload.input.includes("contact emergency services"));
 });
+
+
+test("flags invalid and future fitment evidence timestamps", async () => {
+  const future = new Date(Date.now() + 3 * 86400000).toISOString();
+  configure({
+    fitmentResponse: response([{
+      id: 9, part_number: "TIME123", brand: "Example", part_name: "Brake component",
+      vehicle_year_start: 2018, vehicle_year_end: 2020, make: "Example Motors",
+      model: "Pickup", trim: "LT", engine: "5.3L", drive_type: "4WD",
+      axle_position: "front", abs_type: "ABS", market: "CA", status: "verified",
+      evidence: [{ url: "https://example.com/catalog" }],
+      reviewed_at: future, source_checked_at: future,
+    }]),
+    openaiResponse: response({ output: [{ type: "message", content: [{ type: "output_text", text: "Revalidate the catalog record." }] }] })
+  });
+  const result = await handler(request({ body: {
+    asset: "2019 Example Motors Pickup 5.3L", topic: "parts",
+    question: "Check part TIME123 for this vehicle"
+  }}));
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.equal(data.fitmentMatches[0].confidence, "INVALID EVIDENCE TIMESTAMP — REVALIDATE BEFORE RELYING ON THIS RECORD");
+  assert.ok(data.fitmentMatches[0].evidenceWarnings.some(w => w.includes("more than 24 hours in the future")));
+});
