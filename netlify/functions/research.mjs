@@ -105,13 +105,32 @@ async function lookupReviewedFitment(partNumber) {
     if (!response.ok) return [];
     const rows = await response.json();
     if (!Array.isArray(rows)) return [];
-    return rows.map(row => ({
-      ...row,
-      confidence: row.status === "cross_reference"
-        ? "HIGH-CONFIDENCE CROSS-REFERENCE"
-        : "VERIFIED CATALOG RECORD — EXACT VEHICLE FITMENT NOT YET CONFIRMED",
-      fitmentCaution: "This is a reviewed catalog application, not proof that it fits the vehicle in the current question. Compare year, make, model, engine, trim, drivetrain, axle/position, ABS, and market restrictions before recommending it.",
-    }));
+    return rows.map(row => {
+      const evidenceWarnings = [];
+      if (!Array.isArray(row.evidence) || row.evidence.length === 0) evidenceWarnings.push("No source evidence attached.");
+      if (!row.reviewed_at) evidenceWarnings.push("Review timestamp missing.");
+      if (!row.source_checked_at) evidenceWarnings.push("Source-check timestamp missing.");
+      const missingApplicationDetails = [
+        row.vehicle_year_start == null || row.vehicle_year_end == null ? "complete year range" : null,
+        !row.make ? "make" : null,
+        !row.model ? "model" : null,
+        !row.engine ? "engine" : null,
+        !row.trim ? "trim" : null,
+        !row.drive_type ? "drivetrain" : null,
+        !row.axle_position ? "axle/position" : null,
+        !row.abs_type ? "ABS/brake configuration" : null,
+        !row.market ? "market/region" : null,
+      ].filter(Boolean);
+      return {
+        ...row,
+        confidence: row.status === "cross_reference"
+          ? "HIGH-CONFIDENCE CROSS-REFERENCE"
+          : "VERIFIED CATALOG RECORD — EXACT VEHICLE FITMENT NOT YET CONFIRMED",
+        evidenceWarnings,
+        missingApplicationDetails,
+        fitmentCaution: "This is a reviewed catalog application, not proof that it fits the vehicle in the current question. Compare year, make, model, engine, trim, drivetrain, axle/position, ABS, and market restrictions before recommending it.",
+      };
+    });
   } catch {
     return [];
   }
