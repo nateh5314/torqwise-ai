@@ -910,9 +910,9 @@ function torqExportCases(){const blob=new Blob([JSON.stringify(torqLoadCases(),n
 function torqExportCasesCsv(){
  const cases=torqLoadCases();
  const columns=[['savedAt','Saved at'],['asset','Vehicle / equipment'],['serial','Serial / VIN'],['topic','Research type'],['question','Question / job'],['symptoms','Symptoms'],['dtcs','Fault codes'],['freezeFrame','Freeze-frame data'],['liveData','Live data'],['testsPerformed','Tests performed'],['repairsAttempted','Repairs attempted']];
- const cell=value=>{let text=String(value??'');if(/^[=+@]/.test(text)||/^-[^0-9]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""').replace(/\r?\n/g,' ')+'"';};
+ const cell=value=>{let text=String(value??'');if(/^[=+@-]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""').replace(/\r?\n/g,' ')+'"';};
  const csv=[columns.map(([,label])=>cell(label)).join(','),...cases.map(entry=>columns.map(([key])=>cell(entry[key])).join(','))].join('\r\n');
- const blob=new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
+ const blob=new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-job-notebook.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 window.addEventListener('DOMContentLoaded',torqRenderCases);
