@@ -2,11 +2,15 @@ export default async () => {
   const rawUrl = (process.env.SUPABASE_URL || "").trim();
   // Accept either the full Supabase project URL or a bare project reference.
   const normalizedInput = rawUrl.replace(/\/+$/, "");
-  const url = /^[a-z0-9]{20}$/i.test(normalizedInput)
-    ? `https://${normalizedInput}.supabase.co`
+  // Netlify may supply a project reference rather than a URL. Treat any
+  // hostname-free alphanumeric project reference (15–30 chars) as a ref.
+  const url = /^https?:\/\//i.test(normalizedInput)
+    ? normalizedInput
     : /^[a-z0-9-]+\.supabase\.co$/i.test(normalizedInput)
       ? `https://${normalizedInput}`
-      : normalizedInput;
+      : /^[a-z0-9]{15,30}$/i.test(normalizedInput)
+        ? `https://${normalizedInput}.supabase.co`
+        : normalizedInput;
   const anonKey = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || "").trim();
   let validUrl = false;
   try {
