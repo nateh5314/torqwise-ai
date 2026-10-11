@@ -74,7 +74,7 @@ async function getResearchAccess(req) {
 }
 async function releaseResearchUsage(userId, usageId) {
   if (!userId || !Number.isSafeInteger(usageId)) return;
-  const base = (process.env.SUPABASE_URL || '').trim(); const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const base = supabaseBase(); const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   const response = await fetch(base + '/rest/v1/rpc/release_research_usage', {
     method: 'POST',
     headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json' },
