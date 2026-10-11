@@ -11,7 +11,7 @@ export default async (req) => {
   const proPriceId = env("STRIPE_PRO_PRICE_ID") || env("STRIPE_PRICE_PRO");
   const supabaseUrl = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co", anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!stripeKey || !site || !supabaseUrl || !anon || !service || !proPriceId) return json({ error: "Billing management is not configured yet." }, 503);
-  const token = (req.headers.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return json({ error: "Sign in to manage your subscription." }, 401);
   try {
     const ur = await fetch(supabaseUrl + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
@@ -28,7 +28,7 @@ export default async (req) => {
     const proSubscription = Array.isArray(rows) ? rows.find(row => row.price_id === proPriceId && row.stripe_customer_id) : null;
     const customer = proSubscription?.stripe_customer_id;
     if (!customer) return json({ error: "No Pro subscription is linked to this account yet." }, 404);
-    const form = new URLSearchParams({ customer, return_url: site.replace(/\\/$/, "") + "/#account" });
+    const form = new URLSearchParams({ customer, return_url: site.replace(/\/$/, "") + "/#account" });
     const pr = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
       method: "POST",
       headers: { authorization: "Bearer " + stripeKey, "content-type": "application/x-www-form-urlencoded" },
