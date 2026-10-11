@@ -476,7 +476,8 @@ function diagFindParts(id){
  if(!code&&!sym)return;
  const part=document.getElementById('marketPart'),vehicle=document.getElementById('marketVehicle'),message=document.getElementById('marketMessage');
  const title=code?code.code+' '+code.title:sym.title;
- const session=diagSessionSummary(id);\n if(part)part.value=title+' — technician findings: '+(session.findings||'not recorded')+' — investigate repair-related parts only after confirming the fault';
+ const session=diagSessionSummary(id);
+ if(part)part.value=title+' — technician findings: '+(session.findings||'not recorded')+' — investigate repair-related parts only after confirming the fault';
  if(vehicle)vehicle.value=diagVehicle()==='Vehicle details not supplied'?'':diagVehicle();
  if(message){message.classList.remove('hidden','success');message.textContent='Case context copied. This is a research starting point, not a diagnosis or a parts replacement recommendation. Confirm the cause and exact fitment before ordering.'}
  document.getElementById('parts-market')?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -492,7 +493,8 @@ function diagResearchCase(id){
  const title=code?code.code+' — '+code.title:sym.title;
  const summary=code?code.summary:'Symptom-led case: '+sym.title+'. Urgency: '+sym.urgency;
  const checks=code?code.checks:sym.first;
- const session=diagSessionSummary(id);\n if(question)question.value='Continue this TORQWISE diagnostic case. Vehicle/equipment: '+diagVehicle()+'. Case: '+title+'. Context: '+summary+'.\n\nGuided answers: '+(session.answers.join(' | ')||'None recorded')+'.\n\nTechnician test findings: '+(session.findings||'None recorded')+'.\n\nSuggested checks already shown:\n- '+checks.join('\n- ')+'\n\nPlease: (1) ask only the most important missing questions, (2) rank plausible causes by evidence and explain what would distinguish them, (3) give a safe, ordered next-test plan, including what result would support or rule out each branch, (4) identify the vehicle-specific service data needed. Do not invent specifications, wiring pinouts, test limits, citations, or part numbers. Do not recommend replacing a part unless tests support that conclusion. Flag safety-critical conditions and clearly distinguish verified facts from hypotheses.';
+ const session=diagSessionSummary(id);
+ if(question)question.value='Continue this TORQWISE diagnostic case. Vehicle/equipment: '+diagVehicle()+'. Case: '+title+'. Context: '+summary+'.\n\nGuided answers: '+(session.answers.join(' | ')||'None recorded')+'.\n\nTechnician test findings: '+(session.findings||'None recorded')+'.\n\nSuggested checks already shown:\n- '+checks.join('\n- ')+'\n\nPlease: (1) ask only the most important missing questions, (2) rank plausible causes by evidence and explain what would distinguish them, (3) give a safe, ordered next-test plan, including what result would support or rule out each branch, (4) identify the vehicle-specific service data needed. Do not invent specifications, wiring pinouts, test limits, citations, or part numbers. Do not recommend replacing a part unless tests support that conclusion. Flag safety-critical conditions and clearly distinguish verified facts from hypotheses.';
  document.getElementById('research-hub')?.scrollIntoView({behavior:'smooth',block:'start'});
  const status=document.getElementById('torqAiStatus');
  if(status){status.textContent='Diagnostic case prepared for AI research. Review the vehicle details and case question, then select Ask TORQWISE AI.';status.classList.remove('hidden')}
