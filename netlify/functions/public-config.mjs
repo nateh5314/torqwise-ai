@@ -1,16 +1,15 @@
 export default async () => {
   const rawUrl = (process.env.SUPABASE_URL || "").trim();
-  // Accept either the full Supabase project URL or a bare project reference.
-  const normalizedInput = rawUrl.replace(/\/+$/, "");
-  // Netlify may supply a project reference rather than a URL. Treat any
-  // hostname-free alphanumeric project reference (15–30 chars) as a ref.
-  const url = /^https?:\/\//i.test(normalizedInput)
-    ? normalizedInput
-    : /^[a-z0-9-]+\.supabase\.co$/i.test(normalizedInput)
-      ? `https://${normalizedInput}`
-      : /^[a-z0-9]{15,30}$/i.test(normalizedInput)
-        ? `https://${normalizedInput}.supabase.co`
-        : normalizedInput;
+  // Always return a URL, never a bare project ref. Normalize common Netlify
+  // env formats: full URL, project.supabase.co host, or project ref.
+  const normalizedInput = rawUrl.replace(/\\/+$/, "").trim();
+  let url = normalizedInput;
+  if (normalizedInput && !/^https?:\\/\\//i.test(normalizedInput)) {
+    const host = normalizedInput.match(/^([a-z0-9-]+\\.supabase\\.co)\\/?$/i);
+    const ref = normalizedInput.match(/^([a-z0-9-]{15,40})$/i);
+    if (host) url = "https://" + host[1];
+    else if (ref) url = "https://" + ref[1] + ".supabase.co";
+  }
   const anonKey = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || "").trim();
   let validUrl = false;
   try {
