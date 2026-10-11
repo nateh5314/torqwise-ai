@@ -31,7 +31,7 @@ export default async (req) => {
     });
     if (!sr.ok) throw new Error("subscription query failed");
     const rows = await sr.json();
-    const proPriceId = env("STRIPE_PRO_PRICE_ID") || env("STRIPE_PRICE_PRO");
+    const proPriceId = env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID");
     const proSubscription = Array.isArray(rows)
       ? rows.find(row => !!proPriceId && ["active", "trialing"].includes(row.status) && row.price_id === proPriceId) || null
       : null;
