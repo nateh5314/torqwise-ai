@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "TORQWISE",
+    "slug": "torqwise",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "torqwise",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ca.torqwise.automotive",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "ca.torqwise.automotive"
+    }
+  }
+}
