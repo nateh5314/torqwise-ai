@@ -122,7 +122,7 @@
    <div class="formbuttons"><button type="button" onclick="torqAskAI()" id="torqAiButton">Ask TORQWISE AI · researched answer</button><button class="secondary" type="button" onclick="torqResearch()">Open web research links ↗</button><button class="secondary" type="button" onclick="torqSaveCase()">Save job context</button></div>
    <div id="torqAiStatus" class="notice" style="margin-top:12px" role="status">AI research connects through a secure server function. Answers should include source links; vehicle-specific specs still need exact applicability checks.</div>
    <div id="torqAiOutput" class="card" style="display:none;margin-top:12px;background:#15171a;border-color:#3b3e45" aria-live="polite"></div>
-   <div class="research-result" id="torqFitmentLookupPanel" style="margin-top:14px">
+   <details class="research-advanced" style="margin-top:14px"><summary>Advanced tools: fitment catalog and follow-up questions</summary><div style="padding-top:12px"><div class="research-result" id="torqFitmentLookupPanel" style="margin-top:14px">
     <strong>TORQWISE verified fitment catalog</strong>
     <p class="tiny">Search our reviewed internal fitment records. Only reviewed cross-references and verified records are shown; an empty result means our catalog does not yet cover that application.</p>
     <div class="form-grid">
@@ -147,7 +147,7 @@
     <textarea id="torqFollowUpQuestion" rows="2" placeholder="e.g. How do I verify this bearing fits before ordering?" aria-label="Follow-up question"></textarea>
     <button type="button" class="secondary" id="torqFollowUpButton" style="margin-top:8px" onclick="torqAskFollowUp(this)">Ask follow-up ↗</button>
    </div>
-   <div class="notice" style="margin-top:12px">Use the exact year, model, engine and serial/VIN when possible. Do not assume a generic specification applies to every variant.</div><div class="notice" style="margin-top:10px"><strong>Need more than 3 new AI reports per month?</strong><p class="tiny" style="margin:5px 0 8px">Pro Technician is CA$29.99/month for continued research while your subscription is active.</p><a class="btn secondary" href="#torqProSubscription" style="display:inline-flex">Compare Pro benefits ↗</a></div>
+   </div></details><div class="notice" style="margin-top:12px">Use the exact year, model, engine and serial/VIN when possible. Do not assume a generic specification applies to every variant.</div><div class="notice" style="margin-top:10px"><strong>Need more than 3 new AI reports per month?</strong><p class="tiny" style="margin:5px 0 8px">Pro Technician is CA$29.99/month for continued research while your subscription is active.</p><a class="btn secondary" href="#torqProSubscription" style="display:inline-flex">Compare Pro benefits ↗</a></div>
    <div id="researchLinks" class="research-results" aria-live="polite"></div>
   </div>
   <div class="card">
