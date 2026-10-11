@@ -188,7 +188,7 @@ test("follow-up research carries new test results and prior report without reser
   const payload = JSON.parse(aiCall.options.body);
   assert.ok(payload.input.includes("Previous TORQWISE report"));
   assert.ok(payload.input.includes("misfire stayed on cylinder 2"));
-  assert.ok(payload.instructions.includes("revise the next step"));
+  assert.ok(payload.instructions.includes("new evidence"));
   assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/reserve_research_usage"));
 });
 
