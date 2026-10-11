@@ -122,7 +122,7 @@ async function lookupReviewedFitment(partNumber) {
   if (!base || !anon) return [];
   const params = new URLSearchParams({
     select: "id,part_number,brand,part_name,vehicle_year_start,vehicle_year_end,make,model,trim,engine,drive_type,axle_position,abs_type,market,status,evidence,fitment_notes,reviewed_at,source_checked_at",
-    part_number: "ilike." + cleanPart.replace(/[%,]/g, ""),
+    part_number: "eq." + cleanPart,
     status: "in.(verified,cross_reference)",
     limit: "30",
   });
