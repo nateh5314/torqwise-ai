@@ -156,7 +156,7 @@
    <div id="accountHistoryStatus" class="notice" role="status">Sign in to enable cloud history for this account.</div>
    <div class="formbuttons"><button type="button" class="secondary" id="clearAccountHistoryButton" onclick="torqClearAccountHistory()">Clear all cloud history</button></div>
    <div id="accountHistoryList"><div class="empty">Your saved account history will appear here after sign-in.</div></div>
-   <div class="formbuttons"><button type="button" class="secondary" onclick="torqExportCases()">Export local job contexts</button><button type="button" class="secondary" onclick="torqLoadAccountHistory(true)">Refresh account history</button></div>
+   <div class="formbuttons"><button type="button" class="secondary" onclick="torqExportCases()">Export local job contexts</button><button type="button" class="secondary" onclick="torqExportCasesCsv()">Export notebook as CSV</button><button type="button" class="secondary" onclick="torqLoadAccountHistory(true)">Refresh account history</button></div>
   </div>
  </div>
 </div></section>
@@ -906,7 +906,15 @@ function torqOpenCase(id){
  const status=document.getElementById('torqAiStatus');if(status)status.textContent='Saved job context restored. Review the vehicle details and evidence before running research.';
 }
 function torqDeleteCase(id){localStorage.setItem(TORQ_CASES_KEY,JSON.stringify(torqLoadCases().filter(c=>c.id!==id)));torqRenderCases();}
-function torqExportCases(){const blob=new Blob([JSON.stringify(torqLoadCases(),null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-saved-cases.json';a.click();URL.revokeObjectURL(url);}
+function torqExportCases(){const blob=new Blob([JSON.stringify(torqLoadCases(),null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-saved-cases.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function torqExportCasesCsv(){
+ const cases=torqLoadCases();
+ const columns=[['savedAt','Saved at'],['asset','Vehicle / equipment'],['serial','Serial / VIN'],['topic','Research type'],['question','Question / job'],['symptoms','Symptoms'],['dtcs','Fault codes'],['freezeFrame','Freeze-frame data'],['liveData','Live data'],['testsPerformed','Tests performed'],['repairsAttempted','Repairs attempted']];
+ const cell=value=>{let text=String(value??'');if(/^[=+@]/.test(text)||/^-[^0-9]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""').replace(/\r?\n/g,' ')+'"';};
+ const csv=[columns.map(([,label])=>cell(label)).join(','),...cases.map(entry=>columns.map(([key])=>cell(entry[key])).join(','))].join('\r\n');
+ const blob=new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
+ const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-job-notebook.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 window.addEventListener('DOMContentLoaded',torqRenderCases);
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>
