@@ -48,9 +48,17 @@ async function getResearchAccess(req) {
   try { user = await userResponse.json(); } catch { return { error: 'Your session could not be verified. Please sign in again.', status: 401 }; }
   if (!user || typeof user.id !== 'string' || !user.id) return { error: 'Your session could not be verified. Please sign in again.', status: 401 };
   const headers = { apikey: service, authorization: 'Bearer ' + service };
+  // Billing is optional for free-tier research. If the subscriptions table has
+  // not been installed yet, fail closed to the free tier rather than blocking
+  // every signed-in user. Unexpected server errors still fail safely.
+  let subs = [];
   const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status&order=updated_at.desc&limit=1', { headers });
-  if (!subsResponse.ok) throw new Error('Subscription lookup failed');
-  const subs = await subsResponse.json();
+  if (subsResponse.ok) {
+    const result = await subsResponse.json();
+    if (Array.isArray(result)) subs = result;
+  } else if (![400, 404, 406].includes(subsResponse.status)) {
+    console.error('Subscription lookup unavailable; refusing to assume Pro:', subsResponse.status);
+  }
   if (subs.some(row => ['active', 'trialing'].includes(row.status))) return { userId: user.id, isPro: true, remaining: null };
   const reserveResponse = await fetch(base + '/rest/v1/rpc/reserve_research_usage', {
     method: 'POST',
