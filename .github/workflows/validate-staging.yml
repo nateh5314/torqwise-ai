@@ -48,7 +48,7 @@ jobs:
           id_set = set(ids)
           anchors = re.findall(r'href="#([^"]+)"', html)
           dynamic_ids = set(re.findall(r"\.id\s*=\s*[\'\"]([^\'\"]+)[\'\"]", html))
-broken = sorted({item for item in anchors if item not in id_set and item not in dynamic_ids})
+          broken = sorted({item for item in anchors if item not in id_set and item not in dynamic_ids})
           assert not broken, f"Broken in-page anchors: {broken}"
           for required in ["parts-market", "marketSearchForm", "marketCart", "marketAiButton", "marketExportButton", "research-hub", "diagnostics", "vin-lookup"]:
               assert required in id_set, f"Missing expected page feature: {required}"
