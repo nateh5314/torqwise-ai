@@ -38,9 +38,15 @@ export default async (req) => {
     limit: "300",
     order: "status.asc,part_number.asc",
   });
-  if (partNumber) query.set("part_number", "ilike." + partNumber.replace(/[%,]/g, ""));
-  if (make) query.set("make", "ilike." + make);
+  if (partNumber) query.set("part_number", "ilike." + partNumber.replace(/[%,_*]/g, ""));
+  if (make) query.set("make", "ilike." + make.replace(/[%,_*]/g, ""));
   if (model) query.set("model", "ilike.*" + model.replace(/[*%]/g, "") + "*");
+  // Apply the requested year range in PostgREST before its row limit. Filtering
+  // only after fetching a broad 300-row page can hide valid reviewed fitments.
+  if (year !== null) {
+    query.set("vehicle_year_start", "lte." + year);
+    query.set("vehicle_year_end", "gte." + year);
+  }
   if (brand) query.set("brand", "ilike.*" + brand.replace(/[*%]/g, "") + "*");
   if (partType) query.set("part_name", "ilike.*" + partType.replace(/[*%]/g, "") + "*");
   let response;
