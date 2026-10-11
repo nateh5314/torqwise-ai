@@ -1,6 +1,9 @@
 function supabaseBase() {
   const raw = (process.env.SUPABASE_URL || "").trim();
-  return /^[a-z0-9]{20}$/i.test(raw) ? `https://${raw}.supabase.co` : raw;
+  const normalized = raw.replace(/\\/+$/, "");
+  if (/^[a-z0-9]{20}$/i.test(normalized)) return `https://${normalized}.supabase.co`;
+  if (/^[a-z0-9-]+\\.supabase\\.co$/i.test(normalized)) return `https://${normalized}`;
+  return normalized;
 }
 function json(body, status=200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type":"application/json; charset=utf-8", "cache-control":"no-store" } });
