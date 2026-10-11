@@ -429,7 +429,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       const cfg=await r.json();
       if(!cfg.configured) throw new Error('Account service is not configured yet.');
       const rawSupabaseUrl=String(cfg.url||'').trim().replace(/\/+$/,'');
-      const supabaseUrl=/^[a-z0-9]{20}$/i.test(rawSupabaseUrl)?'https://'+rawSupabaseUrl+'.supabase.co':/^[a-z0-9-]+\.supabase\.co$/i.test(rawSupabaseUrl)?'https://'+rawSupabaseUrl:rawSupabaseUrl;
+      const supabaseUrl=/^https?:\/\//i.test(rawSupabaseUrl)?rawSupabaseUrl:/^[a-z0-9-]+\.supabase\.co$/i.test(rawSupabaseUrl)?'https://'+rawSupabaseUrl:/^[a-z0-9]{15,30}$/i.test(rawSupabaseUrl)?'https://'+rawSupabaseUrl+'.supabase.co':rawSupabaseUrl;
       if(!/^https?:\/\//i.test(supabaseUrl)) throw new Error('Invalid Supabase URL from public configuration. Please redeploy and refresh the site.');
       client=window.supabase.createClient(supabaseUrl,cfg.anonKey);
       const {data}=await client.auth.getSession();
