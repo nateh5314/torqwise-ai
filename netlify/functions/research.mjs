@@ -35,7 +35,7 @@ function tooManyRequests(key) {
   item.count += 1; recentRequests.set(key, item);
   return item.count > MAX_REQUESTS_PER_WINDOW;
 }
-async function getResearchAccess(req) {
+async function getResearchAccess(req, followUp = false) {
   const base = supabaseBase();
   const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || '').trim();
   const service = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -60,6 +60,8 @@ async function getResearchAccess(req) {
     console.error('Subscription lookup unavailable; refusing to assume Pro:', subsResponse.status);
   }
   if (subs.some(row => ['active', 'trialing'].includes(row.status))) return { userId: user.id, isPro: true, remaining: null };
+  // Follow-ups clarify a completed report, skip web search, and do not reserve another monthly report.
+  if (followUp) return { userId: user.id, isPro: false, remaining: null, isFollowUp: true };
   const reserveResponse = await fetch(base + '/rest/v1/rpc/reserve_research_usage', {
     method: 'POST',
     headers: { apikey: service, authorization: 'Bearer ' + service, 'content-type': 'application/json' },
@@ -125,11 +127,14 @@ export default async (req) => {
   const serial = clean(body.serial, 100);
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
+  const followUp = body.followUp === true;
+  const previousAnswer = clean(body.previousAnswer, 8000);
+  if (followUp && (!question || !previousAnswer)) return json({ error: "A follow-up needs a question and the previous research report." }, 400);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
 
   if (tooManyRequests(getClientKey(req))) return json({ error: "Too many research requests from this connection. Wait a few minutes and try again." }, 429);
   let access;
-  try { access = await getResearchAccess(req); } catch (e) {
+  try { access = await getResearchAccess(req, followUp); } catch (e) {
     console.error("Research access lookup failed:", e?.message || "unknown");
     const detail = String(e?.message || "");
     if (detail.includes("apply supabase/research-usage.sql")) {
@@ -153,14 +158,19 @@ export default async (req) => {
     bulletin: "recalls, technical service bulletins and campaigns",
     general: "general technical research",
   };
-  const input = [
-    `Asset / vehicle / equipment: ${asset || "Not provided"}`,
-    `VIN / serial / PIN: ${serial || "Not provided"}`,
-    `Research category: ${topicNames[topic] || topicNames.general}`,
-    `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
-  ].join("\n");
+  const input = followUp
+    ? [`Asset / vehicle / equipment: ${asset || "Not provided"}`, `VIN / serial / PIN: ${serial || "Not provided"}`, `Research category: ${topicNames[topic] || topicNames.general}`, `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`, `Technician follow-up question: ${question}`].join("\n\n")
+    : [
+        `Asset / vehicle / equipment: ${asset || "Not provided"}`,
+        `VIN / serial / PIN: ${serial || "Not provided"}`,
+        `Research category: ${topicNames[topic] || topicNames.general}`,
+        `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
+      ].join("\n");
   const instructions = `You are TORQWISE, a careful automotive and heavy-equipment research assistant for technicians. Use web search to research the exact machine or vehicle and prioritize OEM/manufacturer sources, government recall databases, reputable technical sources, and clearly identified parts catalogs. Do not claim access to paid OEM service databases, proprietary wiring diagrams, or complete catalogs unless a source genuinely provides them. Never invent torque values, capacities, pinouts, wire colours, part numbers, bulletins, procedures, or citations. If exact year/model/engine/serial applicability cannot be confirmed, clearly say what remains unverified, but do not stop at asking for details: always give useful general first steps that are safe without the missing details, then ask only the most important follow-up questions. For vague symptom descriptions, infer likely systems from plain language and state that this is a preliminary interpretation. Give a short decision tree starting with simple observations before specialized testing. If the wording could describe multiple systems, briefly list the likely interpretations and ask which matches. Distinguish verified facts, likely causes, and hypotheses. For diagnosis, give a safe, evidence-led sequence: preserve codes/freeze-frame, check basics, test before replacing parts, and state what each test proves. Flag hazards and when the correct OEM procedure or professional equipment is required. For specs/parts, clearly say when exact fitment or specification needs OEM verification. Explain in practical language with a concise report: Summary; What sources indicate; Recommended checks or research steps; What remains unverified. Cite sources in the answer where possible and return source links. No source means no claim of verification. This is research support, not a confirmed diagnosis.`;
 
+  const requestInstructions = followUp
+    ? "You are TORQWISE answering a follow-up about a previous automotive or heavy-equipment report. Treat the prior report as context, not proof. Answer directly in practical language. Correct or qualify unsupported prior claims, especially part fitment. Never say a part fits a specific year/model unless supplied context verifies it. State what details or checks are missing. Do not invent specifications, procedures, or source links."
+    : instructions + " For parts questions, never infer fitment from a part number alone. Identify what source supports each claimed application, distinguish seller cross-reference listings from OEM-confirmed fitment, and explicitly say when reliable fitment evidence is unavailable.";
   let upstream;
   try {
     upstream = await fetch("https://api.openai.com/v1/responses", {
@@ -168,17 +178,17 @@ export default async (req) => {
       headers: { "authorization": `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || "gpt-5-mini",
-        instructions,
+        instructions: requestInstructions,
         input,
-        tools: [{ type: "web_search", search_context_size: "medium" }],
-        max_output_tokens: 1800,
+        ...(followUp ? {} : { tools: [{ type: "web_search", search_context_size: "medium" }] }),
+        max_output_tokens: followUp ? 900 : 1800,
         store: false,
       }),
       signal: AbortSignal.timeout(38000),
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
-    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+    try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: err?.name === "TimeoutError" ? "AI research timed out while waiting for the research provider. Please retry with a narrower question." : "Could not reach the AI research service. Please retry shortly." }, err?.name === "TimeoutError" ? 504 : 502);
   }
   let payload;
@@ -198,5 +208,5 @@ export default async (req) => {
     try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
   }
-  return json({ answer, sources: extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, remaining: access.isPro ? null : access.remaining });
+  return json({ answer, sources: followUp ? [] : extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
 };
