@@ -156,7 +156,7 @@
    <div id="accountHistoryStatus" class="notice" role="status">Sign in to enable cloud history for this account.</div>
    <div class="formbuttons"><button type="button" class="secondary" id="clearAccountHistoryButton" onclick="torqClearAccountHistory()">Clear all cloud history</button></div>
    <div id="accountHistoryList"><div class="empty">Your saved account history will appear here after sign-in.</div></div>
-   <div class="formbuttons"><button type="button" class="secondary" onclick="torqExportCases()">Export local job contexts</button><button type="button" class="secondary" onclick="torqExportCasesCsv()">Export notebook as CSV</button><button type="button" class="secondary" onclick="torqLoadAccountHistory(true)">Refresh account history</button></div>
+   <div class="formbuttons"><button type="button" class="secondary" onclick="torqExportCases()">Export local job contexts</button><button type="button" class="secondary" onclick="torqExportCasesCsv()">Export notebook as CSV</button><button type="button" class="secondary" onclick="document.getElementById('torqImportCasesFile').click()">Import job backup (.json)</button><input id="torqImportCasesFile" type="file" accept=".json,application/json" hidden onchange="torqImportCases(this)"><button type="button" class="secondary" onclick="torqLoadAccountHistory(true)">Refresh account history</button></div>
   </div>
  </div>
 </div></section>
@@ -907,6 +907,30 @@ function torqOpenCase(id){
 }
 function torqDeleteCase(id){localStorage.setItem(TORQ_CASES_KEY,JSON.stringify(torqLoadCases().filter(c=>c.id!==id)));torqRenderCases();}
 function torqExportCases(){const blob=new Blob([JSON.stringify(torqLoadCases(),null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='torqwise-saved-cases.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+async function torqImportCases(input){
+ const file=input&&input.files&&input.files[0];if(!file)return;
+ const status=document.getElementById('accountHistoryStatus');
+ try{
+  if(file.size>2*1024*1024)throw new Error('Backup is too large. Choose a JSON backup under 2 MB.');
+  const parsed=JSON.parse(await file.text());
+  if(!Array.isArray(parsed))throw new Error('This file is not a TORQWISE job-context backup.');
+  const allowed=['asset','serial','topic','question','symptoms','dtcs','freezeFrame','liveData','testsPerformed','repairsAttempted','savedAt'];
+  const clean=parsed.filter(row=>row&&typeof row==='object'&&!Array.isArray(row)&&allowed.some(key=>typeof row[key]==='string')).map(row=>{
+   const entry={id:Number.isSafeInteger(row.id)&&row.id>0?row.id:Date.now()+Math.floor(Math.random()*1000000)};
+   for(const key of allowed)if(typeof row[key]==='string')entry[key]=row[key].slice(0,12000);
+   entry.savedAt=entry.savedAt||new Date().toLocaleString();
+   return entry;
+  });
+  if(!clean.length)throw new Error('No valid saved job contexts were found in that backup.');
+  const current=torqLoadCases(),ids=new Set(current.map(row=>String(row.id)));
+  const imported=clean.filter(row=>!ids.has(String(row.id)));
+  const merged=[...imported,...current].slice(0,100);
+  localStorage.setItem(TORQ_CASES_KEY,JSON.stringify(merged));
+  torqRenderCases();
+  if(status){status.textContent='Imported '+Math.max(0,merged.length-current.length)+' saved job context(s). Existing local cases were kept.';status.classList.add('success');}
+ }catch(err){if(status){status.textContent=err.message||'Could not import this backup.';status.classList.remove('success');}else alert(err.message||'Could not import this backup.');}
+ finally{input.value='';}
+}
 function torqExportCasesCsv(){
  const cases=torqLoadCases();
  const columns=[['savedAt','Saved at'],['asset','Vehicle / equipment'],['serial','Serial / VIN'],['topic','Research type'],['question','Question / job'],['symptoms','Symptoms'],['dtcs','Fault codes'],['freezeFrame','Freeze-frame data'],['liveData','Live data'],['testsPerformed','Tests performed'],['repairsAttempted','Repairs attempted']];
