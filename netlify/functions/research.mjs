@@ -253,6 +253,8 @@ export default async (req) => {
     { flag: "tire or wheel failure", pattern: /tire (?:blowout|blown|sidewall bulge|cords exposed|separated tread)|tyre (?:blowout|blown|sidewall bulge|cords exposed|separated tread)|wheel (?:studs? broken|lug nuts? missing|coming off)/ },
     { flag: "airbag or supplemental restraint system", pattern: /airbag (?:deployed unexpectedly|light on with crash|not working|fault)|srs (?:fault|warning|not working)|seat belt pretensioner (?:fault|deployed)/ },
     { flag: "fire, smoke, or fuel leak", pattern: /fuel leak|gasoline leak|diesel leak|smoke from (?:engine|vehicle|wiring)|electrical fire|flames|burning wiring/ },
+    { flag: "exhaust intrusion or carbon-monoxide exposure", pattern: /carbon monoxide|co poisoning|exhaust fumes? (?:in|inside) (?:the )?cabin|exhaust smell inside|fumes entering (?:the )?(?:cab|cabin|operator compartment)/ },
+    { flag: "unintended acceleration or throttle-control fault", pattern: /unintended acceleration|vehicle accelerat(?:es|ing) without (?:input|command)|throttle stuck open|engine will not return to idle|runaway engine/ },
     { flag: "severe overheating", pattern: /overheating|temperature gauge (?:in red|pegged)|coolant boiling|coolant spraying/ },
     { flag: "high-voltage electric vehicle", pattern: /high[- ]voltage|orange cable|ev battery pack|hybrid battery|electric vehicle battery/ },
     { flag: "pressurized hydraulic or injection hazard", pattern: /hydraulic (?:hose|line) (?:burst|ruptured|leaking)|pinhole leak|high[- ]pressure (?:fuel|hydraulic)|diesel injection injury/ },
