@@ -112,3 +112,11 @@ test("rejects backups over 500 records without partial import", async () => {
   assert.equal(h.renders, 0);
   assert.match(h.alerts[0], /too many records/);
 });
+
+test("does not preserve unknown symptom IDs from imported backup data", async () => {
+  const h = harness();
+  const suspicious = { ...record("symptom-case"), kind: "symptom", code: null, symptomId: "unknown<svg onload=alert(1)>" };
+  await h.run(backup([suspicious]));
+  assert.equal(h.getCases().length, 1);
+  assert.equal(h.getCases()[0].symptomId, null);
+});
