@@ -5,7 +5,7 @@ function json(body, status = 200) {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 }
-const env = (name) => (process.env[name] || "").trim();
+const env = (name) => {\n  try {\n    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {\n      const value = Netlify.env.get(name);\n      if (typeof value === "string" && value.trim()) return value.trim();\n    }\n  } catch {}\n  return (process.env[name] || "").trim();\n};
 function verifySignature(raw, header, secret) {
   if (!header || !secret) return false;
   const parts = Object.fromEntries(header.split(",").map((part) => {
