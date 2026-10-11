@@ -1,0 +1,58 @@
+name: TORQWISE production launch check
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  production-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production health and critical routes
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const origin = 'https://torqwiseauto.netlify.app';
+          async function get(path) {
+            const response = await fetch(new URL(path, origin), {
+              redirect: 'follow',
+              signal: AbortSignal.timeout(15000),
+              headers: { 'user-agent': 'TORQWISE-production-launch-check' }
+            });
+            console.log(`${response.status} ${path}`);
+            assert.equal(response.status, 200, `${path} should return HTTP 200`);
+            return response;
+          }
+          const homepage = await (await get('/')).text();
+          assert.match(homepage, /TORQWISE/i);
+          for (const marker of ['diagnostics', 'research-hub', 'parts-market', 'vin-lookup']) {
+            assert.ok(homepage.includes(marker), `Homepage missing feature marker: ${marker}`);
+          }
+          for (const path of ['/privacy.html', '/terms.html', '/support.html']) {
+            assert.match(await (await get(path)).text(), /<html[\s>]/i);
+          }
+          const health = await (await get('/.netlify/functions/health')).json();
+          console.log('Health summary:', JSON.stringify({
+            configured: health.configured,
+            environment: health.environment,
+            checks: health.checks,
+            deployContext: health.deployContext,
+            commitRef: health.commitRef
+          }));
+          assert.equal(health.configured, true, 'Supabase public config must be present');
+          assert.equal(health.environment?.supabaseServiceRoleKey, true, 'Supabase service role key missing');
+          assert.equal(health.environment?.openaiApiKey, true, 'OpenAI API key missing');
+          assert.equal(health.checks?.usageTable, 'ready', 'research_usage table check failed');
+          assert.equal(health.checks?.quotaFunction, 'reachable', 'research quota RPC check failed');
+          const config = await (await get('/.netlify/functions/public-config')).json();
+          assert.equal(config.configured, true);
+          const dtc = await (await get('/assets/dtc-database.json')).json();
+          assert.ok(Array.isArray(dtc) && dtc.length >= 9000, `Expected >=9000 DTCs; got ${dtc?.length}`);
+          const codes = new Set(dtc.map(row => row.code));
+          for (const code of ['P0300', 'P0420', 'P0171']) assert.ok(codes.has(code), `Missing ${code}`);
+          console.log(`PASS: production checks completed; ${dtc.length} generic DTC records present.`);
+          NODE
