@@ -7,7 +7,8 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.0"
+    "@supabase/supabase-js": "^2.57.0",
+    "sql.js": "^1.10.3"
   },
   "scripts": {
     "build:dtc": "node scripts/build-dtc-database.mjs",
