@@ -1,5 +1,16 @@
+function env(name) {
+  // Netlify's runtime env API is the supported path for function-scoped variables.
+  // Keep process.env as a compatibility fallback for local development.
+  try {
+    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {
+      const value = Netlify.env.get(name);
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {}
+  return (process.env[name] || "").trim();
+}
 function supabaseBase() {
-  const raw = (process.env.SUPABASE_URL || "https://wnvmtjimldleqfjuuprl.supabase.co").trim().replace(/\/+$/, "");
+  const raw = (env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co").replace(/\/+$/, "");
   if (/^https?:\/\//i.test(raw)) return raw;
   const host = raw.match(/^([a-z0-9-]+\.supabase\.co)$/i);
   if (host) return "https://" + host[1];
@@ -11,27 +22,27 @@ function json(body, status=200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type":"application/json; charset=utf-8", "cache-control":"no-store" } });
 }
 export default async () => {
-  const env = {
+  const envStatus = {
     supabaseUrl: Boolean(supabaseBase()),
-    supabaseAnonKey: Boolean((process.env.SUPABASE_ANON_KEY||process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_PUNISHABLE_KEY||"").trim()),
-    supabaseServiceRoleKey: Boolean((process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim()),
-    openaiApiKey: Boolean((process.env.OPENAI_API_KEY||"").trim()),
+    supabaseAnonKey: Boolean(env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY")),
+    supabaseServiceRoleKey: Boolean(env("SUPABASE_SERVICE_ROLE_KEY")),
+    openaiApiKey: Boolean(env("OPENAI_API_KEY")),
   };
-  // Report only whether billing settings exist; never return key or price values.
   const billing = {
-    stripeSecretKey: Boolean((process.env.STRIPE_SECRET_KEY||"").trim()),
-    stripeProPriceId: Boolean((process.env.STRIPE_PRO_PRICE_ID||process.env.STRIPE_PRICE_PRO||"").trim()),
-    stripeWebhookSecret: Boolean((process.env.STRIPE_WEBHOOK_SECRET||"").trim()),
+    stripeSecretKey: Boolean(env("STRIPE_SECRET_KEY")),
+    stripeProPriceId: Boolean(env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID")),
+    stripeWebhookSecret: Boolean(env("STRIPE_WEBHOOK_SECRET")),
+    siteUrl: Boolean(env("SITE_URL") || "https://torqwiseauto.netlify.app"),
   };
   const checks = {
-    environment: Object.values(env).every(Boolean),
-    billingConfiguration: Object.values(billing).every(Boolean),
+    environment: Object.values(envStatus).every(Boolean),
+    billingConfiguration: Boolean(billing.stripeSecretKey && billing.stripeProPriceId && billing.siteUrl),
     usageTable: "not_checked",
     quotaFunction: "not_checked"
   };
-  if (env.supabaseUrl && env.supabaseServiceRoleKey) {
+  if (envStatus.supabaseUrl && envStatus.supabaseServiceRoleKey) {
     const base=supabaseBase();
-    const key=(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
+    const key=env("SUPABASE_SERVICE_ROLE_KEY");
     const headers={apikey:key,authorization:"Bearer "+key};
     try {
       const table=await fetch(base+"/rest/v1/research_usage?select=id&limit=0",{headers});
@@ -49,12 +60,12 @@ export default async () => {
     }
   }
   return json({
-    healthVersion: "2026-10-11-billing-readiness-v1",
-    deployContext: process.env.CONTEXT || "unknown",
-    branch: process.env.BRANCH || "unknown",
-    commitRef: (process.env.COMMIT_REF || "unknown").slice(0, 12),
-    configured: env.supabaseUrl && env.supabaseAnonKey,
-    environment: env,
+    healthVersion: "2026-10-11-billing-readiness-v2",
+    deployContext: env("CONTEXT") || "unknown",
+    branch: env("BRANCH") || "unknown",
+    commitRef: (env("COMMIT_REF") || "unknown").slice(0, 12),
+    configured: envStatus.supabaseUrl && envStatus.supabaseAnonKey,
+    environment: envStatus,
     billing,
     checks
   });

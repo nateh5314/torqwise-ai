@@ -4,7 +4,15 @@ function json(body, status = 200) {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 }
-function env(name) { return (process.env[name] || "").trim(); }
+function env(name) {
+  try {
+    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {
+      const value = Netlify.env.get(name);
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {}
+  return (process.env[name] || "").trim();
+}
 async function getUser(accessToken) {
   const url = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co", key = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY");
   if (!url || !key) throw new Error("Supabase server configuration is missing.");
@@ -14,7 +22,9 @@ async function getUser(accessToken) {
 }
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
-  const stripeKey = env("STRIPE_SECRET_KEY"), price = env("STRIPE_PRO_PRICE_ID") || env("STRIPE_PRICE_PRO"), site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
+  const stripeKey = env("STRIPE_SECRET_KEY"), price = "price_1UOqWAIpQUHCdBSxunv5OqtK";
+  const requestOrigin = req.headers.get("origin") || "";
+  const site = /^https:\/\/(?:deploy-preview-[0-9]+--torqwiseauto\.netlify\.app|torqwiseauto\.netlify\.app)$/i.test(requestOrigin) ? requestOrigin : (env("SITE_URL") || "https://torqwiseauto.netlify.app");
   if (!stripeKey || !price || !site) return json({ error: "Billing is not configured yet. Ask the site administrator to finish setup." }, 503);
   const auth = req.headers.get("authorization") || "";
   const match = auth.match(/^Bearer\s+(.+)$/i);
@@ -70,8 +80,38 @@ export default async (req) => {
     });
     const data = await r.json();
     if (!r.ok || !data.url) {
-      console.error("Stripe checkout creation failed:", r.status, data?.error?.type || "unknown");
-      return json({ error: "Checkout could not be started. Check Stripe test-mode product and price settings." }, 502);
+      const stripeErrorCode = typeof data?.error?.code === "string" ? data.error.code : "unknown";
+      const stripeErrorParam = typeof data?.error?.param === "string" ? data.error.param : "none";
+      console.error("Stripe checkout creation failed:", JSON.stringify({ status: r.status, type: data?.error?.type || "unknown", code: stripeErrorCode, param: stripeErrorParam }));
+      // Return only safe, actionable diagnostics; never return the Stripe message, request body, key, or customer data.
+      let message = "Checkout could not be started. Please retry shortly.";
+      if (stripeErrorCode === "resource_missing" || stripeErrorCode === "price_not_found") {
+        message = "Stripe could not find this Pro price for the configured test account. The Netlify Stripe test key and Pro price must belong to the same Stripe account.";
+      } else if (stripeErrorCode === "api_key_expired" || stripeErrorCode === "invalid_api_key") {
+        message = "The Stripe test key configured in Netlify is invalid or expired. Update it with a valid test key for the Torqwise sandbox, then redeploy.";
+      } else if (stripeErrorCode === "account_invalid") {
+        message = "Stripe rejected the configured test account. Check that Netlify uses the Torqwise sandbox test key.";
+      } else if (stripeErrorCode === "parameter_invalid_empty" || stripeErrorCode === "parameter_invalid_string_empty") {
+        message = "Stripe rejected a required checkout setting. Verify the Pro price and checkout configuration.";
+      }
+      // Identify which Stripe account this exact runtime key belongs to, without exposing the key.
+      // This distinguishes a mismatched key from a stale/wrong price environment variable.
+      let stripeAccountId = "unavailable";
+      if (stripeErrorCode === "resource_missing" || stripeErrorCode === "price_not_found") {
+        try {
+          const accountResponse = await fetch("https://api.stripe.com/v1/account", {
+            headers: { authorization: "Bearer " + stripeKey },
+            signal: AbortSignal.timeout(4000),
+          });
+          const accountData = await accountResponse.json();
+          if (accountResponse.ok && typeof accountData?.id === "string") stripeAccountId = accountData.id;
+        } catch {}
+      }
+      const priceSource = "verified-code-price";
+      return json({ error: message, diagnostic: {
+        stripeErrorCode, stripeErrorParam, stripeStatus: r.status,
+        stripeAccountId, priceSource, priceIdSuffix: price.slice(-6),
+      } }, 502);
     }
     return json({ url: data.url });
   } catch (e) {

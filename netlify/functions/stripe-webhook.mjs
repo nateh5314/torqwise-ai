@@ -5,7 +5,15 @@ function json(body, status = 200) {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 }
-const env = (name) => (process.env[name] || "").trim();
+const env = (name) => {
+  try {
+    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {
+      const value = Netlify.env.get(name);
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {}
+  return (process.env[name] || "").trim();
+};
 function verifySignature(raw, header, secret) {
   if (!header || !secret) return false;
   const parts = Object.fromEntries(header.split(",").map((part) => {
