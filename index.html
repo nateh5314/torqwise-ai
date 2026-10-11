@@ -92,6 +92,8 @@
   outline: 3px solid rgba(220,38,38,.25);
   border-color: #d94141;
 }
+
+.quick-start{position:relative;background:#151619;border-bottom:1px solid var(--line);padding:18px 0}.quick-start-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.quick-start-card{display:flex;align-items:center;gap:12px;min-width:0;padding:15px 16px;background:#1b1d21;border:1px solid #34363d;border-radius:12px;text-decoration:none;transition:border-color .18s,background .18s}.quick-start-card:hover{border-color:#8f343a;background:#211c1f}.quick-start-card:focus-visible{outline:3px solid var(--red2);outline-offset:3px}.quick-start-icon{display:grid;place-items:center;flex:0 0 40px;height:40px;border-radius:10px;background:#352024;color:#ff777f;font-size:24px}.quick-start-card strong,.quick-start-card small{display:block}.quick-start-card strong{font-size:14px}.quick-start-card small{color:var(--muted);font-size:12px;line-height:1.35;margin-top:3px}.quick-start-arrow{margin-left:auto;color:#ff777f;font-size:20px}.quick-start-card>span:nth-child(2){min-width:0}@media(max-width:700px){.quick-start-grid{grid-template-columns:1fr}.quick-start-card{padding:13px 14px}}
 </style></head>
 <body>
 <div class="topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
@@ -99,6 +101,13 @@
 <main>
 <section class="hero" id="home"><div class="wrap"><div class="eyebrow">Your next repair starts with better information</div><h1>Find the fault.<br><span>Find the right fix.</span></h1><p>TORQWISE helps you investigate vehicle and equipment problems, look up VINs, research parts and fitment, and compare repair options — all in one practical workspace built for drivers and technicians.</p><div class="heroactions"><a class="btn" href="#research-hub">Start your research <span>→</span></a><a class="btn secondary" href="#diagnostics">Explore diagnostics</a></div><div class="trust"><span>Step-by-step diagnostic guidance</span><span>Parts and fitment research</span><span>Sources you can check</span><span>For drivers and shops</span></div></div></section>
 
+<section class="quick-start" aria-label="Choose a starting point">
+ <div class="wrap quick-start-grid">
+  <a class="quick-start-card" href="#diagnostics"><span class="quick-start-icon" aria-hidden="true">⌁</span><span><strong>Diagnose a problem</strong><small>Fault codes, symptoms and next tests</small></span><span class="quick-start-arrow" aria-hidden="true">→</span></a>
+  <a class="quick-start-card" href="#vin-lookup"><span class="quick-start-icon" aria-hidden="true">⌕</span><span><strong>Look up a VIN</strong><small>Start with vehicle identification</small></span><span class="quick-start-arrow" aria-hidden="true">→</span></a>
+  <a class="quick-start-card" href="#parts-market"><span class="quick-start-icon" aria-hidden="true">⚙</span><span><strong>Research a part</strong><small>Explore fitment and supplier options</small></span><span class="quick-start-arrow" aria-hidden="true">→</span></a>
+ </div>
+</section>
 
 <section class="section" id="research-hub"><div class="wrap">
  <div class="sectionhead"><div><div class="eyebrow">Universal research workspace</div><h2>One search to start the job.</h2><p class="sub">Describe a vehicle, machine, symptom, code or part. TORQWISE organizes research shortcuts and lets you save job context in this browser. External search opens source websites in a new tab; it does not mean every result is verified.</p></div></div>
