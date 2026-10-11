@@ -340,3 +340,22 @@ test("flags fitment records with source checks older than one year", async () =>
   assert.equal(data.fitmentMatches[0].confidence, "STALE SOURCE CHECK — REVALIDATION REQUIRED BEFORE RELYING ON THIS RECORD");
   assert.ok(data.fitmentMatches[0].evidenceWarnings.some(w => w.includes("more than 12 months")));
 });
+
+
+test("flags tire and restraint-system safety risks without claiming a diagnosis", async () => {
+  for (const [symptoms, expected] of [
+    ["Front tire has a sidewall bulge", "tire or wheel failure"],
+    ["SRS warning is on", "airbag or supplemental restraint system"],
+  ]) {
+    const calls = configure();
+    const result = await handler(request({ body: {
+      asset: "2019 passenger vehicle", question: "Assess this concern", symptoms,
+    }}));
+    assert.equal(result.status, 200);
+    const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+    const payload = JSON.parse(upstream.options.body);
+    assert.ok(payload.input.includes("Potential safety-critical language detected"));
+    assert.ok(payload.input.includes(expected));
+    assert.ok(payload.input.includes("heuristic only, not a diagnosis"));
+  }
+});
