@@ -63,6 +63,11 @@ export default async req => {
         const old = await previous.json();
         if (old.status === "open" && old.url) return json({ url: old.url, reused: true });
         if (old.payment_status === "paid") return json({ error: "Payment was received and is being confirmed. Refresh your request history shortly." }, 409);
+      } else if (previous.status !== 404) {
+        // Do not create a second checkout session if Stripe could not verify
+        // the previous one; a transient API failure must not be treated as expiry.
+        console.error("Existing service checkout session could not be verified:", previous.status);
+        return json({ error: "We could not verify the previous checkout session. No new checkout was created; please retry shortly." }, 503);
       }
     }
     const form = new URLSearchParams({
