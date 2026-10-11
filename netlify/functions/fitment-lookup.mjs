@@ -53,6 +53,8 @@ export default async (req) => {
   let rows;
   try { rows = await response.json(); } catch { return respond({ error: "Fitment catalog returned an unreadable response." }, 502); }
   const matches = (Array.isArray(rows) ? rows : []).filter(row => {
+    // Treat a supplied part number as an exact identifier, not a fuzzy search term.
+    if (partNumber && normalize(row.part_number) !== normalize(partNumber)) return false;
     // Never present a partial vehicle label or unknown year span as a confirmed candidate.
     if (make && normalize(row.make) !== make) return false;
     if (model && normalize(row.model) !== model) return false;
