@@ -1,5 +1,7 @@
 export default async () => {
-  const url = (process.env.SUPABASE_URL || "").trim();
+  const rawUrl = (process.env.SUPABASE_URL || "").trim();
+  // Accept either the full Supabase project URL or a bare project reference.
+  const url = /^[a-z0-9]{20}$/i.test(rawUrl) ? `https://${rawUrl}.supabase.co` : rawUrl;
   const anonKey = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || "").trim();
   let validUrl = false;
   try {
