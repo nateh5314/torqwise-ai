@@ -82,6 +82,8 @@
     <p class="tiny">Search our reviewed internal fitment records. Only reviewed cross-references and verified records are shown; an empty result means our catalog does not yet cover that application.</p>
     <div class="form-grid">
      <label>Part number<input id="torqFitmentPart" placeholder="e.g. WB510089" autocomplete="off"></label>
+     <label>Brand<input id="torqFitmentBrand" placeholder="e.g. MOOG, NGK, WIX" autocomplete="off"></label>
+     <label>Part category<input id="torqFitmentType" placeholder="e.g. oxygen sensor, ball joint" autocomplete="off"></label>
      <label>Vehicle year<input id="torqFitmentYear" inputmode="numeric" placeholder="e.g. 2018"></label>
      <label>Make<input id="torqFitmentMake" placeholder="e.g. Honda"></label>
      <label>Model<input id="torqFitmentModel" placeholder="e.g. Civic"></label>
@@ -688,8 +690,8 @@ async function torqAskFollowUp(button){
 }
 async function torqLookupFitment(button){
  const result=document.getElementById('torqFitmentResults');
- const body={partNumber:document.getElementById('torqFitmentPart').value.trim(),year:document.getElementById('torqFitmentYear').value.trim(),make:document.getElementById('torqFitmentMake').value.trim(),model:document.getElementById('torqFitmentModel').value.trim()};
- if(!body.partNumber&&!(body.year&&body.make&&body.model)){result.textContent='Enter a part number, or enter year, make and model.';return;}
+ const body={partNumber:document.getElementById('torqFitmentPart').value.trim(),brand:document.getElementById('torqFitmentBrand').value.trim(),partType:document.getElementById('torqFitmentType').value.trim(),year:document.getElementById('torqFitmentYear').value.trim(),make:document.getElementById('torqFitmentMake').value.trim(),model:document.getElementById('torqFitmentModel').value.trim()};
+ if(!body.partNumber&&!body.brand&&!body.partType&&!(body.year&&body.make&&body.model)){result.textContent='Enter a part number, brand, part category, or vehicle year, make and model.';return;}
  button.disabled=true;button.textContent='Searching catalog…';result.textContent='Checking TORQWISE reviewed fitment records…';
  try{
   const response=await fetch('/.netlify/functions/fitment-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
