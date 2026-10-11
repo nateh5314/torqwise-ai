@@ -242,3 +242,14 @@ test("bounds identity and subscription lookup requests", async () => {
   assert.ok(identity?.options.signal, "identity verification should have a timeout");
   assert.ok(subscription?.options.signal, "subscription lookup should have a timeout");
 });
+
+
+test("bounds research usage reservation and release network waits", async () => {
+  const calls = configure({ openaiResponse: response({ error: { code: "rate_limit_exceeded" } }, 429) });
+  const result = await handler(request());
+  assert.equal(result.status, 429);
+  const reserve = calls.find(c => c.url === base + "/rest/v1/rpc/reserve_research_usage");
+  const release = calls.find(c => c.url === base + "/rest/v1/rpc/release_research_usage");
+  assert.ok(reserve?.options.signal, "usage reservation should have a timeout");
+  assert.ok(release?.options.signal, "usage release should have a timeout");
+});
