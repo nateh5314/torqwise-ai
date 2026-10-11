@@ -8,6 +8,39 @@ on:
 permissions:
   contents: read
 jobs:
+  regression-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run API regression tests
+        run: node --test tests/*.test.mjs
+      - name: Check Netlify function syntax
+        run: |
+          for file in netlify/functions/*.mjs; do
+            echo "Checking $file"
+            node --check "$file"
+          done
+      - name: Check inline browser JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          import re, pathlib, subprocess, tempfile
+          pages = ["index.html", "admin.html", "support.html"]
+          with tempfile.TemporaryDirectory() as directory:
+              for page in pages:
+                  html = pathlib.Path(page).read_text()
+                  scripts = re.findall(r"<script(?:\\s[^>]*)?>([\\s\\S]*?)</script\\s*>", html, re.IGNORECASE)
+                  for number, script in enumerate(scripts):
+                      if not script.strip():
+                          continue
+                      path = pathlib.Path(directory) / f"{pathlib.Path(page).stem}-{number}.js"
+                      path.write_text(script)
+                      print(f"Checking inline JavaScript: {page} script {number}")
+                      subprocess.run(["node", "--check", str(path)], check=True)
+          PY
   production-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
