@@ -498,8 +498,20 @@ function diagResearchCase(id){
  if(status){status.textContent='Diagnostic case prepared for AI research. Review the vehicle details and case question, then select Ask TORQWISE AI.';status.classList.remove('hidden')}
 }
 function diagReadHistory(){try{return JSON.parse(localStorage.getItem('torqwise_diag_history_v1'))||[]}catch(e){return[]}}
-function diagSaveCase(id){const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPTOMS[id],session=diagSessionSummary(id),item={id:'D-'+Date.now().toString().slice(-8),title:code?code.code+' — '+code.title:sym?sym.title:id,vehicle:diagVehicle(),created:new Date().toISOString(),kind:code?'code':'symptom',session};const h=diagReadHistory();h.unshift(item);localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(h.slice(0,25)));diagRenderHistory();const out=document.getElementById('diagOutput');const msg=document.createElement('p');msg.className='notice';msg.textContent='Case saved locally. If signed in, it is also being saved to account history.';out.querySelector('.diag-detail')?.appendChild(msg);const checks=code?code.checks:sym?sym.first:[];torqSaveAccountHistory({kind:'diagnostic',title:item.title,asset:item.vehicle,prompt:code?code.summary:sym?sym.urgency:'Diagnostic case',result:(code?code.checks:sym?sym.first:[]).join('\\n'),metadata:{code:code?.code||null,symptomId:sym?id:null,causes:code?code.causes:sym?sym.causes:[],checks,session}});}
-function diagRenderHistory(){const h=diagReadHistory(),el=document.getElementById('diagHistory');if(!h.length){el.innerHTML='<div class="empty">No saved cases yet.</div>';return}el.innerHTML=h.map(x=>'<div class="order"><div class="orderhead"><span>'+escapeHtml(x.title)+'</span><span class="status">Saved locally</span></div><p>'+escapeHtml(x.vehicle)+' · '+new Date(x.created).toLocaleString()+'</p></div>').join('')}
+function diagSaveCase(id){const code=DIAG_DB.find(d=>d.code===id),sym=DIAG_SYMPTOMS[id],session=diagSessionSummary(id),item={id:'D-'+Date.now().toString().slice(-8),title:code?code.code+' — '+code.title:sym?sym.title:id,vehicle:diagVehicle(),created:new Date().toISOString(),kind:code?'code':'symptom',code:code?.code||null,symptomId:sym?id:null,session};const h=diagReadHistory();h.unshift(item);localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(h.slice(0,25)));diagRenderHistory();const out=document.getElementById('diagOutput');const msg=document.createElement('p');msg.className='notice';msg.textContent='Case saved locally. If signed in, it is also being saved to account history.';out.querySelector('.diag-detail')?.appendChild(msg);const checks=code?code.checks:sym?sym.first:[];torqSaveAccountHistory({kind:'diagnostic',title:item.title,asset:item.vehicle,prompt:code?code.summary:sym?sym.urgency:'Diagnostic case',result:(code?code.checks:sym?sym.first:[]).join('\\n'),metadata:{code:code?.code||null,symptomId:sym?id:null,causes:code?code.causes:sym?sym.causes:[],checks,session}});}
+function diagRenderHistory(){
+ const h=diagReadHistory(),el=document.getElementById('diagHistory');
+ if(!h.length){el.innerHTML='<div class="empty">No saved cases yet.</div>';return}
+ el.innerHTML=h.map(x=>{
+  const session=x.session||{},answers=Array.isArray(session.answers)?session.answers:[];
+  const findings=String(session.findings||'').trim();
+  const resume=x.code?"<button type=\"button\" class=\"secondary\" onclick=\"diagShowDetail('"+escapeHtml(x.code)+"')\">Resume diagnostic</button>":x.symptomId?"<button type=\"button\" class=\"secondary\" onclick=\"diagRunSymptom('"+escapeHtml(x.symptomId)+"')\">Resume symptom checks</button>":"";
+  return '<div class="order"><div class="orderhead"><span>'+escapeHtml(x.title)+'</span><span class="status">Saved locally</span></div><p>'+escapeHtml(x.vehicle)+' · '+escapeHtml(new Date(x.created).toLocaleString())+'</p>'+
+   (answers.length?'<p><strong>Guided answers:</strong> '+escapeHtml(answers.join(' · '))+'</p>':'')+
+   (findings?'<p><strong>Test findings:</strong> '+escapeHtml(findings.length>240?findings.slice(0,240)+'…':findings)+'</p>':'<p class="guided-small">No test findings saved.</p>')+
+   resume+'</div>';
+ }).join('');
+}
 function diagClearHistory(){if(!confirm('Clear saved diagnostic cases from this browser?'))return;localStorage.removeItem('torqwise_diag_history_v1');diagRenderHistory()}
 document.getElementById('diagSearchForm').addEventListener('submit',e=>{e.preventDefault();diagRunSearch(document.getElementById('diagQuery').value)});diagRenderHistory();
 
