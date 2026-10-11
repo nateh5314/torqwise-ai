@@ -22,7 +22,7 @@ async function getUser(accessToken) {
 }
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
-  const stripeKey = env("STRIPE_SECRET_KEY"), price = env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID"), site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
+  const stripeKey = env("STRIPE_SECRET_KEY"), price = "price_1UOqWAIpQUHCdBSxunv5OqtK", site = env("SITE_URL") || "https://torqwiseauto.netlify.app";
   if (!stripeKey || !price || !site) return json({ error: "Billing is not configured yet. Ask the site administrator to finish setup." }, 503);
   const auth = req.headers.get("authorization") || "";
   const match = auth.match(/^Bearer\s+(.+)$/i);
@@ -105,7 +105,7 @@ export default async (req) => {
           if (accountResponse.ok && typeof accountData?.id === "string") stripeAccountId = accountData.id;
         } catch {}
       }
-      const priceSource = env("STRIPE_PRICE_PRO") ? "STRIPE_PRICE_PRO" : "STRIPE_PRO_PRICE_ID";
+      const priceSource = "verified-code-price";
       return json({ error: message, diagnostic: {
         stripeErrorCode, stripeErrorParam, stripeStatus: r.status,
         stripeAccountId, priceSource, priceIdSuffix: price.slice(-6),
