@@ -53,7 +53,7 @@ async function getResearchAccess(req, followUp = false) {
   if (!base || !anon || !service) return { error: 'Research accounts are not configured yet.', status: 503 };
   const token = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return { error: 'Sign in to use AI research. Free accounts include 3 reports per month.', status: 401 };
-  const userResponse = await fetch(base + '/auth/v1/user', { headers: { apikey: anon, authorization: 'Bearer ' + token } });
+  const userResponse = await fetch(base + '/auth/v1/user', { headers: { apikey: anon, authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(8000) });
   if (!userResponse.ok) return { error: 'Your session expired. Please sign in again.', status: 401 };
   let user;
   try { user = await userResponse.json(); } catch { return { error: 'Your session could not be verified. Please sign in again.', status: 401 }; }
@@ -66,7 +66,7 @@ async function getResearchAccess(req, followUp = false) {
   // The live environment must use its matching live price ID and credentials.
   const proPriceId = (env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID") || "").trim();
   let subs = [];
-  const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status,price_id&order=updated_at.desc&limit=10', { headers });
+  const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status,price_id&order=updated_at.desc&limit=10', { headers, signal: AbortSignal.timeout(8000) });
   if (subsResponse.ok) {
     let result;
     try { result = await subsResponse.json(); } catch {
