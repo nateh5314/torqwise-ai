@@ -53,8 +53,13 @@ export default async (req) => {
   let rows;
   try { rows = await response.json(); } catch { return respond({ error: "Fitment catalog returned an unreadable response." }, 502); }
   const matches = (Array.isArray(rows) ? rows : []).filter(row => {
-    if (year !== null && row.vehicle_year_start !== null && row.vehicle_year_start !== undefined && year < row.vehicle_year_start) return false;
-    if (year !== null && row.vehicle_year_end !== null && row.vehicle_year_end !== undefined && year > row.vehicle_year_end) return false;
+    // Never present a partial vehicle label or unknown year span as a confirmed candidate.
+    if (make && normalize(row.make) !== make) return false;
+    if (model && normalize(row.model) !== model) return false;
+    if (year !== null) {
+      if (!Number.isInteger(row.vehicle_year_start) || !Number.isInteger(row.vehicle_year_end)) return false;
+      if (year < row.vehicle_year_start || year > row.vehicle_year_end) return false;
+    }
     return true;
   }).filter(row => {
     // Exclude known contradictions; retain missing details as uncertain candidates.
