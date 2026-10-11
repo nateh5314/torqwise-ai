@@ -14,6 +14,7 @@ function harness(db) {
   const output = {
     innerHTML: "",
     handlers: [],
+    addEventListener(type, callback) { this.handlers.push({ type, callback }); },
     querySelectorAll(selector) {
       assert.equal(selector, "[data-open-code]");
       return [];
@@ -22,7 +23,7 @@ function harness(db) {
   const context = {
     DIAG_DB: db,
     document: {
-      getElementById: id => id === "diagOutput" ? output : ({ value: id === "diagMake" ? "Ford" : "" }),
+      getElementById: id => id === "diagOutput" ? output : ({ value: id === "diagMake" ? "Ford" : "", addEventListener() {} }),
     },
     diagVehicle: () => "2018 Ford F-150 5.0L",
     escapeHtml: value => String(value ?? "").replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch])),
