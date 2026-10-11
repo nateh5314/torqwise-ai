@@ -528,7 +528,7 @@ async function diagImportHistory(event){
    const session=row.session&&typeof row.session==='object'&&!Array.isArray(row.session)?row.session:{};
    return {id:row.id.slice(0,100),title:row.title.slice(0,300),vehicle:typeof row.vehicle==='string'?row.vehicle.slice(0,500):'Vehicle not specified',created:new Date(row.created).toISOString(),kind:row.kind==='symptom'?'symptom':'code',code:typeof row.code==='string'&&/^[PBCU][0-9A-F]{4}$/i.test(row.code)?row.code.toUpperCase():null,symptomId:typeof row.symptomId==='string'?row.symptomId.slice(0,80):null,session:{answers:Array.isArray(session.answers)?session.answers.filter(v=>typeof v==='string').slice(0,100).map(v=>v.slice(0,500)):[],findings:typeof session.findings==='string'?session.findings.slice(0,10000):''}};
   });
-  const existing=diagReadHistory(),known=new Set(existing.map(row=>row.id)),fresh=imported.filter(row=>!known.has(row.id));
+  const existing=diagReadHistory(),known=new Set(existing.map(row=>row.id)),fresh=[];for(const row of imported){if(known.has(row.id))continue;known.add(row.id);fresh.push(row)}
   const merged=[...fresh,...existing].sort((a,b)=>Date.parse(b.created)-Date.parse(a.created)).slice(0,25);
   localStorage.setItem('torqwise_diag_history_v1',JSON.stringify(merged));diagRenderHistory();
   alert('Imported '+fresh.length+' new diagnostic case'+(fresh.length===1?'':'s')+'. Existing case IDs were skipped; up to 25 recent cases are kept in this browser.');
