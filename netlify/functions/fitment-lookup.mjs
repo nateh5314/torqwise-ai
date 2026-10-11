@@ -19,6 +19,11 @@ export default async (req) => {
   const model = normalize(body.model).slice(0, 100);
   const brand = normalize(body.brand).slice(0, 100);
   const partType = normalize(body.partType).slice(0, 100);
+  const engine = normalize(body.engine).slice(0, 120);
+  const trim = normalize(body.trim).slice(0, 100);
+  const driveType = normalize(body.driveType || body.drive_type).slice(0, 80);
+  const axlePosition = normalize(body.axlePosition || body.axle_position).slice(0, 80);
+  const absType = normalize(body.absType || body.abs_type).slice(0, 80);
   const year = Number.isInteger(Number(body.year)) && Number(body.year) >= 1900 && Number(body.year) <= 2200 ? Number(body.year) : null;
   if (!partNumber && !partType && !brand && !(make && model)) return respond({ error: "Enter a part number, brand or part type, or a vehicle year, make, and model." }, 400);
   const query = new URLSearchParams({
@@ -51,15 +56,18 @@ export default async (req) => {
     if (year !== null && row.vehicle_year_start !== null && row.vehicle_year_start !== undefined && year < row.vehicle_year_start) return false;
     if (year !== null && row.vehicle_year_end !== null && row.vehicle_year_end !== undefined && year > row.vehicle_year_end) return false;
     return true;
-  }).map(row => ({
-    ...row,
-    confidence: row.status === "verified" ? "VERIFIED MATCH" : "HIGH-CONFIDENCE CROSS-REFERENCE",
-    guaranteeNote: row.status === "verified"
-      ? "Reviewed record. Confirm all listed variant restrictions match the supplied vehicle before ordering."
-      : "Multiple-source cross-reference; not an OEM-confirmed guarantee.",
-  }));
+  }).filter(row => {
+    const ok = (requested, listed) => !requested || !listed || normalize(listed) === requested;
+    return ok(engine, row.engine) && ok(trim, row.trim) && ok(driveType, row.drive_type) && ok(axlePosition, row.axle_position) && ok(absType, row.abs_type);
+  }).map(row => {
+    const vehicleSpecified = year !== null && Boolean(make) && Boolean(model);
+    const coreVehicleMatch = vehicleSpecified && (!row.vehicle_year_start || year >= row.vehicle_year_start) && (!row.vehicle_year_end || year <= row.vehicle_year_end) && normalize(row.make) === make && normalize(row.model).includes(model);
+    const specificityMissing = [!engine && row.engine ? "engine" : null, !trim && row.trim ? "trim" : null, !driveType && row.drive_type ? "drivetrain" : null, !axlePosition && row.axle_position ? "axle/position" : null, !absType && row.abs_type ? "ABS configuration" : null].filter(Boolean);
+    const confidence = row.status === "cross_reference" ? "HIGH-CONFIDENCE CROSS-REFERENCE" : coreVehicleMatch && specificityMissing.length === 0 ? "REVIEWED VEHICLE MATCH - CONFIRM SOURCE RESTRICTIONS" : "REVIEWED CATALOG RECORD - VEHICLE DETAILS STILL NEED CONFIRMATION";
+    return { ...row, confidence, specificityMissing, guaranteeNote: row.status === "cross_reference" ? "Reviewed cross-reference record; not an OEM-confirmed guarantee. Check configuration restrictions before ordering." : coreVehicleMatch ? "Year, make, and model align with the query. Confirm remaining configuration restrictions before ordering." : "This reviewed record alone does not establish exact fitment for the supplied vehicle. Confirm application restrictions before ordering." };
+  }).sort((a, b) => (a.status === "verified" ? 0 : 1) - (b.status === "verified" ? 0 : 1) || String(a.part_number || "").localeCompare(String(b.part_number || "")));
   return respond({
-    query: { partNumber: partNumber || null, partType: partType || null, brand: brand || null, year, make: make || null, model: model || null },
+    query: { partNumber: partNumber || null, partType: partType || null, brand: brand || null, year, make: make || null, model: model || null, engine: engine || null, trim: trim || null, driveType: driveType || null, axlePosition: axlePosition || null, absType: absType || null },
     matches,
     count: matches.length,
     catalogStatus: matches.length ? "matches_found" : "no_reviewed_match",
