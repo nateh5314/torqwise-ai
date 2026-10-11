@@ -14,7 +14,7 @@ Netlify runs `npm run build`. The build script downloads the open OBDex generic 
 - Scope: generic P-, B-, C- and U-family OBD-II definitions. This does not include a complete manufacturer-specific DTC catalogue, factory service procedures, wiring diagrams, live scan-tool data, or guaranteed vehicle-specific repair steps.
 - Each source update is checked for at least 9,000 unique records, valid code format, and required English titles/source references before it can be published.
 
-The source is fetched at build time only; the deployed website serves its generated JSON asset locally. A later build refreshes the snapshot from the source. If all sources fail or the dataset fails validation, the build stops. Review the source licence and contents before changing data providers.
+The source is fetched at build time only; the deployed website serves its generated JSON asset locally. A later build refreshes the snapshot from the source. If a source family fails or the dataset fails validation, the build stops. Review the source licence and contents before changing data providers.
 
 ## Diagnostic safety
 
