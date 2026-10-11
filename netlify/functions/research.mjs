@@ -84,6 +84,36 @@ async function releaseResearchUsage(userId, usageId) {
   });
   if (!response.ok) throw new Error('Usage reservation release failed');
 }
+
+async function lookupReviewedFitment(partNumber) {
+  const cleanPart = clean(partNumber, 100);
+  if (!cleanPart) return [];
+  const base = supabaseBase();
+  const anon = (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUNISHABLE_KEY || "").trim();
+  if (!base || !anon) return [];
+  const params = new URLSearchParams({
+    select: "id,part_number,brand,part_name,vehicle_year_start,vehicle_year_end,make,model,trim,engine,drive_type,axle_position,abs_type,market,status,evidence,fitment_notes,reviewed_at,source_checked_at",
+    part_number: "ilike." + cleanPart.replace(/[%,]/g, ""),
+    status: "in.(verified,cross_reference)",
+    limit: "30",
+  });
+  try {
+    const response = await fetch(base + "/rest/v1/fitment_applications?" + params.toString(), {
+      headers: { apikey: anon, authorization: "Bearer " + anon },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return [];
+    const rows = await response.json();
+    if (!Array.isArray(rows)) return [];
+    return rows.map(row => ({
+      ...row,
+      confidence: row.status === "verified" ? "VERIFIED MATCH" : "HIGH-CONFIDENCE CROSS-REFERENCE",
+    }));
+  } catch {
+    return [];
+  }
+}
+
 function extractText(response) {
   // Accept the normal structured Responses output and the convenience
   // output_text field, so valid answers aren't discarded for shape differences.
@@ -158,6 +188,8 @@ export default async (req) => {
     bulletin: "recalls, technical service bulletins and campaigns",
     general: "general technical research",
   };
+  const partCandidate = topic === "parts" ? (question.match(/\b[A-Z]{1,8}[- ]?\d{3,}[A-Z0-9-]*\b/i)?.[0] || "") : "";
+  const fitmentMatches = partCandidate ? await lookupReviewedFitment(partCandidate) : [];
   const input = followUp
     ? [`Asset / vehicle / equipment: ${asset || "Not provided"}`, `VIN / serial / PIN: ${serial || "Not provided"}`, `Research category: ${topicNames[topic] || topicNames.general}`, `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`, `Technician follow-up question: ${question}`].join("\n\n")
     : [
@@ -165,6 +197,7 @@ export default async (req) => {
         `VIN / serial / PIN: ${serial || "Not provided"}`,
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
+        ...(fitmentMatches.length ? [`TORQWISE reviewed first-party fitment catalog records (use exact status and restrictions; do not overstate):\n${JSON.stringify(fitmentMatches)}`] : []),
       ].join("\n");
   const instructions = `You are TORQWISE, a careful automotive and heavy-equipment research assistant for technicians. Use web search to research the exact machine or vehicle and prioritize OEM/manufacturer sources, government recall databases, reputable technical sources, and clearly identified parts catalogs. Do not claim access to paid OEM service databases, proprietary wiring diagrams, or complete catalogs unless a source genuinely provides them. Never invent torque values, capacities, pinouts, wire colours, part numbers, bulletins, procedures, or citations. If exact year/model/engine/serial applicability cannot be confirmed, clearly say what remains unverified, but do not stop at asking for details: always give useful general first steps that are safe without the missing details, then ask only the most important follow-up questions. For vague symptom descriptions, infer likely systems from plain language and state that this is a preliminary interpretation. Give a short decision tree starting with simple observations before specialized testing. If the wording could describe multiple systems, briefly list the likely interpretations and ask which matches. Distinguish verified facts, likely causes, and hypotheses. For diagnosis, give a safe, evidence-led sequence: preserve codes/freeze-frame, check basics, test before replacing parts, and state what each test proves. Flag hazards and when the correct OEM procedure or professional equipment is required. For parts and fitment, lead with one explicit status: VERIFIED MATCH, HIGH-CONFIDENCE CROSS-REFERENCE, or NOT YET VERIFIED. Use VERIFIED MATCH only when credible source evidence explicitly supports the exact supplied year/make/model/engine/drive/axle/ABS/options. Use HIGH-CONFIDENCE CROSS-REFERENCE only when multiple credible independent catalog listings agree, and disclose that this is not OEM-confirmed. Never imply guaranteed fitment from a part-number search, broad model family, or seller snippet alone. If the evidence is incomplete, perform as much comparison as available sources allow and give the best supported candidate(s) directly in TORQWISE; do not merely tell the technician to go search another website or contact a dealer. Links support our answer, they do not replace it. State the exact missing detail that prevents a stronger fitment status. For specifications, state applicability and uncertainty clearly. Explain in practical language with a concise report: Summary; What sources indicate; Recommended checks or research steps; What remains unverified. Cite sources in the answer where possible and return source links. No source means no claim of verification. This is research support, not a confirmed diagnosis.`;
 
@@ -208,5 +241,5 @@ export default async (req) => {
     try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
   }
-  return json({ answer, sources: followUp ? [] : extractSources(payload), model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
+  return json({ answer, sources: followUp ? [] : extractSources(payload), fitmentMatches, model: payload.model || process.env.OPENAI_MODEL || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
 };
