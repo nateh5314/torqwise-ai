@@ -73,7 +73,15 @@ export default async (req) => {
       }
     }
     if (!customer) return json({ error: "We couldn't find an active Pro subscription linked to this account. Confirm you used the same sign-in email at checkout, then refresh status." }, 404);
-    const form = new URLSearchParams({ customer, return_url: site.replace(/\/$/, "") + "/#account" });
+    // Pin the preview to the verified Stripe test-mode portal configuration.
+    // This configuration enables invoice history, payment-method updates, and
+    // cancellation at period end.
+    const portalConfiguration = env("STRIPE_PORTAL_CONFIGURATION_ID") || "bpc_1UPKu2IpQUHCdBSxPyaJHAfV";
+    const form = new URLSearchParams({
+      customer,
+      return_url: site.replace(/\/$/, "") + "/#account",
+      configuration: portalConfiguration
+    });
     const pr = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
       method: "POST",
       headers: { authorization: "Bearer " + stripeKey, "content-type": "application/x-www-form-urlencoded" },
@@ -81,8 +89,14 @@ export default async (req) => {
     });
     const data = await pr.json();
     if (!pr.ok || !data.url) {
-      console.error("Stripe portal creation failed:", pr.status, data?.error?.type || "unknown");
-      return json({ error: "Could not open subscription management. Check the Stripe customer portal configuration." }, 502);
+      const stripeType = data?.error?.type || "unknown";
+      const stripeCode = data?.error?.code || "";
+      console.error("Stripe portal creation failed:", pr.status, stripeType, stripeCode);
+      let message = "Stripe could not open subscription management.";
+      if (stripeCode === "resource_missing") message = "The subscription or portal configuration could not be found in the connected Stripe account. The preview's Stripe account settings need to be aligned.";
+      else if (stripeType === "authentication_error") message = "The Stripe billing connection is not authorized. The site administrator needs to reconnect the test-mode Stripe key.";
+      else if (stripeType === "invalid_request_error") message = "Stripe rejected the billing portal request. Check that the connected test account has the Customer Portal enabled.";
+      return json({ error: message, code: stripeCode || stripeType }, 502);
     }
     return json({ url: data.url });
   } catch (e) {
