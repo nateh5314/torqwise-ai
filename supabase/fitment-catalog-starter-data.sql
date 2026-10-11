@@ -46,3 +46,30 @@ where not exists (
  and f.vehicle_year_start is not distinct from v.year_start
  and f.vehicle_year_end is not distinct from v.year_end
 );
+
+ 
+-- Expanded WIX 51348 and FRAM PH7317 catalog applications.
+-- Evidence links are manufacturer-published fitment catalogs/bulletins.
+insert into public.fitment_applications
+(part_number,brand,part_name,vehicle_year_start,vehicle_year_end,make,model,engine,market,status,evidence,fitment_notes,reviewer,reviewed_at,source_checked_at)
+select v.part_number,v.brand,v.part_name,v.year_start,v.year_end,v.make,v.model,v.engine,'North America','verified',v.evidence::jsonb,v.notes,'TORQWISE catalog review',now(),now()
+from (values
+('51348','WIX','Spin-on oil filter',2019,2024,'Ford','Ranger','2.3L EcoBoost','[{"title":"WIX technical bulletin: Ford 2.0L/2.3L oil filter applications","url":"https://www.wixfilters.com/content/dam/website/wix/technical-bulletins/MH_WIX_ProTec_ProductBulletin_Ford%202pt0and2pt3LiterEngine_OilFilterFitment.pdf"}]','WIX technical bulletin lists 2019–2024 Ranger 2.3L with 51348/PXL51348. Confirm exact engine and market.'),
+('51348','WIX','Spin-on oil filter',2019,2023,'Ford','Mustang','2.3L EcoBoost','[{"title":"WIX technical bulletin: Ford 2.0L/2.3L oil filter applications","url":"https://www.wixfilters.com/content/dam/website/wix/technical-bulletins/MH_WIX_ProTec_ProductBulletin_Ford%202pt0and2pt3LiterEngine_OilFilterFitment.pdf"}]','WIX technical bulletin lists 2019–2023 Mustang 2.3L with 51348/PXL51348. Confirm exact engine and market.'),
+('51348','WIX','Spin-on oil filter',2022,2024,'Ford','Maverick','2.0L EcoBoost','[{"title":"WIX technical bulletin: Ford 2.0L/2.3L oil filter applications","url":"https://www.wixfilters.com/content/dam/website/wix/technical-bulletins/MH_WIX_ProTec_ProductBulletin_Ford%202pt0and2pt3LiterEngine_OilFilterFitment.pdf"}]','WIX technical bulletin lists 2022–2024 Maverick 2.0L with 51348/PXL51348. Confirm exact engine and market.'),
+('51348','WIX','Spin-on oil filter',2019,2023,'Ford','Transit Connect','2.0L','[{"title":"WIX technical bulletin: Ford 2.0L/2.3L oil filter applications","url":"https://www.wixfilters.com/content/dam/website/wix/technical-bulletins/MH_WIX_ProTec_ProductBulletin_Ford%202pt0and2pt3LiterEngine_OilFilterFitment.pdf"}]','WIX technical bulletin lists 2019–2023 Transit Connect 2.0L with 51348/PXL51348. Confirm exact engine and market.'),
+('51348','WIX','Spin-on oil filter',2020,2022,'Lincoln','Corsair','2.0L / 2.3L','[{"title":"WIX technical bulletin: Ford 2.0L/2.3L oil filter applications","url":"https://www.wixfilters.com/content/dam/website/wix/technical-bulletins/MH_WIX_ProTec_ProductBulletin_Ford%202pt0and2pt3LiterEngine_OilFilterFitment.pdf"}]','WIX technical bulletin lists 2020–2022 Corsair 2.0L and 2.3L with 51348/PXL51348. Confirm exact engine and market.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',2000,2000,'Honda','CR-V','2.0L','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM application list includes 2000 Honda CR-V 2.0L. Confirm exact engine and market.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',2000,2000,'Nissan','Altima','2.4L','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM application list includes 2000 Nissan Altima 2.4L. Confirm exact engine and market.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',2001,2001,'Honda','Accord','2.3L','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM application list includes 2001 Honda Accord 2.3L. Confirm exact engine and market.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',2001,2001,'Acura','EL','1.7L','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM application list includes 2001 Acura EL 1.7L. Confirm exact engine and market.'),
+('PH7317','FRAM','Extra Guard spin-on oil filter',2001,2001,'Acura','Integra','1.8L','[{"title":"FRAM PH7317 official application list","url":"https://www.fram.com/fram-extra-guard-oil-filter-spin-on-ph7317"}]','FRAM application list includes 2001 Acura Integra 1.8L. Confirm exact engine and market.')
+) as v(part_number,brand,part_name,year_start,year_end,make,model,engine,evidence,notes)
+where not exists (
+ select 1 from public.fitment_applications f
+ where lower(f.part_number)=lower(v.part_number)
+ and lower(coalesce(f.make,''))=lower(v.make)
+ and lower(coalesce(f.model,''))=lower(v.model)
+ and f.vehicle_year_start is not distinct from v.year_start
+ and f.vehicle_year_end is not distinct from v.year_end
+);
