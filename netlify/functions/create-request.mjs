@@ -24,7 +24,7 @@ export default async (req) => {
   try { body = await req.json(); } catch { return json({ error: "Request body must be valid JSON." }, 400); }
   if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "Request body must be a JSON object." }, 400);
   try {
-    const auth = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
+    const auth = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token }, signal: AbortSignal.timeout(8000) });
     if (!auth.ok) return json({ error: "Your session expired. Please sign in again." }, 401);
     let user;
     try { user = await auth.json(); } catch { return json({ error: "Your session could not be verified. Please sign in again." }, 401); }
@@ -45,7 +45,8 @@ export default async (req) => {
     const saved = await fetch(base + "/rest/v1/customer_requests", {
       method: "POST",
       headers: { apikey: service, authorization: "Bearer " + service, "content-type": "application/json", Prefer: "return=representation" },
-      body: JSON.stringify(row)
+      body: JSON.stringify(row),
+      signal: AbortSignal.timeout(12000)
     });
     if (!saved.ok) {
       console.error("Customer request insert failed:", saved.status);
@@ -64,6 +65,7 @@ export default async (req) => {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { authorization: "Bearer " + env("RESEND_API_KEY"), "content-type": "application/json" },
+          signal: AbortSignal.timeout(6000),
           body: JSON.stringify({
             from: env("EMAIL_FROM"),
             to: [env("SUPPORT_EMAIL")],
