@@ -1,9 +1,13 @@
+function supabaseBase() {
+  const raw = (process.env.SUPABASE_URL || "").trim();
+  return /^[a-z0-9]{20}$/i.test(raw) ? `https://${raw}.supabase.co` : raw;
+}
 function json(body, status=200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type":"application/json; charset=utf-8", "cache-control":"no-store" } });
 }
 export default async () => {
   const env = {
-    supabaseUrl: Boolean((process.env.SUPABASE_URL||"").trim()),
+    supabaseUrl: Boolean(supabaseBase()),
     supabaseAnonKey: Boolean((process.env.SUPABASE_ANON_KEY||process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_PUNISHABLE_KEY||"").trim()),
     supabaseServiceRoleKey: Boolean((process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim()),
     openaiApiKey: Boolean((process.env.OPENAI_API_KEY||"").trim()),
