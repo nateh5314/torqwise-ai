@@ -62,9 +62,29 @@ export default async (req) => {
   }).map(row => {
     const vehicleSpecified = year !== null && Boolean(make) && Boolean(model);
     const coreVehicleMatch = vehicleSpecified && (!row.vehicle_year_start || year >= row.vehicle_year_start) && (!row.vehicle_year_end || year <= row.vehicle_year_end) && normalize(row.make) === make && normalize(row.model).includes(model);
-    const specificityMissing = [!engine && row.engine ? "engine" : null, !trim && row.trim ? "trim" : null, !driveType && row.drive_type ? "drivetrain" : null, !axlePosition && row.axle_position ? "axle/position" : null, !absType && row.abs_type ? "ABS configuration" : null].filter(Boolean);
-    const confidence = row.status === "cross_reference" ? "HIGH-CONFIDENCE CROSS-REFERENCE" : coreVehicleMatch && specificityMissing.length === 0 ? "REVIEWED VEHICLE MATCH - CONFIRM SOURCE RESTRICTIONS" : "REVIEWED CATALOG RECORD - VEHICLE DETAILS STILL NEED CONFIRMATION";
-    return { ...row, confidence, specificityMissing, guaranteeNote: row.status === "cross_reference" ? "Reviewed cross-reference record; not an OEM-confirmed guarantee. Check configuration restrictions before ordering." : coreVehicleMatch ? "Year, make, and model align with the query. Confirm remaining configuration restrictions before ordering." : "This reviewed record alone does not establish exact fitment for the supplied vehicle. Confirm application restrictions before ordering." };
+    const specificityMissing = [
+      engine && !row.engine ? "catalog engine detail" : null,
+      trim && !row.trim ? "catalog trim detail" : null,
+      driveType && !row.drive_type ? "catalog drivetrain detail" : null,
+      axlePosition && !row.axle_position ? "catalog axle/position detail" : null,
+      absType && !row.abs_type ? "catalog ABS detail" : null,
+      !engine && row.engine ? "engine" : null,
+      !trim && row.trim ? "trim" : null,
+      !driveType && row.drive_type ? "drivetrain" : null,
+      !axlePosition && row.axle_position ? "axle/position" : null,
+      !absType && row.abs_type ? "ABS configuration" : null,
+    ].filter(Boolean);
+    const evidenceWarnings = [];
+    if (!Array.isArray(row.evidence) || row.evidence.length === 0) evidenceWarnings.push("No source evidence attached to this record.");
+    if (!row.reviewed_at) evidenceWarnings.push("Review timestamp is missing.");
+    if (!row.source_checked_at) evidenceWarnings.push("Source-check timestamp is missing.");
+    const confidence = row.status === "cross_reference" ? "HIGH-CONFIDENCE CROSS-REFERENCE" : coreVehicleMatch && specificityMissing.length === 0 && evidenceWarnings.length === 0 ? "REVIEWED VEHICLE MATCH - CONFIRM SOURCE RESTRICTIONS" : "REVIEWED CATALOG RECORD - VEHICLE DETAILS STILL NEED CONFIRMATION";
+    const guaranteeNote = row.status === "cross_reference"
+      ? "Reviewed cross-reference record; not an OEM-confirmed guarantee. Check configuration restrictions before ordering."
+      : coreVehicleMatch
+        ? "Year, make, and model align with the query. Confirm remaining configuration restrictions before ordering."
+        : "This reviewed record alone does not establish exact fitment for the supplied vehicle. Confirm application restrictions before ordering.";
+    return { ...row, confidence, specificityMissing, evidenceWarnings, guaranteeNote };
   }).sort((a, b) => (a.status === "verified" ? 0 : 1) - (b.status === "verified" ? 0 : 1) || String(a.part_number || "").localeCompare(String(b.part_number || "")));
   return respond({
     query: { partNumber: partNumber || null, partType: partType || null, brand: brand || null, year, make: make || null, model: model || null, engine: engine || null, trim: trim || null, driveType: driveType || null, axlePosition: axlePosition || null, absType: absType || null },
