@@ -36,8 +36,23 @@ export default async (req) => {
     // the subscription row, reconcile against Stripe using this authenticated
     // user's verified email and only accept a matching Pro subscription.
     let customer = Array.isArray(rows) ? rows.find(row => row.price_id === proPriceId && row.stripe_customer_id && ["active","trialing","past_due","unpaid"].includes(row.status))?.stripe_customer_id : null;
+    if (!customer) {
+      // Stripe checkout records the authenticated Supabase user ID in
+      // subscription metadata. Use that stable link before falling back to email.
+      const sr2 = await fetch("https://api.stripe.com/v1/subscriptions?status=all&limit=100", { headers: { authorization: "Bearer " + stripeKey } });
+      const sd = await sr2.json();
+      if (sr2.ok && Array.isArray(sd.data)) {
+        const match = sd.data.find(sub =>
+          sub.metadata?.supabase_user_id === user.id &&
+          ["active","trialing","past_due","unpaid"].includes(sub.status) &&
+          sub.items?.data?.some(item => item.price?.id === proPriceId)
+        );
+        if (match && typeof match.customer === "string") customer = match.customer;
+      }
+    }
     if (!customer && typeof user.email === "string" && user.email) {
-      const search = new URLSearchParams({ query: "email:'" + user.email.replace(/\\\\/g, "\\\\\\\\").replace(/'/g, "\\\\'") + "'", limit: "10" });
+      const escapedEmail = user.email.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      const search = new URLSearchParams({ query: "email:'" + escapedEmail + "'", limit: "10" });
       const cr = await fetch("https://api.stripe.com/v1/customers/search?" + search.toString(), { headers: { authorization: "Bearer " + stripeKey } });
       const cd = await cr.json();
       if (cr.ok && Array.isArray(cd.data)) {
