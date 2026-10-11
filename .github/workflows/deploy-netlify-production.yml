@@ -1,0 +1,37 @@
+name: Deploy TORQWISE to Netlify Production
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: torqwise-netlify-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out production branch
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Build bundled diagnostic database
+        run: npm run build
+      - name: Deploy built site and Netlify Functions to production
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: 8f99c31a-5a14-4397-8134-b76af0051ec9
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret NETLIFY_AUTH_TOKEN. Add a Netlify personal access token under repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          npx --yes netlify-cli@latest deploy --prod --build --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN"
