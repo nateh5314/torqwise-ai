@@ -4,7 +4,7 @@ function json(body, status = 200) {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 }
-const env = (name) => (process.env[name] || "").trim();
+const env = (name) => {\n  try {\n    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {\n      const value = Netlify.env.get(name);\n      if (typeof value === "string" && value.trim()) return value.trim();\n    }\n  } catch {}\n  return (process.env[name] || "").trim();\n};
 export default async (req) => {
   if (req.method !== "GET") return json({ error: "Use GET." }, 405);
   const auth = req.headers.get("authorization") || "";
