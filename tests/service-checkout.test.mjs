@@ -23,7 +23,7 @@ function configure({ authResponse = response({ id: userId, email: "mechanic@exam
   payment_status: "unpaid",
   status: "Awaiting customer",
   stripe_checkout_session_id: null,
-}, stripeSession = { id: "cs_test_1", url: "https://checkout.stripe.example/session" } } = {}) {
+}, stripeSession = { id: "cs_test_1", url: "https://checkout.stripe.example/session" }, previousSessionResponse = response({ id: "cs_old", status: "open", url: "https://checkout.stripe.example/old" }) } = {}) {
   Object.assign(process.env, {
     SUPABASE_URL: base,
     SUPABASE_ANON_KEY: "public-test-key",
@@ -130,4 +130,16 @@ test("requires operator review before collecting payment", async () => {
   const result = await handler(request("POST", { requestCode }));
   assert.equal(result.status, 409);
   assert.match((await result.json()).error, /reviewed and marked ready for payment/i);
+});
+
+
+test("does not create a replacement checkout when Stripe cannot verify the previous session", async () => {
+  const calls = configure({
+    requestRow: { request_code: requestCode, user_id: userId, service: "parts", quoted_price: 15, payment_status: "pending", status: "Awaiting customer", stripe_checkout_session_id: "cs_old" },
+    previousSessionResponse: response({ error: "temporary outage" }, 500),
+  });
+  const result = await handler(request("POST", { requestCode }));
+  assert.equal(result.status, 503);
+  assert.match((await result.json()).error, /could not verify the previous checkout session/i);
+  assert.equal(calls.some(c => c.url === "https://api.stripe.com/v1/checkout/sessions" && c.options.method === "POST"), false);
 });
