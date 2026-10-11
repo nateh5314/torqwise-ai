@@ -195,7 +195,7 @@ function diagVehicle(){return [document.getElementById('diagYear').value,documen
 function diagRunSearch(q){
  q=(q||'').trim().toUpperCase();const out=document.getElementById('diagOutput');
  if(!q){out.innerHTML='<div class="diag-empty">Enter a trouble code or keyword to search diagnostic references.</div>';return}
- const normalized=q.replace(/\\s+/g,'');const make=(document.getElementById('diagMake')?.value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+ const normalized=q.replace(/\s+/g,'');const make=(document.getElementById('diagMake')?.value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
  let matches=DIAG_DB.filter(d=>String(d.code||'').toUpperCase().includes(normalized)||String(d.title||'').toUpperCase().includes(q)||String(d.system||'').toUpperCase().includes(q)||String(d.summary||'').toUpperCase().includes(q)||(d.causes||[]).some(c=>String(c).toUpperCase().includes(q))||(d.symptoms||[]).some(c=>String(c).toUpperCase().includes(q)));
  if(/^[PBCU][0-9A-F]{4}$/.test(normalized)){matches=DIAG_DB.filter(d=>String(d.code||'').toUpperCase()===normalized);if(make){const specific=matches.filter(d=>String(d.manufacturer||'').toUpperCase().replace(/[^A-Z0-9]/g,'')===make);const generic=matches.filter(d=>!d.manufacturer||d.isGeneric);if(specific.length)matches=[...specific,...generic];}}
  matches=matches.slice(0,40);
@@ -333,7 +333,7 @@ async function torqLoadBundledDtcDatabase(){
    const causes=(r.common_causes||[]).map(c=>localize(c.label||c)).filter(Boolean).slice(0,10);
    const symptoms=(r.symptoms||[]).map(localize).filter(Boolean).slice(0,10);
    const components=(r.affected_components||[]).map(x=>String(x).replace(/_/g,' ')).slice(0,10);
-   const sourceLinks=(r.sources||[]).filter(x=>typeof x==='string'&&/^https?:\\/\\//i.test(x)).slice(0,5);
+   const sourceLinks=(r.sources||[]).filter(x=>typeof x==='string'&&(x.startsWith('https://')||x.startsWith('http://'))).slice(0,5);
    const related=Array.isArray(r.related_codes)?r.related_codes:[];
    const repair=r.repair||{},cost=Array.isArray(repair.estimated_cost_eur)?repair.estimated_cost_eur:null,hours=Array.isArray(repair.estimated_hours)?repair.estimated_hours:null;
    const extras=[];
