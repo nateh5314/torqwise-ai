@@ -4,6 +4,7 @@ import handler from "../netlify/functions/fitment-lookup.mjs";
 
 const originalFetch = globalThis.fetch;
 const originalEnv = { ...process.env };
+let lastFetchUrl = "";
 
 function request(body) {
   return new Request("https://torqwise.example/.netlify/functions/fitment-lookup", {
@@ -38,12 +39,16 @@ function catalogRow(overrides = {}) {
 }
 function configure(rows) {
   process.env.SUPABASE_ANON_KEY = "test-anon";
-  globalThis.fetch = async () => new Response(JSON.stringify(rows), {
+  globalThis.fetch = async (url) => {
+    lastFetchUrl = String(url);
+    return new Response(JSON.stringify(rows), {
     status: 200,
     headers: { "content-type": "application/json" },
-  });
+    });
+  };
 }
 test.afterEach(() => {
+  lastFetchUrl = "";
   globalThis.fetch = originalFetch;
   for (const key of Object.keys(process.env)) if (!(key in originalEnv)) delete process.env[key];
   for (const [key, value] of Object.entries(originalEnv)) process.env[key] = value;
@@ -114,4 +119,22 @@ test("rejects a non-four-digit year even when JavaScript could coerce it to a nu
   configure([catalogRow()]);
   const response = await handler(request({ year: "2.021e3", make: "Ford", model: "F-150", partType: "brake pad" }));
   assert.equal(response.status, 400);
+});
+
+test("uses exact part-number filtering and strips search wildcard syntax", async () => {
+  configure([catalogRow()]);
+  const response = await handler(request({
+    partNumber: "TEST-123",
+    make: "Ford%,",
+    model: "F-150_*",
+    brand: "TestBrand%",
+    partType: "brake_pad*",
+  }));
+  assert.equal(response.status, 200);
+  const url = new URL(lastFetchUrl);
+  assert.equal(url.searchParams.get("part_number"), "eq.TEST-123");
+  assert.equal(url.searchParams.get("make"), "ilike.ford");
+  assert.equal(url.searchParams.get("model"), "ilike.*f-150*");
+  assert.equal(url.searchParams.get("brand"), "ilike.*testbrand*");
+  assert.equal(url.searchParams.get("part_name"), "ilike.*brakepad*");
 });
