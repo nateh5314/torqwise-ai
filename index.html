@@ -950,7 +950,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
 <script>
 /* Production account + Pro subscription integration. Requires Netlify/Supabase/Stripe env configuration. */
 (function(){
-  let client=null, currentUser=null, pro=false, ready=false;
+  let client=null, currentUser=null, pro=false, subscription=null, ready=false;
   const byId=id=>document.getElementById(id);
   async function initProductionAuth(){
     try{
@@ -973,6 +973,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       const q=new URLSearchParams(location.search);
       if(q.get('billing')==='success'){alert('Checkout returned successfully. Your Pro access will appear after Stripe confirms the subscription.');history.replaceState({},'',location.pathname+location.hash);}
       if(q.get('billing')==='cancelled'){alert('Checkout was cancelled. No subscription was started.');history.replaceState({},'',location.pathname+location.hash);}
+      if(q.get('billing_return')==='1'){const portalMessage=byId('torqPortalStatus');if(portalMessage)portalMessage.textContent='Checking your latest subscription changes…';await refreshAccountUI();history.replaceState({},'',location.pathname+location.hash);}
       if(q.get('service_payment')==='success'){const m=byId('requestMessage');if(m){m.classList.remove('hidden');m.textContent='Stripe checkout returned successfully. Your request will show as paid after the verified payment confirmation arrives. Refresh your request list shortly.'}history.replaceState({},'',location.pathname+location.hash);}
       if(q.get('service_payment')==='cancelled'){const m=byId('requestMessage');if(m){m.classList.remove('hidden');m.textContent='Checkout was cancelled. No payment was confirmed. Your request remains saved.'}history.replaceState({},'',location.pathname+location.hash);}
     }catch(e){console.warn('TORQWISE account setup:',e.message);addSetupNotice(e.message);}
@@ -1062,7 +1063,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
     if(!currentUser){
       identity.textContent='Status: Signed out';
       if(accountStatus)accountStatus.innerHTML='<strong>Membership:</strong> Not signed in. Sign in to check your subscription.';
-      pro=false;updateSubscriptionUI();return;
+      pro=false;subscription=null;updateSubscriptionUI();return;
     }
     identity.textContent='✓ You are signed in as '+currentUser.email;
     const out=document.createElement('button');out.className='secondary';out.style.cssText='padding:6px 9px;font-size:11px;margin:8px 0';out.textContent='Sign out';out.onclick=window.signout;identity.append(out);
@@ -1072,11 +1073,13 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       if(!session)throw new Error('No active session');
       const r=await fetch('/.netlify/functions/billing-status',{headers:{authorization:'Bearer '+session.access_token},cache:'no-store'});
       if(!r.ok)throw new Error('Subscription status request failed');
-      const d=await r.json();pro=!!d.isPro;billingStatusKnown=true;
-    }catch{pro=false;}
+      const d=await r.json();pro=!!d.isPro;subscription=d.subscription||null;billingStatusKnown=true;
+    }catch{pro=false;subscription=null;}
     if(accountStatus){
       accountStatus.classList.toggle('success',pro);
-      accountStatus.innerHTML=pro?'<strong>Membership:</strong> Pro Technician active<p class="tiny">Your subscription is verified as active.</p>':billingStatusKnown?'<strong>Membership:</strong> Free plan<p class="tiny">No active Pro Technician subscription was found for this account.</p>':'<strong>Membership:</strong> Could not verify right now<p class="tiny">Refresh status to try again. We will not assume your subscription is inactive when verification fails.</p>';
+      const periodEnd=subscription?.current_period_end?new Date(subscription.current_period_end).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}):null;
+      const cancelScheduled=!!subscription?.cancel_at_period_end;
+      accountStatus.innerHTML=pro?'<strong>Membership:</strong> Pro Technician active'+(cancelScheduled?'<p class="tiny">Cancellation scheduled. Pro access remains active until '+(periodEnd||'the end of your current billing period')+'.</p>':'<p class="tiny">Your subscription is active'+(periodEnd?'; next billing date: '+periodEnd:'')+'.</p>'):billingStatusKnown&&subscription&&['canceled','incomplete_expired'].includes(subscription.status)?'<strong>Membership:</strong> Subscription canceled<p class="tiny">'+(periodEnd?'Access may have ended on '+periodEnd+'. ':'')+'You can subscribe again below if you choose.</p>':billingStatusKnown?'<strong>Membership:</strong> Free plan<p class="tiny">No active Pro Technician subscription was found for this account.</p>':'<strong>Membership:</strong> Could not verify right now<p class="tiny">Refresh status to try again. We will not assume your subscription is inactive when verification fails.</p>';
     }
     updateSubscriptionUI();
     if(currentUser){await loadCustomerRequests();await torqLoadAccountHistory(false);}else{const h=document.getElementById('accountHistoryList');if(h)h.innerHTML='<div class="empty">Sign in to see saved history across sessions.</div>';}
@@ -1093,7 +1096,8 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
     if(!status||!button)return;
     status.style.whiteSpace='pre-wrap';status.style.overflowWrap='anywhere';
     if(portal){portal.style.display=pro?'block':'none';portal.onclick=async()=>{if(!currentUser)return;portal.disabled=true;portal.textContent='Opening secure portal…';if(portalStatus)portalStatus.textContent='';try{const session=(await client.auth.getSession()).data.session;const r=await fetch('/.netlify/functions/create-portal',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({})});const d=await r.json();if(!r.ok||!d.url)throw new Error(d.error||'Could not open subscription management.');location.assign(d.url);}catch(e){if(portalStatus)portalStatus.textContent=e.message||'Could not open subscription management.';portal.disabled=false;portal.textContent='Try managing subscription again';}};}
-    status.textContent=pro?'Your Pro subscription is active.':currentUser?'Sign in verified. Start your subscription securely below.':'Create an account or sign in to start your subscription.';
+    const periodEnd=subscription?.current_period_end?new Date(subscription.current_period_end).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}):null;
+    status.textContent=pro?(subscription?.cancel_at_period_end?'Your Pro subscription is active but set to cancel'+(periodEnd?' on '+periodEnd:'')+'. You can manage billing below.':'Your Pro subscription is active'+(periodEnd?'. Next billing date: '+periodEnd:'')+'. Use Manage subscription to update payment details or cancel.'):(currentUser?'No active Pro subscription is linked to this account. If you just changed billing in Stripe, refresh status in a moment.':'Create an account or sign in to start your subscription.');
     button.textContent=pro?'Pro Technician active':'Subscribe — $29.99 CAD/month';
     button.onclick=async()=>{
       if(!currentUser){window.openAuth('signin');return;}
