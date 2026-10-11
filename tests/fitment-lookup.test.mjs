@@ -94,3 +94,10 @@ test("excludes records with a known make mismatch", async () => {
   const data = await response.json();
   assert.equal(data.matches.length, 0);
 });
+
+test("does not fuzzy-match a supplied part number", async () => {
+  configure([catalogRow({ part_number: "TEST-1234" })]);
+  const response = await handler(request({ partNumber: "TEST-123", partType: "brake pad" }));
+  const data = await response.json();
+  assert.equal(data.matches.length, 0);
+});
