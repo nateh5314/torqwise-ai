@@ -21,7 +21,7 @@ const serviceCatalog = {
 async function getUser(token) {
   const base = env("SUPABASE_URL"), anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY");
   if (!base || !anon) throw new Error("Supabase configuration is missing.");
-  const r = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
+  const r = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) return null;
   return await r.json();
 }
@@ -30,6 +30,7 @@ async function supabase(path, options = {}) {
   if (!base || !key) throw new Error("Supabase service configuration is missing.");
   return fetch(base + "/rest/v1/" + path, {
     ...options,
+    signal: options.signal || AbortSignal.timeout(10000),
     headers: { apikey: key, authorization: "Bearer " + key, "content-type": "application/json", ...(options.headers || {}) },
   });
 }
@@ -58,6 +59,7 @@ export default async req => {
     if (request.stripe_checkout_session_id) {
       const previous = await fetch("https://api.stripe.com/v1/checkout/sessions/" + encodeURIComponent(request.stripe_checkout_session_id), {
         headers: { authorization: "Bearer " + stripeKey },
+        signal: AbortSignal.timeout(8000),
       });
       if (previous.ok) {
         const old = await previous.json();
@@ -91,6 +93,7 @@ export default async req => {
       method: "POST",
       headers: { authorization: "Bearer " + stripeKey, "content-type": "application/x-www-form-urlencoded" },
       body: form.toString(),
+      signal: AbortSignal.timeout(12000),
     });
     const session = await checkout.json();
     if (!checkout.ok || !session.id || !session.url) {
