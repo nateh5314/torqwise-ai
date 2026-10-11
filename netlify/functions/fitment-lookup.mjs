@@ -6,6 +6,8 @@ function respond(body, status = 200) {
 }
 function env(name) { return (process.env[name] || "").trim(); }
 function normalize(value) { return typeof value === "string" ? value.trim().toLowerCase() : ""; }
+// Keep user text from becoming PostgREST filter syntax or unintended LIKE wildcards.
+function safeFilterText(value) { return value.replace(/[%,_*(),\\\\]/g, ""); }
 
 export default async (req) => {
   if (req.method !== "POST") return respond({ error: "Use POST to look up fitment." }, 405);
@@ -38,17 +40,17 @@ export default async (req) => {
     limit: "300",
     order: "status.asc,part_number.asc",
   });
-  if (partNumber) query.set("part_number", "ilike." + partNumber.replace(/[%,_*]/g, ""));
-  if (make) query.set("make", "ilike." + make.replace(/[%,_*]/g, ""));
-  if (model) query.set("model", "ilike.*" + model.replace(/[*%]/g, "") + "*");
+  if (partNumber) query.set("part_number", "eq." + partNumber);
+  if (make) query.set("make", "ilike." + safeFilterText(make));
+  if (model) query.set("model", "ilike.*" + safeFilterText(model) + "*");
   // Apply the requested year range in PostgREST before its row limit. Filtering
   // only after fetching a broad 300-row page can hide valid reviewed fitments.
   if (year !== null) {
     query.set("vehicle_year_start", "lte." + year);
     query.set("vehicle_year_end", "gte." + year);
   }
-  if (brand) query.set("brand", "ilike.*" + brand.replace(/[*%]/g, "") + "*");
-  if (partType) query.set("part_name", "ilike.*" + partType.replace(/[*%]/g, "") + "*");
+  if (brand) query.set("brand", "ilike.*" + safeFilterText(brand) + "*");
+  if (partType) query.set("part_name", "ilike.*" + safeFilterText(partType) + "*");
   let response;
   try {
     response = await fetch(base.replace(/\/+$/, "") + "/rest/v1/fitment_applications?" + query.toString(), {
