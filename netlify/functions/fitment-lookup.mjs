@@ -68,6 +68,9 @@ export default async (req) => {
     const vehicleSpecified = year !== null && Boolean(make) && Boolean(model);
     const coreVehicleMatch = vehicleSpecified && Number.isInteger(row.vehicle_year_start) && Number.isInteger(row.vehicle_year_end) && year >= row.vehicle_year_start && year <= row.vehicle_year_end && normalize(row.make) === make && normalize(row.model) === model;
     const specificityMissing = [
+      !year ? "vehicle year" : null,
+      !make ? "vehicle make" : null,
+      !model ? "vehicle model" : null,
       engine && !row.engine ? "catalog engine detail" : null,
       trim && !row.trim ? "catalog trim detail" : null,
       driveType && !row.drive_type ? "catalog drivetrain detail" : null,
