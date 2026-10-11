@@ -106,7 +106,7 @@ export default async (req) => {
     if (driveType && !row.drive_type) evidenceWarnings.push("The catalog does not specify drivetrain, so the requested drivetrain cannot be confirmed.");
     if (axlePosition && !row.axle_position) evidenceWarnings.push("The catalog does not specify axle/position, so the requested position cannot be confirmed.");
     if (absType && !row.abs_type) evidenceWarnings.push("The catalog does not specify ABS/brake configuration, so that configuration cannot be confirmed.");
-    const confidence = row.status === "cross_reference" ? "HIGH-CONFIDENCE CROSS-REFERENCE" : coreVehicleMatch && specificityMissing.length === 0 && evidenceWarnings.length === 0 ? "REVIEWED VEHICLE MATCH - CONFIRM SOURCE RESTRICTIONS" : "REVIEWED CATALOG RECORD - VEHICLE DETAILS STILL NEED CONFIRMATION";
+    const confidence = row.status === "cross_reference"\n      ? specificityMissing.length === 0 && evidenceWarnings.length === 0\n        ? "HIGH-CONFIDENCE CROSS-REFERENCE"\n        : "REVIEWED CROSS-REFERENCE - EVIDENCE OR VEHICLE DETAILS INCOMPLETE"\n      : coreVehicleMatch && specificityMissing.length === 0 && evidenceWarnings.length === 0\n        ? "REVIEWED VEHICLE MATCH - CONFIRM SOURCE RESTRICTIONS"\n        : "REVIEWED CATALOG RECORD - VEHICLE DETAILS STILL NEED CONFIRMATION";
     const guaranteeNote = row.status === "cross_reference"
       ? "Reviewed cross-reference record; not an OEM-confirmed guarantee. Check configuration restrictions before ordering."
       : coreVehicleMatch
