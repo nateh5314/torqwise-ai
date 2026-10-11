@@ -767,13 +767,14 @@ function torqUseExample(kind){
  const examples={
   misfire:{asset:"2018 Chevrolet Silverado 1500 5.3L V8",topic:"diagnostic",question:"Diagnose a P0300 random/multiple-cylinder misfire. Compare likely causes and rank the next tests by diagnostic value. Do not recommend replacing parts without supporting evidence.",dtcs:"P0300 — confirm whether current, pending, or history before diagnosis.",symptoms:"Engine runs rough; reproduce and record whether cold, warm, idle, or under load."},
   "no-start":{asset:"2012 Honda Civic 1.8L",topic:"diagnostic",question:"Build a crank/no-start diagnostic path. Separate fuel, ignition, compression, timing, and sensor hypotheses. For each step, state the test, expected observation, and what each result would mean.",symptoms:"Starter cranks engine at apparently normal speed, but engine does not start.",testsPerformed:"Not tested yet. Start with safe, non-invasive checks and ask for missing measurements."},
-  fitment:{asset:"Enter your exact year, make, model, engine, and trim",topic:"parts",question:"Assess the fitment of this part: enter the part number and brand. Identify the exact vehicle details and cross-reference evidence needed before calling it a confirmed match. Clearly label anything not verified."}
+  fitment:{asset:"Enter your exact year, make, model, engine, and trim",topic:"parts",question:"Assess fitment for part number [ENTER PART NUMBER] from brand [ENTER BRAND]. Compare it against the exact vehicle year, make, model, engine, trim, drivetrain, and axle/position where applicable. Identify evidence supporting the match and clearly label anything not verified."}
  };
  const example=examples[kind];if(!example)return;
  document.getElementById("researchAsset").value=example.asset;
+ const serialField=document.getElementById("researchSerial");if(serialField)serialField.value="";
  document.getElementById("researchTopic").value=example.topic;
  document.getElementById("researchQuestion").value=example.question;
- const values={researchDtcs:example.dtcs||"",researchSymptoms:example.symptoms||"",researchTests:example.testsPerformed||""};
+ const values={researchDtcs:example.dtcs||"",researchSymptoms:example.symptoms||"",researchFreezeFrame:"",researchLiveData:"",researchTests:example.testsPerformed||"",researchRepairs:""};
  Object.entries(values).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.value=value;});
  document.getElementById("researchQuestion").focus();
  const status=document.getElementById("torqAiStatus");
