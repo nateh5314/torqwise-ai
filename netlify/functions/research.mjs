@@ -51,15 +51,20 @@ async function getResearchAccess(req, followUp = false) {
   // Billing is optional for free-tier research. If the subscriptions table has
   // not been installed yet, fail closed to the free tier rather than blocking
   // every signed-in user. Unexpected server errors still fail safely.
+  const proPriceId = (process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_PRICE_PRO || '').trim();
   let subs = [];
-  const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status&order=updated_at.desc&limit=1', { headers });
+  const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status,price_id&order=updated_at.desc&limit=10', { headers });
   if (subsResponse.ok) {
     const result = await subsResponse.json();
     if (Array.isArray(result)) subs = result;
   } else if (![400, 404, 406].includes(subsResponse.status)) {
     console.error('Subscription lookup unavailable; refusing to assume Pro:', subsResponse.status);
   }
-  if (subs.some(row => ['active', 'trialing'].includes(row.status))) return { userId: user.id, isPro: true, remaining: null };
+  // Only the configured Pro Technician recurring price grants unlimited research.
+  // Other active plans (including the lower-priced Driver plan) must not inherit Pro access.
+  if (proPriceId && subs.some(row => ['active', 'trialing'].includes(row.status) && row.price_id === proPriceId)) {
+    return { userId: user.id, isPro: true, remaining: null };
+  }
   // Follow-ups clarify a completed report, skip web search, and do not reserve another monthly report.
   if (followUp) return { userId: user.id, isPro: false, remaining: null, isFollowUp: true };
   const reserveResponse = await fetch(base + '/rest/v1/rpc/reserve_research_usage', {
