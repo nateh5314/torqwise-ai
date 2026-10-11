@@ -377,3 +377,22 @@ test("flags exhaust exposure and unintended acceleration risks", async () => {
     assert.ok(payload.input.includes(expected));
   }
 });
+
+
+test("flags damaged or overheating EV traction batteries", async () => {
+  for (const symptoms of [
+    "EV battery pack is smoking",
+    "Lithium-ion battery is swelling and venting",
+  ]) {
+    const calls = configure();
+    const result = await handler(request({ body: {
+      asset: "Electric vehicle", question: "Assess this concern", symptoms,
+    }}));
+    assert.equal(result.status, 200);
+    const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+    const payload = JSON.parse(upstream.options.body);
+    assert.ok(payload.input.includes("Potential safety-critical language detected"));
+    assert.ok(payload.input.includes("battery thermal runaway or damaged traction battery"));
+    assert.ok(payload.input.includes("avoid hazardous testing"));
+  }
+});
