@@ -92,7 +92,24 @@ export default async (req) => {
       } else if (stripeErrorCode === "parameter_invalid_empty" || stripeErrorCode === "parameter_invalid_string_empty") {
         message = "Stripe rejected a required checkout setting. Verify the Pro price and checkout configuration.";
       }
-      return json({ error: message, diagnostic: { stripeErrorCode, stripeErrorParam, stripeStatus: r.status } }, 502);
+      // Identify which Stripe account this exact runtime key belongs to, without exposing the key.
+      // This distinguishes a mismatched key from a stale/wrong price environment variable.
+      let stripeAccountId = "unavailable";
+      if (stripeErrorCode === "resource_missing" || stripeErrorCode === "price_not_found") {
+        try {
+          const accountResponse = await fetch("https://api.stripe.com/v1/account", {
+            headers: { authorization: "Bearer " + stripeKey },
+            signal: AbortSignal.timeout(4000),
+          });
+          const accountData = await accountResponse.json();
+          if (accountResponse.ok && typeof accountData?.id === "string") stripeAccountId = accountData.id;
+        } catch {}
+      }
+      const priceSource = env("STRIPE_PRICE_PRO") ? "STRIPE_PRICE_PRO" : "STRIPE_PRO_PRICE_ID";
+      return json({ error: message, diagnostic: {
+        stripeErrorCode, stripeErrorParam, stripeStatus: r.status,
+        stripeAccountId, priceSource, priceIdSuffix: price.slice(-6),
+      } }, 502);
     }
     return json({ url: data.url });
   } catch (e) {
