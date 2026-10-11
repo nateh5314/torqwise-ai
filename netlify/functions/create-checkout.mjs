@@ -22,10 +22,10 @@ async function getUser(accessToken) {
 }
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST." }, 405);
-  const stripeKey = env("STRIPE_SECRET_KEY"), price = "price_1UOqWAIpQUHCdBSxunv5OqtK";
+  const stripeKey = env("STRIPE_SECRET_KEY"), price = env("STRIPE_PRICE_PRO");
   const requestOrigin = req.headers.get("origin") || "";
   const site = /^https:\/\/(?:deploy-preview-[0-9]+--torqwiseauto\.netlify\.app|torqwiseauto\.netlify\.app)$/i.test(requestOrigin) ? requestOrigin : (env("SITE_URL") || "https://torqwiseauto.netlify.app");
-  if (!stripeKey || !price || !site) return json({ error: "Billing is not configured yet. Ask the site administrator to finish setup." }, 503);
+  if (!stripeKey || !price || !site) return json({ error: "Billing is not configured yet. Confirm STRIPE_SECRET_KEY, STRIPE_PRICE_PRO, and SITE_URL in this deploy context." }, 503);
   const auth = req.headers.get("authorization") || "";
   const match = auth.match(/^Bearer\s+(.+)$/i);
   if (!match) return json({ error: "Sign in before starting a subscription." }, 401);
@@ -86,11 +86,11 @@ export default async (req) => {
       // Return only safe, actionable diagnostics; never return the Stripe message, request body, key, or customer data.
       let message = "Checkout could not be started. Please retry shortly.";
       if (stripeErrorCode === "resource_missing" || stripeErrorCode === "price_not_found") {
-        message = "Stripe could not find this Pro price for the configured test account. The Netlify Stripe test key and Pro price must belong to the same Stripe account.";
+        message = "Stripe could not find the configured Pro price. Confirm STRIPE_SECRET_KEY and STRIPE_PRICE_PRO belong to the same Stripe account and mode.";
       } else if (stripeErrorCode === "api_key_expired" || stripeErrorCode === "invalid_api_key") {
-        message = "The Stripe test key configured in Netlify is invalid or expired. Update it with a valid test key for the Torqwise sandbox, then redeploy.";
+        message = "The Stripe secret key configured in Netlify is invalid or expired. Update it with a valid key for the intended Stripe account and mode, then redeploy.";
       } else if (stripeErrorCode === "account_invalid") {
-        message = "Stripe rejected the configured test account. Check that Netlify uses the Torqwise sandbox test key.";
+        message = "Stripe rejected the configured account. Check that Netlify uses the intended Stripe secret key for this deploy context.";
       } else if (stripeErrorCode === "parameter_invalid_empty" || stripeErrorCode === "parameter_invalid_string_empty") {
         message = "Stripe rejected a required checkout setting. Verify the Pro price and checkout configuration.";
       }
@@ -107,7 +107,7 @@ export default async (req) => {
           if (accountResponse.ok && typeof accountData?.id === "string") stripeAccountId = accountData.id;
         } catch {}
       }
-      const priceSource = "verified-code-price";
+      const priceSource = "STRIPE_PRICE_PRO environment variable";
       return json({ error: message, diagnostic: {
         stripeErrorCode, stripeErrorParam, stripeStatus: r.status,
         stripeAccountId, priceSource, priceIdSuffix: price.slice(-6),
