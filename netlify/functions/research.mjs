@@ -150,14 +150,18 @@ async function lookupReviewedFitment(partNumber) {
         !row.abs_type ? "ABS/brake configuration" : null,
         !row.market ? "market/region" : null,
       ].filter(Boolean);
+      const evidenceComplete = evidenceWarnings.length === 0 && missingApplicationDetails.length === 0;
+      const confidence = !evidenceComplete
+        ? "INCOMPLETE CATALOG RECORD — NOT SUFFICIENT TO VERIFY FITMENT"
+        : row.status === "cross_reference"
+          ? "REVIEWED CROSS-REFERENCE — EXACT VEHICLE FITMENT NOT YET CONFIRMED"
+          : "VERIFIED CATALOG RECORD — EXACT VEHICLE FITMENT NOT YET CONFIRMED";
       return {
         ...row,
-        confidence: row.status === "cross_reference"
-          ? "REVIEWED CROSS-REFERENCE — EXACT VEHICLE FITMENT NOT YET CONFIRMED"
-          : "VERIFIED CATALOG RECORD — EXACT VEHICLE FITMENT NOT YET CONFIRMED",
+        confidence,
         evidenceWarnings,
         missingApplicationDetails,
-        fitmentCaution: "This is a reviewed catalog application, not proof that it fits the vehicle in the current question. Compare year, make, model, engine, trim, drivetrain, axle/position, ABS, and market restrictions before recommending it.",
+        fitmentCaution: "This catalog record alone does not prove fitment for the vehicle in the current question. Compare year, make, model, engine, trim, drivetrain, axle/position, ABS, and market restrictions before recommending it.",
       };
     });
   } catch {
