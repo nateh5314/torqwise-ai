@@ -51,7 +51,9 @@ async function getResearchAccess(req, followUp = false) {
   // Billing is optional for free-tier research. If the subscriptions table has
   // not been installed yet, fail closed to the free tier rather than blocking
   // every signed-in user. Unexpected server errors still fail safely.
-  const proPriceId = (process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_PRICE_PRO || '').trim();
+  // Keep entitlement checks aligned with billing-status.mjs and create-portal.mjs.
+  // The live environment must use its matching live price ID and credentials.
+  const proPriceId = (process.env.STRIPE_PRO_PRICE_ID || process.env.STRIPE_PRICE_PRO || "price_1UOqWAIpQUHCdBSxunv5OqtK").trim();
   let subs = [];
   const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status,price_id&order=updated_at.desc&limit=10', { headers });
   if (subsResponse.ok) {
