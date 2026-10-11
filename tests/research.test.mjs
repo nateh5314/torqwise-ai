@@ -316,3 +316,27 @@ test("labels incomplete reviewed fitment records as insufficient to verify fitme
   assert.ok(fitmentCall, "fitment lookup should run");
   assert.equal(new URL(fitmentCall.url).searchParams.get("part_number"), "eq.ABC123");
 });
+
+
+test("flags fitment records with source checks older than one year", async () => {
+  const oldDate = new Date(Date.now() - 400 * 86400000).toISOString();
+  configure({
+    fitmentResponse: response([{
+      id: 8, part_number: "OLD123", brand: "Example", part_name: "Brake component",
+      vehicle_year_start: 2018, vehicle_year_end: 2020, make: "Example Motors",
+      model: "Pickup", trim: "LT", engine: "5.3L", drive_type: "4WD",
+      axle_position: "front", abs_type: "ABS", market: "CA", status: "verified",
+      evidence: [{ url: "https://example.com/catalog" }],
+      reviewed_at: oldDate, source_checked_at: oldDate,
+    }]),
+    openaiResponse: response({ output: [{ type: "message", content: [{ type: "output_text", text: "Revalidate the catalog source." }] }] })
+  });
+  const result = await handler(request({ body: {
+    asset: "2019 Example Motors Pickup 5.3L", topic: "parts",
+    question: "Check part OLD123 for this vehicle"
+  }}));
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.equal(data.fitmentMatches[0].confidence, "STALE SOURCE CHECK — REVALIDATION REQUIRED BEFORE RELYING ON THIS RECORD");
+  assert.ok(data.fitmentMatches[0].evidenceWarnings.some(w => w.includes("more than 12 months")));
+});
