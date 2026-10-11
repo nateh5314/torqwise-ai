@@ -9,18 +9,21 @@ const base = "https://supabase.example";
 function response(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
-function configure({ userResponse = response({ id: "user-123" }), reservation = response({ allowed: true, remaining: 2, usage_id: 101 }), openaiResponse = response({ output: [{ type: "message", content: [{ type: "output_text", text: "Test research answer", annotations: [] }] }, { type: "web_search_call", action: { sources: [{ url: "https://example.com/source", title: "Example source" }] } }], model: "gpt-5-mini" }) } = {}) {
+function configure({ userResponse = response({ id: "user-123" }), reservation = response({ allowed: true, remaining: 2, usage_id: 101 }), subscriptions = response([]), proPriceId = "", openaiResponse = response({ output: [{ type: "message", content: [{ type: "output_text", text: "Test research answer", annotations: [] }] }, { type: "web_search_call", action: { sources: [{ url: "https://example.com/source", title: "Example source" }] } }], model: "gpt-5-mini" }) } = {}) {
   Object.assign(process.env, {
     SUPABASE_URL: base,
     SUPABASE_ANON_KEY: "public-test-key",
     SUPABASE_SERVICE_ROLE_KEY: "server-test-key",
     OPENAI_API_KEY: "test-placeholder",
   });
+  delete process.env.STRIPE_PRO_PRICE_ID;
+  delete process.env.STRIPE_PRICE_PRO;
+  if (proPriceId) process.env.STRIPE_PRO_PRICE_ID = proPriceId;
   const calls = [];
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), options });
     if (String(url) === base + "/auth/v1/user") return userResponse;
-    if (String(url) === base + "/rest/v1/subscriptions?user_id=eq.user-123&select=status&order=updated_at.desc&limit=1") return response([]);
+    if (String(url) === base + "/rest/v1/subscriptions?user_id=eq.user-123&select=status,price_id&order=updated_at.desc&limit=10") return subscriptions;
     if (String(url) === base + "/rest/v1/rpc/reserve_research_usage") return reservation;
     if (String(url) === base + "/rest/v1/rpc/release_research_usage") return response(true);
     if (String(url) === "https://api.openai.com/v1/responses") return openaiResponse;
