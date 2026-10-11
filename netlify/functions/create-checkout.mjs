@@ -4,7 +4,15 @@ function json(body, status = 200) {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 }
-function env(name) {\n  try {\n    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {\n      const value = Netlify.env.get(name);\n      if (typeof value === "string" && value.trim()) return value.trim();\n    }\n  } catch {}\n  return (process.env[name] || "").trim();\n}
+function env(name) {
+  try {
+    if (typeof Netlify !== "undefined" && Netlify?.env?.get) {
+      const value = Netlify.env.get(name);
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {}
+  return (process.env[name] || "").trim();
+}
 async function getUser(accessToken) {
   const url = env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co", key = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY");
   if (!url || !key) throw new Error("Supabase server configuration is missing.");
