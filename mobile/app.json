@@ -7,12 +7,13 @@
     "userInterfaceStyle": "dark",
     "scheme": "torqwise",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "ca.torqwise.automotive",
       "buildNumber": "1"
     },
     "android": {
       "package": "ca.torqwise.automotive"
-    }
+    },
+    "description": "Automotive diagnostics, VIN lookup, and repair research for drivers and technicians."
   }
 }
