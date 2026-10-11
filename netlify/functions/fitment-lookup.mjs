@@ -7,7 +7,7 @@ function respond(body, status = 200) {
 function env(name) { return (process.env[name] || "").trim(); }
 function normalize(value) { return typeof value === "string" ? value.trim().toLowerCase() : ""; }
 // Keep user text from becoming PostgREST filter syntax or unintended LIKE wildcards.
-function safeFilterText(value) { return value.replace(/[%,_*(),\\\\]/g, ""); }
+function safeFilterText(value) { return value.replace(/[%,_*(),]/g, "").replaceAll("\\\\", ""); }
 
 export default async (req) => {
   if (req.method !== "POST") return respond({ error: "Use POST to look up fitment." }, 405);
