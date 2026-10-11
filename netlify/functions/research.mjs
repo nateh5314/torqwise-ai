@@ -250,6 +250,8 @@ export default async (req) => {
   const safetyFlags = [
     { flag: "braking", pattern: /brake pedal (?:goes to floor|soft|spongy)|brake failure|no brakes|brake fluid leak|brakes? (?:not working|failed)/ },
     { flag: "steering or vehicle control", pattern: /steering (?:failed|locked|loss|failure)|lost steering|wheel (?:about to come off|loose)|control arm (?:broken|separated)/ },
+    { flag: "tire or wheel failure", pattern: /tire (?:blowout|blown|sidewall bulge|cords exposed|separated tread)|tyre (?:blowout|blown|sidewall bulge|cords exposed|separated tread)|wheel (?:studs? broken|lug nuts? missing|coming off)/ },
+    { flag: "airbag or supplemental restraint system", pattern: /airbag (?:deployed unexpectedly|light on with crash|not working|fault)|srs (?:fault|warning|not working)|seat belt pretensioner (?:fault|deployed)/ },
     { flag: "fire, smoke, or fuel leak", pattern: /fuel leak|gasoline leak|diesel leak|smoke from (?:engine|vehicle|wiring)|electrical fire|flames|burning wiring/ },
     { flag: "severe overheating", pattern: /overheating|temperature gauge (?:in red|pegged)|coolant boiling|coolant spraying/ },
     { flag: "high-voltage electric vehicle", pattern: /high[- ]voltage|orange cable|ev battery pack|hybrid battery|electric vehicle battery/ },
