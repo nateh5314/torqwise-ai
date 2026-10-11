@@ -83,13 +83,17 @@ async function releaseResearchUsage(userId, usageId) {
   if (!response.ok) throw new Error('Usage reservation release failed');
 }
 function extractText(response) {
+  // Accept the normal structured Responses output and the convenience
+  // output_text field, so valid answers aren't discarded for shape differences.
   const parts = [];
   for (const item of response.output || []) {
     if (item.type === "message" && Array.isArray(item.content)) {
-      for (const part of item.content) if (part.type === "output_text" && part.text) parts.push(part.text);
+      for (const part of item.content) {
+        if ((part.type === "output_text" || part.type === "text") && typeof part.text === "string" && part.text.trim()) parts.push(part.text);
+      }
     }
   }
-  return parts.join("\n\n").trim();
+  return parts.join("\n\n").trim() || (typeof response.output_text === "string" ? response.output_text.trim() : "");
 }
 function extractSources(response) {
   const sources = new Map();
