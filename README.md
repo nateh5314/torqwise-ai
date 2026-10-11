@@ -1,6 +1,10 @@
-# TORQWISE — Automotive & Equipment Research
+# TORQWISE — Automotive AI Diagnostics & Research
 
-TORQWISE is a mobile-friendly automotive/heavy-equipment research and diagnostic workspace. The goal is to combine guided diagnostics, VIN lookup, source-linked AI research, customer workflows, and a trusted multi-supplier parts marketplace.
+**Official website:** https://torqwiseauto.netlify.app/
+
+TORQWISE is an automotive and heavy-equipment research workspace for AI-assisted vehicle diagnostics, OBD-II trouble-code research, VIN lookup, parts research, fitment checks, and repair planning. It is designed for drivers, DIY vehicle owners, apprentices, and professional technicians who want diagnostic workflows and research together in one place.
+
+**Explore TORQWISE:** [Open the live automotive research workspace](https://torqwiseauto.netlify.app/).
 
 ## Bundled diagnostic data
 
@@ -64,7 +68,6 @@ Use [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) to finish configuration and test 
 - Supplier search links are not live product feeds and do not confirm fitment, stock, shipping, seller quality, or final price.
 - Customer request starting prices are not automatically charged; scope and final price must be confirmed separately.
 - Browser-local drafts are device-specific. Cloud account history requires the account-history SQL schema to be run in Supabase and the Netlify functions to be deployed.
-- The public website has not been confirmed live by these repository changes alone.
 
 ## Pre-launch smoke test
 
