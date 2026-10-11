@@ -26,7 +26,7 @@ export default async (req) => {
   const absType = normalize(body.absType || body.abs_type).slice(0, 80);
   const yearProvided = body.year !== undefined && body.year !== null && String(body.year).trim() !== "";
   const yearText = yearProvided ? String(body.year).trim() : "";
-  const parsedYear = yearProvided && /^\\d{4}$/.test(yearText) ? Number(yearText) : null;
+  const parsedYear = yearProvided && /^\d{4}$/.test(yearText) ? Number(yearText) : null;
   if (yearProvided && (!Number.isInteger(parsedYear) || parsedYear < 1900 || parsedYear > 2200)) {
     return respond({ error: "Enter a valid four-digit vehicle year between 1900 and 2200." }, 400);
   }
