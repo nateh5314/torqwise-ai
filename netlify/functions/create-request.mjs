@@ -51,7 +51,14 @@ export default async (req) => {
       console.error("Customer request insert failed:", saved.status);
       return json({ error: "Could not save your request. Please try again shortly." }, 503);
     }
-    const rows = await saved.json();
+    let rows = [];
+    try {
+      const returned = await saved.json();
+      if (Array.isArray(returned)) rows = returned;
+    } catch {
+      // The insert succeeded; don't tell the customer to retry and risk creating a duplicate.
+    }
+    const savedRow = rows[0] && typeof rows[0] === "object" && !Array.isArray(rows[0]) ? rows[0] : row;
     if (env("RESEND_API_KEY") && env("SUPPORT_EMAIL") && env("EMAIL_FROM")) {
       try {
         await fetch("https://api.resend.com/emails", {
@@ -66,7 +73,7 @@ export default async (req) => {
         });
       } catch (e) { console.error("Request notification email failed:", e?.message || "unknown"); }
     }
-    return json({ request: { ...rows[0], id: rows[0].request_code, email: rows[0].customer_email, customerType: rows[0].customer_type, price: rows[0].quoted_price, created: rows[0].created_at } }, 201);
+    return json({ request: { ...savedRow, id: savedRow.request_code || code, email: savedRow.customer_email || user.email, customerType: savedRow.customer_type || row.customer_type, price: savedRow.quoted_price ?? row.quoted_price, created: savedRow.created_at || null } }, 201);
   } catch (e) {
     console.error("Customer request error:", e?.message || "unknown");
     return json({ error: "Could not submit your request right now." }, 503);
