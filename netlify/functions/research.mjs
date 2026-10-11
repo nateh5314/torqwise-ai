@@ -93,6 +93,7 @@ async function getResearchAccess(req, followUp = false) {
     method: 'POST',
     headers: { apikey: service, authorization: 'Bearer ' + service, 'content-type': 'application/json' },
     body: JSON.stringify({ p_user_id: user.id, p_monthly_limit: 3 }),
+    signal: AbortSignal.timeout(8000),
   });
   if (!reserveResponse.ok) throw new Error('Usage reservation failed; apply supabase/research-usage.sql before enabling AI research');
   const reservation = await reserveResponse.json();
@@ -108,6 +109,7 @@ async function releaseResearchUsage(userId, usageId) {
     method: 'POST',
     headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json' },
     body: JSON.stringify({ p_user_id: userId, p_usage_id: usageId }),
+    signal: AbortSignal.timeout(6000),
   });
   if (!response.ok) throw new Error('Usage reservation release failed');
 }
