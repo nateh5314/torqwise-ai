@@ -741,7 +741,24 @@ async function torqLookupFitment(button){
   const response=await fetch('/.netlify/functions/fitment-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await response.json();if(!response.ok)throw new Error(data.error||'Catalog lookup failed.');
   result.innerHTML='';const summary=document.createElement('p');summary.className='tiny';summary.textContent=data.message||'Catalog search complete.';result.appendChild(summary);
-  (data.matches||[]).forEach(match=>{
+  const matches=Array.isArray(data.matches)?data.matches:[];
+  if(!matches.length){
+   const next=document.createElement('div');next.className='research-result';next.style.marginTop='10px';
+   const nextTitle=document.createElement('strong');nextTitle.textContent='Need help beyond the catalog?';next.appendChild(nextTitle);
+   const nextText=document.createElement('p');nextText.className='tiny';nextText.textContent='No reviewed match is available for these exact details. You can send the same application details into AI research to investigate source material and possible cross-references—without treating an unverified result as confirmed fitment.';next.appendChild(nextText);
+   const nextButton=document.createElement('button');nextButton.type='button';nextButton.className='secondary';nextButton.textContent='Investigate this application with AI ↗';
+   nextButton.addEventListener('click',()=>{
+    const asset=[body.year,body.make,body.model,body.engine].filter(Boolean).join(' ');
+    document.getElementById('researchAsset').value=asset;
+    document.getElementById('researchSerial').value='';
+    document.getElementById('researchTopic').value='parts';
+    document.getElementById('researchQuestion').value='TORQWISE has no reviewed catalog match for this request. Investigate the part/application using source-linked research. Part number: '+(body.partNumber||'not supplied')+'; brand: '+(body.brand||'not supplied')+'; part category: '+(body.partType||'not supplied')+'; year/make/model: '+[body.year,body.make,body.model].filter(Boolean).join(' ')+'; engine: '+(body.engine||'not supplied')+'; trim: '+(body.trim||'not supplied')+'; drivetrain: '+(body.driveType||'not supplied')+'; axle/position: '+(body.axlePosition||'not supplied')+'; ABS/brake configuration: '+(body.absType||'not supplied')+'. Distinguish verified application evidence from unconfirmed leads and list the exact details still needed before ordering.';
+    document.getElementById('research-hub').scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('researchQuestion').focus({preventScroll:true});
+   });
+   next.appendChild(nextButton);result.appendChild(next);
+  }
+  matches.forEach(match=>{
    const card=document.createElement('div');card.className='research-result';card.style.marginTop='8px';
    const title=document.createElement('strong');title.textContent=(match.confidence||match.status||'FITMENT RECORD')+' — '+match.part_number;card.appendChild(title);
    const detail=document.createElement('p');detail.className='tiny';detail.textContent=[match.brand,match.part_name,[match.vehicle_year_start,match.vehicle_year_end].filter(Boolean).join('–'),match.make,match.model,match.trim,match.engine,match.drive_type,match.axle_position,match.abs_type,match.market].filter(Boolean).join(' · ');card.appendChild(detail);
