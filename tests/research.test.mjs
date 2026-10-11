@@ -158,12 +158,16 @@ test("passes detected DTC tokens as a group without inventing code status", asyn
   const result = await handler(request({ body: {
     asset: "2018 Ford F-150 5.0L",
     question: "Intermittent misfire with P0302 and P0171",
-    dtcs: "P0302 current; P0171 pending"
+    dtcs: "P0302 current; P0171 pending",
+    freezeFrame: "P0420 captured at 1800 rpm",
+    liveData: "U0100 observed during network dropout",
+    repairsAttempted: "B1234 recorded before prior repair"
   }}));
   assert.equal(result.status, 200);
   const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
   const payload = JSON.parse(aiCall.options.body);
-  assert.ok(payload.input.includes("P0302, P0171"));
+  assert.ok(payload.input.includes("P0302, P0171, P0420, U0100, B1234"));
+  assert.ok(payload.input.includes("DTC tokens detected in the supplied text"));
   assert.ok(payload.input.includes("status not inferred"));
   assert.ok(payload.input.includes("Analyze relationships across codes"));
 });
