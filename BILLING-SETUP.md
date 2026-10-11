@@ -32,12 +32,23 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 5. Add the final site origin to Supabase Auth's allowed redirect URLs for email confirmation and password reset.
 
 ## Stripe test mode
-1. In Stripe test mode, create a recurring monthly price of CAD 29.99 and copy its Price ID into `STRIPE_PRO_PRICE_ID`.
-2. Add a webhook endpoint at `https://YOUR-STAGING-DOMAIN/.netlify/functions/stripe-webhook`.
-3. Subscribe to `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`.
-4. Copy the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+The Stripe sandbox account was inspected on 2026-10-11. These objects already exist in **test mode**; do not create duplicate products or prices:
+- Pro Technician product: `prod_VPfri29rG2FFmI`
+- Pro Technician monthly price: `price_1UOqWAIpQUHCdBSxunv5OqtK` — CAD 29.99/month
+- Driver product: `prod_VPfqr1DyadZQ7u` with a separate CAD 9.99/month price; this is not the Pro entitlement price.
+- Enabled webhook endpoint: `https://torqwiseauto.netlify.app/.netlify/functions/stripe-webhook`
+- Default customer portal configuration exists and allows payment-method updates, invoice history, and cancellation at period end.
+
+Before accepting test purchases:
+1. Set Netlify `STRIPE_PRO_PRICE_ID=price_1UOqWAIpQUHCdBSxunv5OqtK` (or the supported `STRIPE_PRICE_PRO` alias) in the site environment, with Functions/runtime scope.
+2. Confirm the existing webhook endpoint subscribes to `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`.
+3. Confirm its signing secret is stored as Netlify `STRIPE_WEBHOOK_SECRET`, and that `STRIPE_SECRET_KEY` is a test-mode secret key from the same Stripe account.
+4. Confirm `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`, and the public anon/publishable key are configured in Netlify. Secret values must never be committed or pasted into chat.
 5. Use Stripe test cards only; do not enable live mode.
 6. For one-time service payments, verify the request's server-stored price is used, users cannot pay for another user's request, a pending session is reused, cancelled checkout does not mark the request paid, and only a verified `checkout.session.completed` event with `mode=payment` and `payment_status=paid` marks the request paid.
+
+The Stripe sandbox product, price, webhook endpoint, and portal configuration were confirmed through Stripe's API. Netlify site-level environment values and a complete customer checkout/webhook round trip have **not** been verified yet.
 
 ## Endpoints in this branch
 - `POST /.netlify/functions/create-checkout`: verifies the Supabase access token and creates a hosted Stripe Checkout subscription session.
@@ -60,7 +71,7 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 - The staging site now includes draft Privacy Policy, Terms of Service, and Support pages. Confirm legal business identity, monitored contact address, refund terms, and privacy wording before public launch. The staging HTML wires the account modal to Supabase sign-up/sign-in, shows the CA$29.99/month Pro subscription option, checks the signed-in user's subscription status, and offers the Stripe customer portal when Pro is active. This wiring is not yet production-verified.
 - Fixed-price service requests can use a separate one-time Stripe Checkout flow. The signed webhook marks a request paid only after Stripe reports a completed, paid checkout session, and verifies the stored checkout session ID, currency, and amount against the saved request. Checkout is blocked until an operator reviews scope and changes the request status to `Awaiting customer`. If Resend is configured, that status change emails the customer to return to their account. Custom/business research remains quote-first. This is code-ready but still requires provider configuration and end-to-end test-mode verification.
 - Customer request submission and history are wired to persistent Supabase storage. Optional request notification emails are supported through Resend environment variables, and `/admin.html` provides a restricted request-status dashboard. Set `SUPPORT_EMAIL`, configure the sender, and add the operator's Supabase user UUID to `TORQWISE_ADMIN_USER_IDS` before launch.
-- The AI research endpoint now checks the signed-in user's subscription and enforces a three-report monthly free allowance using `research_usage`. This is a basic count-based quota, not an atomic quota reservation under concurrent requests.
+- The AI research endpoint checks subscription status server-side against the configured Pro Technician price; other active plans do not automatically receive Pro access. Free accounts are limited to three successful reports per UTC calendar month using the atomic `research_usage` reservation function. Pro usage currently bypasses that free-tier counter; reconcile this with the product's advertised monthly allowance before launch.
 - Before enabling live payments, the operator must complete the account configuration, verify that the Stripe price is the intended CA$29.99 recurring plan, set up the billing portal, confirm refund/cancellation terms, and replace or approve the draft legal pages. The site code does not replace these account-level decisions.
 - The existing AI research endpoint currently uses a best-effort in-memory rate limit, which is not suitable for a public paid product by itself.
 - A successful checkout redirect is not proof of payment. Grant access only after a verified webhook updates the subscription record.
