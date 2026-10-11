@@ -253,3 +253,28 @@ test("bounds research usage reservation and release network waits", async () => 
   assert.ok(reserve?.options.signal, "usage reservation should have a timeout");
   assert.ok(release?.options.signal, "usage release should have a timeout");
 });
+
+
+test("returns only valid HTTP(S) citation links with bounded titles", async () => {
+  const calls = configure({ openaiResponse: response({
+    output: [{ type: "message", content: [{
+      type: "output_text",
+      text: "Use verified sources.",
+      annotations: [
+        { type: "url_citation", url: "javascript:alert(1)", title: "unsafe" },
+        { type: "url_citation", url: "https://example.com/oem", title: "OEM manual" },
+        { type: "url_citation", url: "https://example.com/other", title: "T".repeat(400) },
+        { type: "url_citation", url: "not-a-url", title: "invalid" }
+      ]
+    }] }],
+    model: "gpt-5-mini"
+  })});
+  const result = await handler(request());
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.deepEqual(data.sources, [
+    { url: "https://example.com/oem", title: "OEM manual" },
+    { url: "https://example.com/other", title: "T".repeat(240) }
+  ]);
+  assert.ok(calls.some(c => c.url === "https://api.openai.com/v1/responses"));
+});
