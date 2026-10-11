@@ -459,3 +459,18 @@ test("downgrades fitment evidence that has no inspectable source URL", async () 
   assert.equal(data.fitmentMatches[0].confidence, "INCOMPLETE CATALOG RECORD — NOT SUFFICIENT TO VERIFY FITMENT");
   assert.ok(data.fitmentMatches[0].evidenceWarnings.some(w => w.includes("valid HTTP(S) URL")));
 });
+
+
+test("adds no-drive guidance for critical braking, steering, and wheel faults", async () => {
+  for (const symptoms of ["Brake pedal goes to floor", "Lost steering control", "Tire sidewall bulge"]) {
+    const calls = configure();
+    const result = await handler(request({ body: {
+      asset: "Passenger vehicle", question: "Assess this concern", symptoms,
+    }}));
+    assert.equal(result.status, 200);
+    const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+    const payload = JSON.parse(upstream.options.body);
+    assert.ok(payload.input.includes("do not road-test or drive the vehicle"));
+    assert.ok(payload.input.includes("qualified inspection or recovery"));
+  }
+});
