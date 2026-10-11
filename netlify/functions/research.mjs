@@ -184,7 +184,7 @@ function extractSources(response) {
     if (item.type === "message" && Array.isArray(item.content)) {
       for (const part of item.content) {
         for (const a of part.annotations || []) {
-          if (a.type === "url_citation" && a.url) sources.set(a.url, { url: a.url, title: a.title || a.url });
+          if (a.type === "url_citation" && typeof a.url === "string" && /^https?:\/\//i.test(a.url)) sources.set(a.url, { url: a.url, title: typeof a.title === "string" && a.title.trim() ? a.title.trim().slice(0, 240) : a.url });
         }
       }
     }
