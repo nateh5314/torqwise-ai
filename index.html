@@ -507,12 +507,13 @@ function diagRenderHistory(){
  el.innerHTML=h.map(x=>{
   const session=x.session||{},answers=Array.isArray(session.answers)?session.answers:[];
   const findings=String(session.findings||'').trim();
-  const resume=(x.code||x.symptomId)?"<button type=\"button\" class=\"secondary\" onclick=\"diagResumeCase('"+escapeHtml(x.id)+"')\">"+(x.code?'Resume diagnostic':'Resume symptom checks')+"</button>":"";
+  const resume=(x.code||x.symptomId)?"<button type=\"button\" class=\"secondary\" data-resume-case=\""+escapeHtml(x.id)+"\">"+(x.code?'Resume diagnostic':'Resume symptom checks')+"</button>":"";
   return '<div class="order"><div class="orderhead"><span>'+escapeHtml(x.title)+'</span><span class="status">Saved locally</span></div><p>'+escapeHtml(x.vehicle)+' · '+escapeHtml(new Date(x.created).toLocaleString())+'</p>'+
    (answers.length?'<p><strong>Guided answers:</strong> '+escapeHtml(answers.join(' · '))+'</p>':'')+
    (findings?'<p><strong>Test findings:</strong> '+escapeHtml(findings.length>240?findings.slice(0,240)+'…':findings)+'</p>':'<p class="guided-small">No test findings saved.</p>')+
    resume+'</div>';
  }).join('');
+ el.querySelectorAll('[data-resume-case]').forEach(button=>button.addEventListener('click',()=>diagResumeCase(button.getAttribute('data-resume-case'))));
 }
 function diagResumeCase(caseId){
  const item=diagReadHistory().find(row=>row.id===caseId);if(!item)return;
