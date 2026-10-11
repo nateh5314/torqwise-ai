@@ -1,0 +1,31 @@
+name: IndexNow URL notification
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "index.html"
+      - "sitemap.xml"
+      - "robots.txt"
+      - "7c5f1a9e4d2b8c6f0a3e7d1b5f9c2a84.txt"
+      - ".github/workflows/indexnow-notify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify IndexNow of the live homepage
+        env:
+          INDEXNOW_KEY: 7c5f1a9e4d2b8c6f0a3e7d1b5f9c2a84
+        run: |
+          set -eu
+          payload="$(printf '{"host":"torqwiseauto.netlify.app","key":"%s","keyLocation":"https://torqwiseauto.netlify.app/7c5f1a9e4d2b8c6f0a3e7d1b5f9c2a84.txt","urlList":["https://torqwiseauto.netlify.app/"]}' "$INDEXNOW_KEY")"
+          curl --fail-with-body --silent --show-error \
+            --request POST "https://api.indexnow.org/indexnow" \
+            --header "Content-Type: application/json; charset=utf-8" \
+            --data "$payload"
