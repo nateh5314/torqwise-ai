@@ -21,6 +21,7 @@ function harness(initial = []) {
       removeItem: key => { if (key === "torqwise_diag_history_v1") stored = null; }
     },
     diagReadHistory: () => stored ? JSON.parse(stored) : [],
+    DIAG_SYMPTOMS: { nostart: { title: "Cranks but will not start" } },
     diagRenderHistory: () => { renders++; },
     alert: message => alerts.push(message),
     Date, JSON, Number, Array, Set, Error, String, Math
