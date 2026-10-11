@@ -61,7 +61,7 @@ export default async (req) => {
     return ok(engine, row.engine) && ok(trim, row.trim) && ok(driveType, row.drive_type) && ok(axlePosition, row.axle_position) && ok(absType, row.abs_type);
   }).map(row => {
     const vehicleSpecified = year !== null && Boolean(make) && Boolean(model);
-    const coreVehicleMatch = vehicleSpecified && (!row.vehicle_year_start || year >= row.vehicle_year_start) && (!row.vehicle_year_end || year <= row.vehicle_year_end) && normalize(row.make) === make && normalize(row.model) === model;
+    const coreVehicleMatch = vehicleSpecified && Number.isInteger(row.vehicle_year_start) && Number.isInteger(row.vehicle_year_end) && year >= row.vehicle_year_start && year <= row.vehicle_year_end && normalize(row.make) === make && normalize(row.model) === model;
     const specificityMissing = [
       engine && !row.engine ? "catalog engine detail" : null,
       trim && !row.trim ? "catalog trim detail" : null,
@@ -73,6 +73,8 @@ export default async (req) => {
       !driveType && row.drive_type ? "drivetrain" : null,
       !axlePosition && row.axle_position ? "axle/position" : null,
       !absType && row.abs_type ? "ABS configuration" : null,
+      vehicleSpecified && (row.vehicle_year_start == null || row.vehicle_year_end == null) ? "catalog year-range detail" : null,
+      vehicleSpecified && !row.market ? "market/region applicability" : null,
     ].filter(Boolean);
     const evidenceWarnings = [];
     if (!Array.isArray(row.evidence) || row.evidence.length === 0) evidenceWarnings.push("No source evidence attached to this record.");
