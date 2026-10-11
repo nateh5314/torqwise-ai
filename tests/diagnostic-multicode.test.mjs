@@ -69,3 +69,10 @@ test("adds safe network-code guidance when a U-code definition is missing", () =
   assert.match(h.output.innerHTML, /scan all modules/);
   assert.match(h.output.innerHTML, /researchMissingCode/);
 });
+
+test("limits multi-code batches to keep combined research manageable", () => {
+  const h = harness([]);
+  h.search("P0001 P0002 P0003 P0004 P0005 P0006 P0007 P0008 P0009 P0010 P0011 P0012 P0013");
+  assert.match(h.output.innerHTML, /up to 12 codes at a time/);
+  assert.doesNotMatch(h.output.innerHTML, /Multi-code research/);
+});
