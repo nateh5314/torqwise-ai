@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "TORQWISE",
+    "slug": "torqwise",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "torqwise",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ca.torqwise.automotive",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "ca.torqwise.automotive"
+    },
+    "description": "Automotive diagnostics, VIN lookup, and repair research for drivers and technicians.",
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
