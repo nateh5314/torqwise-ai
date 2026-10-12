@@ -60,8 +60,9 @@
 From `mobile/`, once Expo and Apple credentials are configured:
 
 ```sh
-npx eas-cli build --platform ios --profile preview
-npx eas-cli build --platform ios --profile production
+npm run build:ios:preview
+npm run build:ios:production
+npm run submit:ios
 ```
 
 A successful JavaScript bundle or cloud build is not the same as a signed, device-tested, App Store-approved release.
@@ -72,3 +73,13 @@ A successful JavaScript bundle or cloud build is not the same as a signed, devic
 - Native account sign-in and AI research are wired to existing services but still require physical-device acceptance testing; the native Tools screen is an initial implementation. Cloud history, several website workflows, and complete feature parity/paid entitlement integration are not yet complete.
 - The bundle identifier is provisional until ownership and availability are confirmed.
 - The owner must configure their own Apple Developer and Expo accounts. No credentials belong in this repository.
+
+
+## One-command Android owner test
+From `mobile/`, after signing into your Expo account and configuring EAS:
+
+```sh
+npm run build:android:preview
+```
+
+This requests an Android APK through EAS. A configured profile does not mean a binary already exists; wait for the EAS build result, install the APK, and complete device acceptance tests.
