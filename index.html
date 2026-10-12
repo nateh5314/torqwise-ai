@@ -269,7 +269,7 @@
   </div>
  </div>
 </div></section>
-<section class="section" id="services"><div class="wrap"><div class="sectionhead"><div><div class="eyebrow">Straightforward pricing</div><h2>Research that saves you time.</h2><p class="sub">Fixed-scope pilot prices. We review each request first; custom or out-of-scope work gets a quote before payment.</p></div></div><div class="grid">
+<section class="section" id="services"><div class="wrap"><div class="sectionhead"><div><div class="eyebrow">Straightforward pricing</div><h2>Research that saves you time.</h2><p class="sub">Fixed-scope pilot prices. We review each request first; custom or out-of-scope work gets a quote before payment.</p></div></div><div id="proServiceAllowanceBanner" class="notice hidden" role="status" aria-live="polite"><strong>Included with Pro Technician</strong><p class="tiny">Use up to 3 combined monthly requests across Parts Finder, Estimate Comparison, and Used Vehicle Research. Included pricing applies while allowance remains; standard one-time prices apply after it is used.</p></div><div class="grid">
 <article class="card"><div class="iconbox">⚙</div><h3>Parts Finder</h3><p>Find candidate replacement parts and compare supplier options for your vehicle.</p><div class="price">$15 <small>CAD · fixed scope</small></div><ul><li>One vehicle and part category</li><li>Up to two options</li><li>Supplier links and price comparison</li><li>Fitment uncertainties flagged</li></ul><button onclick="chooseService('parts')">Request parts research →</button></article>
 <article class="card"><span class="tag">Popular</span><div class="iconbox">▤</div><h3>Estimate Comparison</h3><p>Turn a repair estimate into a clearer, organized comparison of parts and quoted costs.</p><div class="price">$25 <small>CAD · fixed scope</small></div><ul><li>One existing estimate</li><li>Parts alternatives where available</li><li>Line-item summary</li><li>Questions to ask the shop</li></ul><button onclick="chooseService('estimate')">Compare an estimate →</button></article>
 <article class="card"><div class="iconbox">⌕</div><h3>Used Vehicle Research</h3><p>Prepare for a purchase with a source-linked research brief about a specific vehicle.</p><div class="price">$30 <small>CAD · fixed scope</small></div><ul><li>One vehicle or listing</li><li>Commonly reported issues</li><li>Recall checks and buyer questions</li><li>Maintenance considerations</li></ul><button onclick="chooseService('used')">Research a vehicle →</button></article>
@@ -1169,6 +1169,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       section.innerHTML='<div class="wrap"><div class="card"><div class="eyebrow">TORQWISE PRO TECHNICIAN</div><h2>Unlock Pro Technician</h2><p class="sub">For technicians who need more than three AI research reports a month—without losing the evidence trail.</p><div class="price">$29.99 <small>CAD · monthly</small></div><div class="pro-benefits"><div><strong>Included with Pro</strong><ul><li>Three combined monthly requests across Parts Finder, Estimate Comparison, and Used Vehicle Research</li><li>Continued AI research after the 3-report free monthly allowance</li><li>Source-linked research answers with uncertainty and safety notes</li><li>Follow-up questions to refine an existing report without spending another report</li><li>Saved account history for returning to prior investigations</li><li>Job notebook, fitment lookup, and shareable/exportable reports</li></ul></div><div class="notice"><strong>Free vs. Pro</strong><p class="tiny">Free accounts: 3 new AI research reports per month. Pro: continued AI research while the subscription is active. Other tools may remain available outside the subscription; exact part fitment and repair conclusions still require source verification.</p></div></div><p id="torqProStatus" class="muted"></p><button id="torqProButton">Subscribe to Pro Technician</button><button id="torqPortalButton" class="secondary" style="display:none;margin-top:8px">Manage subscription</button><p id="torqPortalStatus" class="tiny"></p><p class="tiny">Secure payment through Stripe Checkout. You can cancel according to the subscription terms.</p></div></div>';
       const account=byId('account'); account?.parentNode.insertBefore(section,account.nextSibling);card=section;
     }
+    updateProServicePricing();
     const status=byId('torqProStatus'),button=byId('torqProButton'),portal=byId('torqPortalButton'),portalStatus=byId('torqPortalStatus');
     if(!status||!button)return;
     status.style.whiteSpace='pre-wrap';status.style.overflowWrap='anywhere';
@@ -1187,6 +1188,37 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
         location.assign(data.url);
       }catch(err){status.textContent=err.message||'Could not start checkout.';button.disabled=false;button.textContent='Try subscription checkout again';}
     };
+  }
+  function updateProServicePricing(){
+    const banner=byId('proServiceAllowanceBanner');
+    if(banner){banner.classList.toggle('hidden',!pro);}
+    const serviceCards=[...document.querySelectorAll('#services .grid > article.card')];
+    const keys=['parts','estimate','used'];
+    serviceCards.forEach((card,index)=>{
+      const price=card.querySelector('.price');
+      const button=card.querySelector('button');
+      if(!price||!button||!keys[index])return;
+      if(pro){
+        price.innerHTML='Included with Pro <small>while monthly allowance remains</small>';
+        button.textContent=['Request with Pro →','Compare with Pro →','Research with Pro →'][index];
+      }else{
+        price.innerHTML=['$15 <small>CAD · fixed scope</small>','$25 <small>CAD · fixed scope</small>','$30 <small>CAD · fixed scope</small>'][index];
+        button.textContent=['Request parts research →','Compare an estimate →','Research a vehicle →'][index];
+      }
+    });
+    const serviceSelect=byId('service');
+    if(serviceSelect){
+      const labels=pro
+        ?['Parts Finder — included with Pro allowance','$25 CAD after allowance — Estimate Comparison','$30 CAD after allowance — Used Vehicle Research']
+        :['Parts Finder — $15','Estimate Comparison — $25','Used Vehicle Research — $30'];
+      [...serviceSelect.options].slice(0,3).forEach((option,index)=>{option.textContent=labels[index]||option.textContent;});
+    }
+    const fixedScopeNote=document.querySelector('#request .requestaside .card .tiny');
+    if(fixedScopeNote){
+      fixedScopeNote.textContent=pro
+        ?'Pro includes up to 3 combined monthly requests across the three research services. After the allowance is used, standard prices apply: $15 parts finder · $25 estimate comparison · $30 used vehicle research.'
+        :'Fixed-scope pilot prices: $15 parts finder · $25 estimate comparison · $30 used vehicle research. Complex requests are quoted before payment.';
+    }
   }
   async function loadCustomerRequests(){
     if(!client||!currentUser)return;
