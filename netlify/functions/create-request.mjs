@@ -36,9 +36,50 @@ export default async (req) => {
     const details = clean(body.details);
     const vehicle = clean(body.vehicle, 240);
     if (!details || !vehicle) return json({ error: "Enter vehicle/equipment details and describe the request." }, 400);
+
+    // Pro bundle access is granted only from a server-verified active/trialing
+    // subscription row matching the configured Pro Stripe price.
+    let isPro = false;
+    const proPriceId = env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID");
+    if (proPriceId && ["parts", "estimate", "used"].includes(serviceId)) {
+      try {
+        const subs = await fetch(base + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) + "&select=status,price_id&order=updated_at.desc&limit=20", {
+          headers: { apikey: service, authorization: "Bearer " + service },
+          signal: AbortSignal.timeout(8000)
+        });
+        if (!subs.ok) throw new Error("subscription lookup failed");
+        const subRows = await subs.json();
+        isPro = Array.isArray(subRows) && subRows.some(row => row.price_id === proPriceId && ["active", "trialing"].includes(row.status));
+      } catch (e) {
+        console.error("Pro entitlement lookup failed:", e?.message || "unknown");
+        return json({ error: "We could not verify your Pro subscription right now. Please retry shortly; no request was submitted." }, 503);
+      }
+    }
+
+    let includedWithPro = false;
+    if (isPro) {
+      let reservation;
+      try {
+        const reserved = await fetch(base + "/rest/v1/rpc/reserve_pro_service_usage", {
+          method: "POST",
+          headers: { apikey: service, authorization: "Bearer " + service, "content-type": "application/json" },
+          body: JSON.stringify({ p_user_id: user.id, p_request_code: code, p_monthly_limit: 3 }),
+          signal: AbortSignal.timeout(8000)
+        });
+        if (!reserved.ok) throw new Error("Pro allowance reservation failed");
+        reservation = await reserved.json();
+      } catch (e) {
+        console.error("Pro allowance reservation failed:", e?.message || "unknown");
+        return json({ error: "We could not verify your included Pro allowance right now. Please retry shortly; no request was submitted." }, 503);
+      }
+      includedWithPro = reservation?.allowed === true;
+    }
+
     const row = {
       request_code: code, user_id: user.id, service: serviceId, label: services[serviceId][0],
-      quoted_price: services[serviceId][1], status: "Request received", customer_email: user.email,
+      quoted_price: includedWithPro ? 0 : services[serviceId][1],
+      included_with_pro: includedWithPro,
+      status: "Request received", customer_email: user.email,
       customer_type: clean(body.customerType, 40), vehicle, details,
       preferred_timeline: clean(body.deadline, 80) || "Flexible"
     };
@@ -51,14 +92,24 @@ export default async (req) => {
         signal: AbortSignal.timeout(12000)
       });
     } catch (e) {
-      // A network failure/timeout does not prove the database rejected the write.
-      // Tell the customer to check history before retrying to avoid duplicate requests.
+      // The insert may have succeeded, so keep the reservation and ask the user to
+      // check history before retrying rather than risking a duplicate included request.
       console.error("Customer request insert outcome uncertain:", e?.name || "network error");
       return json({
         error: "We could not confirm whether your request was saved. Check your request history before submitting again to avoid a duplicate."
       }, 503);
     }
     if (!saved.ok) {
+      if (includedWithPro) {
+        try {
+          await fetch(base + "/rest/v1/rpc/release_pro_service_usage", {
+            method: "POST",
+            headers: { apikey: service, authorization: "Bearer " + service, "content-type": "application/json" },
+            body: JSON.stringify({ p_user_id: user.id, p_request_code: code }),
+            signal: AbortSignal.timeout(5000)
+          });
+        } catch {}
+      }
       console.error("Customer request insert failed:", saved.status);
       return json({ error: "Could not save your request. Please try again shortly." }, 503);
     }
@@ -80,12 +131,12 @@ export default async (req) => {
             from: env("EMAIL_FROM"),
             to: [env("SUPPORT_EMAIL")],
             subject: "New TORQWISE research request " + code,
-            text: "A customer submitted a TORQWISE research request.\\n\\nRequest: " + code + "\\nService: " + services[serviceId][0] + "\\nCustomer: " + user.email + "\\nVehicle/equipment: " + vehicle + "\\nDetails: " + details + "\\nDeadline: " + (row.preferred_timeline || "Flexible") + "\\n\\nSign in to the connected Supabase dashboard to review the saved request."
+            text: "A customer submitted a TORQWISE research request.\\n\\nRequest: " + code + "\\nService: " + services[serviceId][0] + "\\nCustomer: " + user.email + "\\nVehicle/equipment: " + vehicle + "\\nDetails: " + details + "\\nDeadline: " + (row.preferred_timeline || "Flexible") + "\\nPro bundle included: " + (includedWithPro ? "Yes (monthly allowance)" : "No") + "\\n\\nSign in to the connected Supabase dashboard to review the saved request."
           })
         });
       } catch (e) { console.error("Request notification email failed:", e?.message || "unknown"); }
     }
-    return json({ request: { ...savedRow, id: savedRow.request_code || code, email: savedRow.customer_email || user.email, customerType: savedRow.customer_type || row.customer_type, price: savedRow.quoted_price ?? row.quoted_price, created: savedRow.created_at || null } }, 201);
+    return json({ request: { ...savedRow, id: savedRow.request_code || code, email: savedRow.customer_email || user.email, customerType: savedRow.customer_type || row.customer_type, price: savedRow.quoted_price ?? row.quoted_price, includedWithPro: savedRow.included_with_pro === true || includedWithPro, created: savedRow.created_at || null } }, 201);
   } catch (e) {
     console.error("Customer request error:", e?.message || "unknown");
     return json({ error: "Could not submit your request right now." }, 503);
