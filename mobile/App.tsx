@@ -44,6 +44,7 @@ export default function App() {
   const [bundledDtc, setBundledDtc] = useState<Record<string, Dtc>>({});
   const [databaseReady, setDatabaseReady] = useState(false);
   const [databaseCount, setDatabaseCount] = useState(0);
+  const [databaseSource, setDatabaseSource] = useState<"loading" | "fresh" | "cached" | "starter">("loading");
   const [databaseRetry, setDatabaseRetry] = useState(0);
   const [databaseSyncTime, setDatabaseSyncTime] = useState<string | null>(null);
   const [databaseLoadError, setDatabaseLoadError] = useState("");
@@ -320,9 +321,13 @@ export default function App() {
         const cached = await AsyncStorage.getItem("@torqwise/dtc-database/v1");
         if (cached) {
           const parsed = normalizeDatabase(JSON.parse(cached));
-          if (mounted && Object.keys(parsed).length > 0) {
+          const cachedCount = Object.keys(parsed).length;
+          if (mounted && cachedCount > 0) {
             setBundledDtc(parsed);
-            setDatabaseCount(Object.keys(parsed).length);
+            setDatabaseCount(cachedCount);
+            setDatabaseSource(cachedCount >= 9000 ? "cached" : "starter");
+            const savedSyncTime = await AsyncStorage.getItem("@torqwise/dtc-database/synced-at/v1");
+            if (savedSyncTime && !Number.isNaN(Date.parse(savedSyncTime))) setDatabaseSyncTime(savedSyncTime);
           }
         }
       } catch { /* Ignore a corrupt cache; the starter code list remains available. */ }
@@ -336,13 +341,21 @@ export default function App() {
         if (mounted) {
           setBundledDtc(parsed);
           setDatabaseCount(count);
-          setDatabaseSyncTime(new Date().toISOString());
+          setDatabaseSource("fresh");
+          const syncedAt = new Date().toISOString();
+          setDatabaseSyncTime(syncedAt);
+          try { await AsyncStorage.setItem("@torqwise/dtc-database/synced-at/v1", syncedAt); } catch { /* Sync timestamp is optional. */ }
         }
         try { await AsyncStorage.setItem("@torqwise/dtc-database/v1", JSON.stringify(rows)); } catch { /* Cache storage is optional. */ }
       } catch (cause) {
         if (mounted) setDatabaseLoadError(cause instanceof Error ? cause.message : "Diagnostic library could not be refreshed.");
       }
-      finally { if (mounted) setDatabaseReady(true); }
+      finally {
+        if (mounted) {
+          setDatabaseReady(true);
+          setDatabaseSource(current => current === "loading" ? "starter" : current);
+        }
+      }
     };
     void loadDatabase();
     return () => { mounted = false; };
@@ -525,11 +538,11 @@ export default function App() {
         {tab === "Diagnose" && <>
           <Text style={s.eyebrow}>DIAGNOSTIC WORKSPACE</Text><Text accessibilityRole="header" style={s.pageTitle}>Fault code lookup</Text>
           <Text style={s.body}>Search the generic OBD-II library, then verify the cause with testing.</Text>
-          <View style={s.databasePill}><View style={[s.dot, databaseCount >= 9000 ? {backgroundColor:"#58cf9a"} : {backgroundColor:"#e9ad58"}]}/><Text style={s.databaseText}>{databaseCount >= 9000 ? `${databaseCount.toLocaleString()} GENERIC CODES AVAILABLE` : databaseReady ? "STARTER CODE SET · FULL LIBRARY UNAVAILABLE" : "LOADING DIAGNOSTIC LIBRARY…"}</Text></View>
-          {databaseCount >= 9000 && !!databaseSyncTime && <Text style={s.mutedCaps}>LIBRARY REFRESHED {new Date(databaseSyncTime).toLocaleTimeString()}</Text>}
-          {databaseReady && databaseCount < 9000 && <View style={s.panel}>
-            <Text style={s.panelTitle}>Full diagnostic library unavailable</Text>
-            <Text style={s.body}>{databaseLoadError || "The app is using its small starter set. Connect to the internet and try refreshing the library."}</Text>
+          <View style={s.databasePill}><View style={[s.dot, databaseSource === "fresh" ? {backgroundColor:"#58cf9a"} : databaseSource === "cached" ? {backgroundColor:"#e9ad58"} : {backgroundColor:"#e9ad58"}]}/><Text style={s.databaseText}>{databaseSource === "fresh" ? `${databaseCount.toLocaleString()} CODES · LIVE LIBRARY` : databaseSource === "cached" ? `${databaseCount.toLocaleString()} CODES · CACHED COPY` : databaseSource === "starter" ? "STARTER CODE SET · FULL LIBRARY UNAVAILABLE" : "LOADING DIAGNOSTIC LIBRARY…"}</Text></View>
+          {!!databaseSyncTime && databaseCount >= 9000 && <Text style={s.mutedCaps}>LAST SUCCESSFUL LIBRARY SYNC {new Date(databaseSyncTime).toLocaleString()}</Text>}
+          {databaseReady && !!databaseLoadError && <View style={s.panel}>
+            <Text style={s.panelTitle}>{databaseCount >= 9000 ? "Using saved diagnostic library" : "Full diagnostic library unavailable"}</Text>
+            <Text style={s.body}>{databaseCount >= 9000 ? "The last refresh did not complete. Your saved reference data remains available; reconnect and retry to check for updates. " + databaseLoadError : databaseLoadError || "The app is using its small starter set. Connect to the internet and try refreshing the library."}</Text>
             <TouchableOpacity style={s.secondary} onPress={() => { setDatabaseReady(false); setDatabaseRetry(value => value + 1); }} accessibilityRole="button">
               <Text style={s.secondaryText}>RETRY DIAGNOSTIC LIBRARY</Text>
             </TouchableOpacity>
