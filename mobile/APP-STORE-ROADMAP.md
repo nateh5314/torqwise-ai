@@ -19,9 +19,10 @@
 - [ ] Validate long diagnostic content on smaller iPhones, including keyboard dismissal and scrolling.
 - [ ] Add user-friendly errors for invalid VINs, network timeouts, empty search results and storage failures.
 
-## Stage 3 — Account and paid-product integration
-- [ ] Inspect the existing web authentication model and choose a compatible native sign-in flow.
-- [ ] Store session credentials only in platform-secure storage; test sign-out, token refresh and expired sessions.
+## Stage 3 — Account and paid-product integration (in progress)
+- [x] Inspect the existing web authentication model and choose a compatible native sign-in flow.
+- [x] Add native email/password sign-in and account creation using the existing public Supabase configuration, with session tokens stored through platform secure storage.
+- [ ] Test secure session persistence, sign-out, token refresh, expired sessions, and email-confirmation flows on physical iOS and Android devices.
 - [ ] Sync garage and case history only after sign-in, with clear offline behavior and conflict handling.
 - [ ] Connect AI research through a server-side endpoint; never ship OpenAI keys or Supabase service-role secrets in the binary.
 - [ ] Enforce subscription entitlements server-side, not only with a client-side switch.
