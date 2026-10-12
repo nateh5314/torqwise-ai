@@ -41,6 +41,9 @@ export default function App() {
   const [bundledDtc, setBundledDtc] = useState<Record<string, Dtc>>({});
   const [databaseReady, setDatabaseReady] = useState(false);
   const [databaseCount, setDatabaseCount] = useState(0);
+  const [databaseRetry, setDatabaseRetry] = useState(0);
+  const [databaseSyncTime, setDatabaseSyncTime] = useState<string | null>(null);
+  const [databaseLoadError, setDatabaseLoadError] = useState("");
   const [savedCases, setSavedCases] = useState<SavedCase[]>([]);
   const [casesLoaded, setCasesLoaded] = useState(false);
 
@@ -72,6 +75,7 @@ export default function App() {
       return normalized;
     };
     const loadDatabase = async () => {
+      if (mounted) setDatabaseLoadError("");
       try {
         const cached = await AsyncStorage.getItem("@torqwise/dtc-database/v1");
         if (cached) {
@@ -92,14 +96,17 @@ export default function App() {
         if (mounted) {
           setBundledDtc(parsed);
           setDatabaseCount(count);
+          setDatabaseSyncTime(new Date().toISOString());
         }
         try { await AsyncStorage.setItem("@torqwise/dtc-database/v1", JSON.stringify(rows)); } catch { /* Cache storage is optional. */ }
-      } catch { /* Keep cached or starter data available when offline. */ }
+      } catch (cause) {
+        if (mounted) setDatabaseLoadError(cause instanceof Error ? cause.message : "Diagnostic library could not be refreshed.");
+      }
       finally { if (mounted) setDatabaseReady(true); }
     };
     void loadDatabase();
     return () => { mounted = false; };
-  }, []);
+  }, [databaseRetry]);
 
   useEffect(() => {
     let mounted = true;
@@ -236,6 +243,14 @@ export default function App() {
           <Text style={s.eyebrow}>DIAGNOSTIC WORKSPACE</Text><Text style={s.pageTitle}>Fault code lookup</Text>
           <Text style={s.body}>Search the generic OBD-II library, then verify the cause with testing.</Text>
           <View style={s.databasePill}><View style={[s.dot, databaseCount >= 9000 ? {backgroundColor:"#58cf9a"} : {backgroundColor:"#e9ad58"}]}/><Text style={s.databaseText}>{databaseCount >= 9000 ? `${databaseCount.toLocaleString()} GENERIC CODES AVAILABLE` : databaseReady ? "STARTER CODE SET · FULL LIBRARY UNAVAILABLE" : "LOADING DIAGNOSTIC LIBRARY…"}</Text></View>
+          {databaseCount >= 9000 && !!databaseSyncTime && <Text style={s.mutedCaps}>LIBRARY REFRESHED {new Date(databaseSyncTime).toLocaleTimeString()}</Text>}
+          {databaseReady && databaseCount < 9000 && <View style={s.panel}>
+            <Text style={s.panelTitle}>Full diagnostic library unavailable</Text>
+            <Text style={s.body}>{databaseLoadError || "The app is using its small starter set. Connect to the internet and try refreshing the library."}</Text>
+            <TouchableOpacity style={s.secondary} onPress={() => { setDatabaseReady(false); setDatabaseRetry(value => value + 1); }} accessibilityRole="button">
+              <Text style={s.secondaryText}>RETRY DIAGNOSTIC LIBRARY</Text>
+            </TouchableOpacity>
+          </View>}
           <TextInput style={s.input} value={code} onChangeText={setCode} autoCapitalize="characters" autoCorrect={false} placeholder="Enter code, e.g. P0300" placeholderTextColor="#7e8794" accessibilityLabel="OBD-II diagnostic trouble code"/>
           {dtc ? <View style={s.panel}>
             <View style={s.codeBadge}><Text style={s.codeBadgeText}>{code.trim().toUpperCase()}</Text></View>
