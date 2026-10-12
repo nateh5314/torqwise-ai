@@ -7,10 +7,10 @@
     "start": "expo start",
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
-    "build:android:preview": "eas build --platform android --profile preview",
-    "build:ios:preview": "eas build --platform ios --profile preview",
-    "build:ios:production": "eas build --platform ios --profile production",
-    "submit:ios": "eas submit --platform ios --profile production"
+    "build:android:preview": "npx eas-cli build --platform android --profile preview",
+    "build:ios:preview": "npx eas-cli build --platform ios --profile preview",
+    "build:ios:production": "npx eas-cli build --platform ios --profile production",
+    "submit:ios": "npx eas-cli submit --platform ios --profile production"
   },
   "dependencies": {
     "expo": "~54.0.0",
