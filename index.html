@@ -248,6 +248,20 @@
 
 <section class="section alt" id="vehicle-history"><div class="wrap">
  <div class="sectionhead"><div><div class="eyebrow">Vehicle History Intelligence · Early access</div><h2>Look beyond the odometer.</h2><p class="sub">Organize available history evidence, compare dated kilometre readings, and identify inconsistencies before you buy. TORQWISE does not yet have a live CARFAX Canada connection; no third-party history report is implied here.</p></div></div>
+ <div id="vhiProGate" class="card" style="margin:16px 0">
+  <div class="eyebrow">TORQWISE PRO TECHNICIAN · EXCLUSIVE</div>
+  <h3 style="margin-top:8px">Know more before you buy.</h3>
+  <p>Vehicle History Intelligence is included with Pro Technician. Build an odometer evidence timeline, flag conflicting kilometre readings, document source records, and export your findings for a used-vehicle inspection.</p>
+  <div class="vhi-grid">
+   <div class="vhi-stat"><span class="tiny">Mileage evidence</span><strong>Compare dated readings</strong></div>
+   <div class="vhi-stat"><span class="tiny">Risk flags</span><strong>Spot inconsistencies</strong></div>
+   <div class="vhi-stat"><span class="tiny">Inspection records</span><strong>Keep evidence organized</strong></div>
+   <div class="vhi-stat"><span class="tiny">Report workflow</span><strong>Export a CSV timeline</strong></div>
+  </div>
+  <p class="tiny">Live CARFAX Canada reports are not connected yet and are not included or implied by this preview.</p>
+  <div class="formbuttons"><button type="button" id="vhiUpgradeButton">Unlock with Pro — $29.99 CAD/month</button><button type="button" class="secondary" id="vhiSignInButton">Already Pro? Sign in</button></div>
+ </div>
+ <div id="vhiProContent" class="hidden">
  <div class="vhi-grid">
   <div class="card">
    <div class="diag-label">Step 1 · Vehicle identity</div><h3 style="margin-top:8px">Start with a VIN</h3>
@@ -276,6 +290,7 @@
   <div id="vhiSummary" class="vhi-grid"><div class="vhi-stat"><span class="tiny">Readings recorded</span><strong>0</strong></div><div class="vhi-stat"><span class="tiny">History assessment</span><strong>Not enough evidence</strong></div></div>
   <div id="vhiTimeline" style="margin-top:14px"><div class="empty">Add dated kilometre readings to build a timeline.</div></div>
   <div id="vhiWarnings" aria-live="polite"></div>
+ </div>
  </div>
  <p class="tiny" style="margin-top:12px">Important: an increasing sequence does not prove the odometer is accurate. Missing, conflicting, or decreasing records require follow-up. CARFAX Canada integration will require approved API access, credentials, and commercial terms.</p>
 </div></section>
@@ -1209,6 +1224,12 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       const account=byId('account'); account?.parentNode.insertBefore(section,account.nextSibling);card=section;
     }
     updateProServicePricing();
+    const vhiContent=byId('vhiProContent'),vhiGate=byId('vhiProGate');
+    if(vhiContent)vhiContent.classList.toggle('hidden',!pro);
+    if(vhiGate)vhiGate.classList.toggle('hidden',pro);
+    const vhiUpgrade=byId('vhiUpgradeButton'),vhiSignIn=byId('vhiSignInButton');
+    if(vhiUpgrade)vhiUpgrade.onclick=()=>{if(!currentUser){window.openAuth('signup');return;}byId('torqProSubscription')?.scrollIntoView({behavior:'smooth',block:'center'});};
+    if(vhiSignIn)vhiSignIn.onclick=()=>{if(!currentUser){window.openAuth('signin');return;}refreshAccountUI();};
     const status=byId('torqProStatus'),button=byId('torqProButton'),portal=byId('torqPortalButton'),portalStatus=byId('torqPortalStatus');
     if(!status||!button)return;
     status.style.whiteSpace='pre-wrap';status.style.overflowWrap='anywhere';
