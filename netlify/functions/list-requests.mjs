@@ -29,7 +29,7 @@ export default async (req) => {
       headers: { apikey: service, authorization: "Bearer " + service },
       signal: AbortSignal.timeout(10000)
     });
-    if (!result.ok) throw new Error("Request history lookup failed");
+    if (!result.ok) { console.error("Customer request history lookup failed:", result.status); throw new Error("Request history lookup failed"); }
     let rows;
     try { rows = await result.json(); } catch {
       return json({ error: "Request history returned an unreadable response. Please retry shortly." }, 503);
