@@ -491,6 +491,9 @@ test("Vehicle History Intelligence is presented as a Pro-exclusive feature", asy
   assert.ok(html.includes("vhiGate.classList.toggle('hidden',pro)"));
   assert.match(html, /CARFAX API status: not connected/);
   assert.match(html, /id="vhiExport"/);
+  assert.match(html, /id="vhiReport"/);
+  assert.match(html, /torqwise-inspection-evidence-/);
+  assert.match(html, /This report summarizes user-entered records/);
   assert.match(html, /torqwise-odometer-timeline-/);
   assert.match(html, /not independently verified/);
 });
