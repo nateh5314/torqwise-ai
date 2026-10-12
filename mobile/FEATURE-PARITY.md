@@ -13,7 +13,7 @@ The clients should have equivalent **entitlements and core service availability*
 | Free/paid research entitlement | Server-enforced by research endpoint | Calls same research endpoint with user token | Partial; verify exact mapping for every plan and quota/error responses |
 | Generic OBD-II lookup | Website data bundle and diagnostic UI | Downloads website DTC JSON, caches locally, starter fallback | Partial; verify deployed asset path, record count, parity, last-sync/offline status |
 | VIN decoding | NHTSA vPIC integration | NHTSA vPIC integration | Similar core path; test invalid VIN, timeouts, malformed response and readable result |
-| AI technical research | Existing website research workflow | Native Research screen via server endpoint | Partial; verify equivalent request fields, sources, report output, limits and error states |
+| AI technical research | Existing website research workflow | Native Research screen via server endpoint with 60-second timeout, bounded request fields, readable timeout/network/JSON errors | Partial; verify equivalent request fields, sources, report output, limits and error states on devices |
 | Parts finder / price comparison | Website supplier search and pilot request flows | Native Tools screen with supplier search and AI research hand-off | Partial; native search is a starting point, not parity with the website request/quote workflow |
 | Estimate comparison | Website request workflow | Native Tools can prepare an AI research prompt | Not equivalent yet; map the website's complete form, pricing/quote disclosures and saved request state |
 | Used-vehicle research | Website service request | No dedicated native workflow | Missing parity |
@@ -39,7 +39,7 @@ The clients should have equivalent **entitlements and core service availability*
 - [ ] Test free limits and paid access with representative accounts on both clients, including exhausted quota, canceled subscription, expired session, failed payment and restored entitlement.
 - [ ] Compare representative DTC records and diagnostic steps across web/app; assert record count and last successful data sync.
 - [ ] Compare VIN results for valid, invalid, unsupported, timed-out and malformed responses.
-- [ ] Compare research report content, source links, usage counters, timeout behavior and error messages.
+- [ ] Compare research report content, source links, usage counters, timeout behavior and error messages on physical devices (native request bounds and timeout are now implemented).
 - [ ] Test parts/estimate/used-vehicle workflows from input through final result, including all quote and payment disclosures.
 - [ ] Decide and implement cross-device garage/case history, conflict resolution, export and account deletion.
 - [ ] Test each client independently on a fresh install with the other client never opened.
