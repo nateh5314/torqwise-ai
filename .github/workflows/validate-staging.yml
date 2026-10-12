@@ -28,17 +28,17 @@ jobs:
           with tempfile.TemporaryDirectory() as directory:
               for page in pages:
                   html = pathlib.Path(page).read_text()
-          scripts = re.findall(r"<script([^>]*)>([\\s\\S]*?)</script\\s*>", html, re.IGNORECASE)
-          for number, (attrs, script) in enumerate(scripts):
-              attrs_lower = attrs.lower()
-              if "application/ld+json" in attrs_lower or "importmap" in attrs_lower:
-                  continue
-              if not script.strip():
-                  continue
-              path = pathlib.Path(directory) / f"{pathlib.Path(page).stem}-{number}.js"
-              path.write_text(script)
-              print(f"Checking inline JavaScript: {page} script {number}")
-              subprocess.run(["node", "--check", str(path)], check=True)
+                  scripts = re.findall(r"<script([^>]*)>([\s\S]*?)</script\s*>", html, re.IGNORECASE)
+                  for number, (attrs, script) in enumerate(scripts):
+                      attrs_lower = attrs.lower()
+                      if "application/ld+json" in attrs_lower or "importmap" in attrs_lower:
+                          continue
+                      if not script.strip():
+                          continue
+                      path = pathlib.Path(directory) / f"{pathlib.Path(page).stem}-{number}.js"
+                      path.write_text(script)
+                      print(f"Checking inline JavaScript: {page} script {number}")
+                      subprocess.run(["node", "--check", str(path)], check=True)
           PY
       - name: Check page anchors and marketplace hooks
         run: |
