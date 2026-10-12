@@ -14,7 +14,7 @@
 ## Stage 2 — Core product reliability (in progress)
 - [ ] Verify the deployed site serves `/assets/dtc-database.json`; test actual iPhone network behavior and the 9,000-record threshold.
 - [ ] Add a complete connection state that clearly distinguishes fresh, cached, and starter data and records the last successful library sync.
-- [ ] Add automated tests for VIN validation, DTC normalization, malformed data, cache corruption and offline behavior.
+- [ ] Add automated tests for VIN validation, DTC normalization, malformed data, cache corruption, offline behavior, and native research response parsing.
 - [ ] Extend saved diagnostic cases with technician notes, vehicle association, and export after core local persistence is device-tested.
 - [ ] Validate long diagnostic content on smaller iPhones, including keyboard dismissal and scrolling.
 - [ ] Add user-friendly errors for invalid VINs, network timeouts, empty search results and storage failures.
@@ -24,7 +24,8 @@
 - [x] Add native email/password sign-in and account creation using the existing public Supabase configuration, with session tokens stored through platform secure storage.
 - [ ] Test secure session persistence, sign-out, token refresh, expired sessions, and email-confirmation flows on physical iOS and Android devices.
 - [ ] Sync garage and case history only after sign-in, with clear offline behavior and conflict handling.
-- [ ] Connect AI research through a server-side endpoint; never ship OpenAI keys or Supabase service-role secrets in the binary.
+- [x] Connect native AI research through the existing server-side endpoint using the signed-in user's access token; never ship OpenAI keys or Supabase service-role secrets in the binary.
+- [ ] Test research quota enforcement, timeout/error paths, and source-link rendering on physical devices.
 - [ ] Enforce subscription entitlements server-side, not only with a client-side switch.
 - [ ] Confirm whether native digital subscriptions must use StoreKit / Apple's in-app purchase flow. Do not enable web checkout in the iOS app until the applicable Apple rules have been reviewed.
 
