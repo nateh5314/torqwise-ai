@@ -174,12 +174,30 @@ export default function App() {
       if (sessionError) throw sessionError;
       const token = sessionData.session?.access_token;
       if (!token) throw new Error("Your session has expired. Sign in again.");
-      const response = await fetch(WEB + ".netlify/functions/research", {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: "Bearer " + token },
-        body: JSON.stringify({ asset: researchAsset.trim(), question: researchQuestion.trim(), topic: researchTopic })
-      });
-      const payload = await response.json();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+      let response: Response;
+      try {
+        response = await fetch(WEB + ".netlify/functions/research", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer " + token },
+          body: JSON.stringify({ asset: researchAsset.trim().slice(0, 300), question: researchQuestion.trim().slice(0, 6000), topic: researchTopic }),
+          signal: controller.signal
+        });
+      } catch (cause) {
+        if (cause instanceof Error && cause.name === "AbortError") {
+          throw new Error("Research took longer than 60 seconds. Try a more focused question and run it again.");
+        }
+        throw new Error("Could not reach TORQWISE research. Check your connection and try again.");
+      } finally {
+        clearTimeout(timeout);
+      }
+      let payload: any;
+      try {
+        payload = await response.json();
+      } catch {
+        throw new Error("The research service returned an unreadable response. Please try again.");
+      }
       if (typeof payload?.isPro === "boolean") setResearchIsPro(payload.isPro);
       if (typeof payload?.remaining === "number") setResearchRemaining(payload.remaining);
       if (!response.ok) {
