@@ -14,6 +14,9 @@
     "android": {
       "package": "ca.torqwise.automotive"
     },
-    "description": "Automotive diagnostics, VIN lookup, and repair research for drivers and technicians."
+    "description": "Automotive diagnostics, VIN lookup, and repair research for drivers and technicians.",
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
