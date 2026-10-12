@@ -360,7 +360,7 @@ export default async (req) => {
         model: env("OPENAI_MODEL") || "gpt-5-mini",
         instructions: requestInstructions,
         input,
-        ...(followUp ? {} : { tools: [{ type: "web_search", search_context_size: "medium" }] }),
+        ...(followUp ? {} : { tools: [{ type: "web_search", search_context_size: "low" }] }),
         max_output_tokens: followUp ? 900 : 1800,
         store: false,
       }),
