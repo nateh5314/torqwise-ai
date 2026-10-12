@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
+import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { ActivityIndicator, Linking, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type Tab = "Home" | "Diagnose" | "VIN" | "Garage";
@@ -46,6 +48,112 @@ export default function App() {
   const [databaseLoadError, setDatabaseLoadError] = useState("");
   const [savedCases, setSavedCases] = useState<SavedCase[]>([]);
   const [casesLoaded, setCasesLoaded] = useState(false);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    let authSubscription: { unsubscribe: () => void } | undefined;
+    const initializeAuth = async () => {
+      try {
+        const response = await fetch(WEB + ".netlify/functions/public-config");
+        if (!response.ok) throw new Error("Account configuration is not available.");
+        const config = await response.json();
+        const url = typeof config?.url === "string" ? config.url.trim() : "";
+        const anonKey = typeof config?.anonKey === "string" ? config.anonKey.trim() : "";
+        if (!config?.configured || !/^https:\/\//i.test(url) || !anonKey) {
+          throw new Error("Native sign-in is not configured on the current website deployment.");
+        }
+        const client = createClient(url, anonKey, {
+          auth: {
+            storage: {
+              getItem: (key) => SecureStore.getItemAsync(key),
+              setItem: (key, value) => SecureStore.setItemAsync(key, value),
+              removeItem: (key) => SecureStore.deleteItemAsync(key)
+            },
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: false
+          }
+        });
+        if (!mounted) return;
+        setSupabase(client);
+        const { data, error } = await client.auth.getSession();
+        if (error) throw error;
+        if (mounted) setSession(data.session);
+        const { data: listener } = client.auth.onAuthStateChange((_event, nextSession) => {
+          if (mounted) setSession(nextSession);
+        });
+        authSubscription = listener.subscription;
+      } catch (cause) {
+        if (mounted) setAuthMessage(cause instanceof Error ? cause.message : "Account service could not be reached.");
+      } finally {
+        if (mounted) setAuthLoading(false);
+      }
+    };
+    void initializeAuth();
+    return () => {
+      mounted = false;
+      authSubscription?.unsubscribe();
+    };
+  }, []);
+
+  async function submitAuth() {
+    if (!supabase) {
+      setAuthMessage("Account service is not ready yet. Try again shortly.");
+      return;
+    }
+    const email = authEmail.trim().toLowerCase();
+    if (!email || !authPassword) {
+      setAuthMessage("Enter your email and password.");
+      return;
+    }
+    if (authPassword.length < 8) {
+      setAuthMessage("Use a password with at least 8 characters.");
+      return;
+    }
+    setAuthBusy(true);
+    setAuthMessage("");
+    try {
+      if (authMode === "signup") {
+        const { data, error } = await supabase.auth.signUp({ email, password: authPassword });
+        if (error) throw error;
+        setAuthPassword("");
+        setAuthMessage(data.session
+          ? "Account created and signed in."
+          : "Account created. Check your email to confirm it, then sign in.");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password: authPassword });
+        if (error) throw error;
+        setAuthPassword("");
+        setAuthMessage("Signed in successfully.");
+      }
+    } catch (cause) {
+      setAuthMessage(cause instanceof Error ? cause.message : "Sign-in failed. Check your details and try again.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function signOut() {
+    if (!supabase) return;
+    setAuthBusy(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setAuthMessage("You have been signed out.");
+    } catch (cause) {
+      setAuthMessage(cause instanceof Error ? cause.message : "Sign-out failed. Try again.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -243,6 +351,24 @@ export default function App() {
               <TouchableOpacity key={card.title} style={s.quick} onPress={card.action}>
                 <Text style={s.quickIcon}>{card.icon}</Text><Text style={s.quickTitle}>{card.title}</Text><Text style={s.quickBody}>{card.body}</Text>
               </TouchableOpacity>)}
+          </View>
+          <Text style={[s.section,{marginTop:24}]}>YOUR TORQWISE ACCOUNT</Text>
+          <View style={s.panel}>
+            {authLoading ? <View style={s.formRow}><ActivityIndicator color="#ef5058"/><Text style={s.body}>Connecting secure account service…</Text></View> :
+              session ? <>
+                <Text style={s.panelTitle}>Signed in</Text>
+                <Text style={s.body}>{session.user.email || "Your TORQWISE account"}</Text>
+                <Text style={s.disclaimer}>Your session is stored using the device's secure storage. Cloud history and native AI research are still being integrated.</Text>
+                <TouchableOpacity style={s.secondary} onPress={signOut} disabled={authBusy}><Text style={s.secondaryText}>{authBusy ? "PLEASE WAIT…" : "SIGN OUT"}</Text></TouchableOpacity>
+              </> : <>
+                <Text style={s.panelTitle}>{authMode === "signin" ? "Sign in to TORQWISE" : "Create your TORQWISE account"}</Text>
+                <Text style={s.body}>Use the same email and password as your TORQWISE website account.</Text>
+                <TextInput style={s.input} value={authEmail} onChangeText={setAuthEmail} placeholder="Email address" placeholderTextColor="#7e8794" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" accessibilityLabel="Account email"/>
+                <TextInput style={s.input} value={authPassword} onChangeText={setAuthPassword} placeholder="Password (8+ characters)" placeholderTextColor="#7e8794" secureTextEntry textContentType={authMode === "signin" ? "password" : "newPassword"} autoCapitalize="none" accessibilityLabel="Account password" onSubmitEditing={submitAuth}/>
+                <TouchableOpacity style={s.primary} onPress={submitAuth} disabled={authBusy}><Text style={s.primaryText}>{authBusy ? "PLEASE WAIT…" : authMode === "signin" ? "SIGN IN" : "CREATE ACCOUNT"}</Text></TouchableOpacity>
+                <TouchableOpacity style={s.secondary} onPress={() => { setAuthMode(current => current === "signin" ? "signup" : "signin"); setAuthMessage(""); }}><Text style={s.secondaryText}>{authMode === "signin" ? "NEW TO TORQWISE? CREATE AN ACCOUNT" : "ALREADY HAVE AN ACCOUNT? SIGN IN"}</Text></TouchableOpacity>
+              </>}
+            {!!authMessage && <Text style={s.error}>{authMessage}</Text>}
           </View>
           <View style={s.panel}><Text style={s.panelTitle}>Built for evidence, not guesswork.</Text><Text style={s.body}>Code descriptions are starting points. Confirm faults with measurements and service information for the exact vehicle.</Text></View>
         </>}
