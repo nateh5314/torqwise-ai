@@ -348,7 +348,7 @@ export default function App() {
   }, [vehicles, garageLoaded]);
   const dtc = useMemo(() => bundledDtc[code.trim().toUpperCase()] || CODES[code.trim().toUpperCase()], [code, bundledDtc]);
 
-  async function openWeb() { await Linking.openURL(WEB); }
+  async function openWeb() { try { await Linking.openURL(WEB); } catch { setNotice("Could not open the TORQWISE website. Check your connection and try again."); } }
   async function decodeVin() {
     const value = vin.trim().toUpperCase();
     setError(""); setVinResult("");
@@ -470,7 +470,7 @@ export default function App() {
         </>}
 
         {tab === "Diagnose" && <>
-          <Text style={s.eyebrow}>DIAGNOSTIC WORKSPACE</Text><Text style={s.pageTitle}>Fault code lookup</Text>
+          <Text style={s.eyebrow}>DIAGNOSTIC WORKSPACE</Text><Text accessibilityRole="header" style={s.pageTitle}>Fault code lookup</Text>
           <Text style={s.body}>Search the generic OBD-II library, then verify the cause with testing.</Text>
           <View style={s.databasePill}><View style={[s.dot, databaseCount >= 9000 ? {backgroundColor:"#58cf9a"} : {backgroundColor:"#e9ad58"}]}/><Text style={s.databaseText}>{databaseCount >= 9000 ? `${databaseCount.toLocaleString()} GENERIC CODES AVAILABLE` : databaseReady ? "STARTER CODE SET · FULL LIBRARY UNAVAILABLE" : "LOADING DIAGNOSTIC LIBRARY…"}</Text></View>
           {databaseCount >= 9000 && !!databaseSyncTime && <Text style={s.mutedCaps}>LIBRARY REFRESHED {new Date(databaseSyncTime).toLocaleTimeString()}</Text>}
@@ -499,7 +499,7 @@ export default function App() {
         </>}
 
         {tab === "VIN" && <>
-          <Text style={s.eyebrow}>VEHICLE IDENTIFICATION</Text><Text style={s.pageTitle}>Decode a VIN</Text>
+          <Text style={s.eyebrow}>VEHICLE IDENTIFICATION</Text><Text accessibilityRole="header" style={s.pageTitle}>Decode a VIN</Text>
           <Text style={s.body}>Enter a 17-character VIN to retrieve available manufacturer-reported details from NHTSA.</Text>
           <TextInput style={s.input} value={vin} onChangeText={v => {setVin(v.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "").slice(0,17));setError("");}} autoCapitalize="characters" autoCorrect={false} maxLength={17} placeholder="17-character VIN" placeholderTextColor="#7e8794" accessibilityLabel="Vehicle identification number"/>
           <Text style={s.counter}>{vin.length}/17 CHARACTERS</Text>
@@ -549,7 +549,7 @@ export default function App() {
         </>}
 
         {tab === "Garage" && <>
-          <Text style={s.eyebrow}>YOUR VEHICLES</Text><Text style={s.pageTitle}>My garage</Text>
+          <Text style={s.eyebrow}>YOUR VEHICLES</Text><Text accessibilityRole="header" style={s.pageTitle}>My garage</Text>
           <Text style={s.body}>Keep a working list of vehicles for your next diagnostic session.</Text>
           <View style={s.formRow}><TextInput style={[s.input,{flex:1,marginBottom:0}]} value={vehicle} onChangeText={setVehicle} placeholder="e.g. 2018 Ford F-150 5.0L" placeholderTextColor="#7e8794" returnKeyType="done" onSubmitEditing={addVehicle}/><TouchableOpacity style={s.addButton} onPress={addVehicle}><Text style={s.primaryText}>ADD</Text></TouchableOpacity></View>
           {vehicles.length === 0 ? <View style={s.empty}><Text style={s.emptyIcon}>▣</Text><Text style={s.panelTitle}>Your garage is ready</Text><Text style={s.body}>Add a vehicle to start your local list. Cloud sync and account-linked history are planned for a later integration phase.</Text></View> :
@@ -600,7 +600,7 @@ const s = StyleSheet.create({
   eyebrow:{color:"#ef5058",fontSize:10,letterSpacing:1.8,fontWeight:"900",marginBottom:12},
   heroTitle:{color:"#fff",fontSize:38,lineHeight:42,fontWeight:"900",letterSpacing:-1.2},
   heroBody:{color:"#b6bec9",fontSize:15,lineHeight:23,marginTop:13,marginBottom:22},
-  primary:{minHeight:49,backgroundColor:"#e8323b",borderRadius:12,alignItems:"center",justifyContent:"center",paddingHorizontal:15,marginTop:12},
+  primary:{minHeight:52,backgroundColor:"#e8323b",borderRadius:12,alignItems:"center",justifyContent:"center",paddingHorizontal:15,marginTop:12},
   primaryText:{color:"#fff",fontSize:11,fontWeight:"900",letterSpacing:0.7,textAlign:"center"},
   rule:{height:1,backgroundColor:"#343944",marginTop:22,marginBottom:12},
   mutedCaps:{color:"#838c99",fontSize:9,fontWeight:"800",letterSpacing:1.2},
@@ -614,7 +614,7 @@ const s = StyleSheet.create({
   panelTitle:{color:"#f5f6f8",fontSize:15,fontWeight:"800",marginBottom:8,lineHeight:22},
   body:{color:"#b1bac6",fontSize:13,lineHeight:20,marginBottom:12},
   pageTitle:{color:"#fff",fontSize:29,lineHeight:35,fontWeight:"900",letterSpacing:-0.7,marginBottom:10},
-  input:{backgroundColor:"#141820",borderColor:"#343b47",borderWidth:1,borderRadius:12,paddingHorizontal:15,paddingVertical:14,color:"#fff",fontSize:15,marginTop:10,marginBottom:10},
+  input:{backgroundColor:"#141820",borderColor:"#343b47",borderWidth:1,borderRadius:12,paddingHorizontal:15,paddingVertical:14,color:"#fff",fontSize:16,marginTop:10,marginBottom:10},
   databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},
   databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},
   sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},
@@ -629,7 +629,7 @@ const s = StyleSheet.create({
   codeBadge:{alignSelf:"flex-start",backgroundColor:"#3a171c",borderWidth:1,borderColor:"#8d2d35",borderRadius:7,paddingHorizontal:10,paddingVertical:6,marginBottom:13},
   codeBadgeText:{color:"#ff7b82",fontWeight:"900",fontSize:12,letterSpacing:1},
   label:{color:"#ef646b",fontSize:9,letterSpacing:1.3,fontWeight:"900",marginTop:9,marginBottom:7},
-  secondary:{borderWidth:1,borderColor:"#555d6a",borderRadius:10,minHeight:45,alignItems:"center",justifyContent:"center",paddingHorizontal:12,marginTop:7},
+  secondary:{borderWidth:1,borderColor:"#555d6a",borderRadius:10,minHeight:48,alignItems:"center",justifyContent:"center",paddingHorizontal:12,marginTop:7},
   secondaryText:{color:"#f1f3f6",fontSize:10,fontWeight:"900",letterSpacing:0.6},
   disclaimer:{color:"#818b99",fontSize:10,lineHeight:16,marginTop:16,marginBottom:10},
   counter:{textAlign:"right",color:"#818b99",fontSize:9,fontWeight:"800",letterSpacing:1,marginBottom:5},
