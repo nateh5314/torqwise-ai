@@ -496,4 +496,11 @@ test("Vehicle History Intelligence is presented as a Pro-exclusive feature", asy
   assert.match(html, /This report summarizes user-entered records/);
   assert.match(html, /torqwise-odometer-timeline-/);
   assert.match(html, /not independently verified/);
+  assert.ok(html.includes('Accident / damage history'));
+  assert.ok(html.includes('Title / brand / lien status'));
+  assert.ok(html.includes('Recall status'));
+  assert.ok(html.includes('Ownership / registration history'));
+  assert.ok(html.includes('Unknown — no authorized history provider connected'));
+  assert.ok(html.includes('Buyer evidence checklist'));
+  assert.ok(html.includes('no official recall lookup performed'));
 });
