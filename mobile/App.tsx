@@ -4,7 +4,8 @@ import * as SecureStore from "expo-secure-store";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { ActivityIndicator, Linking, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-type Tab = "Home" | "Diagnose" | "VIN" | "Garage";
+type Tab = "Home" | "Diagnose" | "VIN" | "Garage" | "Research";
+type ResearchSource = { title?: string; url?: string };
 type Dtc = { title: string; meaning: string; steps: string; causes?: string[]; symptoms?: string[]; sources?: string[] };
 type SavedCase = { id: string; code: string; title: string; meaning: string; savedAt: string };
 type DtcRecord = {
@@ -26,7 +27,7 @@ const CODES: Record<string, Dtc> = {
   P0442: { title: "EVAP system small leak", meaning: "The evaporative-emissions monitor detected a leak-sized condition.", steps: "Inspect the fuel cap and EVAP hoses, then follow the OEM-approved leak-test procedure." }
 };
 const TABS: { label: Tab; icon: string }[] = [
-  { label: "Home", icon: "⌂" }, { label: "Diagnose", icon: "⌁" }, { label: "VIN", icon: "▤" }, { label: "Garage", icon: "▣" }
+  { label: "Home", icon: "⌂" }, { label: "Diagnose", icon: "⌁" }, { label: "VIN", icon: "▤" }, { label: "Research", icon: "⌕" }, { label: "Garage", icon: "▣" }
 ];
 
 export default function App() {
@@ -56,6 +57,14 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authMessage, setAuthMessage] = useState("");
+  const [researchAsset, setResearchAsset] = useState("");
+  const [researchQuestion, setResearchQuestion] = useState("");
+  const [researchTopic, setResearchTopic] = useState("diagnostic");
+  const [researchAnswer, setResearchAnswer] = useState("");
+  const [researchSources, setResearchSources] = useState<ResearchSource[]>([]);
+  const [researchRemaining, setResearchRemaining] = useState<number | null>(null);
+  const [researchBusy, setResearchBusy] = useState(false);
+  const [researchError, setResearchError] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -138,6 +147,45 @@ export default function App() {
       setAuthMessage(cause instanceof Error ? cause.message : "Sign-in failed. Check your details and try again.");
     } finally {
       setAuthBusy(false);
+    }
+  }
+
+  async function submitResearch() {
+    if (!session || !supabase) {
+      setResearchError("Sign in with your TORQWISE account before running AI research.");
+      setTab("Home");
+      return;
+    }
+    if (!researchQuestion.trim() && !researchAsset.trim()) {
+      setResearchError("Enter a vehicle or equipment description, or a research question.");
+      return;
+    }
+    setResearchBusy(true);
+    setResearchError("");
+    setResearchAnswer("");
+    setResearchSources([]);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Your session has expired. Sign in again.");
+      const response = await fetch(WEB + ".netlify/functions/research", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + token },
+        body: JSON.stringify({ asset: researchAsset.trim(), question: researchQuestion.trim(), topic: researchTopic })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : "Research could not be completed. Try again.");
+      if (typeof payload?.answer !== "string" || !payload.answer.trim()) throw new Error("The research service returned an empty report.");
+      setResearchAnswer(payload.answer);
+      setResearchSources(Array.isArray(payload.sources) ? payload.sources.filter((item: unknown): item is ResearchSource =>
+        !!item && typeof item === "object" && typeof (item as ResearchSource).url === "string" && (item as ResearchSource).url!.startsWith("https://")
+      ).slice(0, 12) : []);
+      setResearchRemaining(typeof payload.remaining === "number" ? payload.remaining : null);
+    } catch (cause) {
+      setResearchError(cause instanceof Error ? cause.message : "Research failed. Check your connection and try again.");
+    } finally {
+      setResearchBusy(false);
     }
   }
 
@@ -347,7 +395,7 @@ export default function App() {
             {([{title:"Fault codes", body:"Look up common OBD-II codes", icon:"⌁", action:() => setTab("Diagnose")},
               {title:"VIN decoder", body:"Identify a vehicle", icon:"▤", action:() => setTab("VIN")},
               {title:"My garage", body:"Keep vehicles together", icon:"▣", action:() => setTab("Garage")},
-              {title:"Research hub", body:"Open full TORQWISE workspace", icon:"↗", action:openWeb}] as const).map(card =>
+              {title:"AI research", body:"Research diagnostics, parts, and specs", icon:"⌕", action:() => setTab("Research")}] as const).map(card =>
               <TouchableOpacity key={card.title} style={s.quick} onPress={card.action}>
                 <Text style={s.quickIcon}>{card.icon}</Text><Text style={s.quickTitle}>{card.title}</Text><Text style={s.quickBody}>{card.body}</Text>
               </TouchableOpacity>)}
@@ -408,6 +456,38 @@ export default function App() {
           {!!error && <Text style={s.error}>{error}</Text>}
           {!!vinResult && <View style={s.panel}><Text style={s.label}>DECODED VEHICLE DETAILS</Text><Text style={s.panelTitle}>{vinResult}</Text><Text style={s.body}>Confirm engine, drivetrain, trim, and production details before making a repair or parts decision.</Text><TouchableOpacity style={s.secondary} onPress={() => {setVehicle(vinResult);setTab("Garage");}}><Text style={s.secondaryText}>ADD DETAILS TO GARAGE</Text></TouchableOpacity></View>}
           <Text style={s.disclaimer}>VIN decoding is not an OEM parts catalogue and may not return every configuration detail.</Text>
+        </>}
+
+        {tab === "Research" && <>
+          <Text style={s.eyebrow}>SOURCE-LINKED AI WORKSPACE</Text><Text style={s.pageTitle}>Technical research</Text>
+          <Text style={s.body}>Ask a focused automotive or heavy-equipment question. TORQWISE checks your account allowance on the server and returns a report with source links when available.</Text>
+          {!session && <View style={s.panel}><Text style={s.panelTitle}>Sign-in required</Text><Text style={s.body}>Sign in with your existing TORQWISE account on the Home screen to use AI research.</Text><TouchableOpacity style={s.primary} onPress={() => setTab("Home")}><Text style={s.primaryText}>GO TO ACCOUNT  →</Text></TouchableOpacity></View>}
+          <Text style={s.label}>VEHICLE / EQUIPMENT (OPTIONAL)</Text>
+          <TextInput style={s.input} value={researchAsset} onChangeText={setResearchAsset} placeholder="e.g. 2018 Ford F-150 5.0L" placeholderTextColor="#7e8794" accessibilityLabel="Vehicle or equipment"/>
+          <Text style={s.label}>RESEARCH CATEGORY</Text>
+          <View style={s.topicRow}>
+            {([{value:"diagnostic",label:"Diagnostics"},{value:"service",label:"Service"},{value:"parts",label:"Parts"},{value:"spec",label:"Specs"},{value:"diagram",label:"Diagrams"},{value:"bulletin",label:"Bulletins"},{value:"general",label:"General"}] as const).map(item =>
+              <TouchableOpacity key={item.value} style={[s.topicChip,researchTopic===item.value&&s.topicActive]} onPress={() => setResearchTopic(item.value)} accessibilityRole="button" accessibilityState={{selected:researchTopic===item.value}}>
+                <Text style={[s.topicText,researchTopic===item.value&&s.topicTextActive]}>{item.label}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={s.label}>YOUR QUESTION</Text>
+          <TextInput style={[s.input,{minHeight:110,textAlignVertical:"top"}]} value={researchQuestion} onChangeText={setResearchQuestion} placeholder="Describe the fault, symptoms, part number, specification, or test result…" placeholderTextColor="#7e8794" multiline maxLength={1800} accessibilityLabel="Technical research question"/>
+          <TouchableOpacity style={[s.primary,researchBusy&&{opacity:0.6}]} onPress={submitResearch} disabled={researchBusy||!session}>
+            {researchBusy ? <ActivityIndicator color="#fff"/> : <Text style={s.primaryText}>RUN AI RESEARCH  →</Text>}
+          </TouchableOpacity>
+          {!!researchError && <Text style={s.error}>{researchError}</Text>}
+          {!!researchAnswer && <View style={s.panel}>
+            <Text style={s.label}>TORQWISE RESEARCH REPORT</Text>
+            <Text style={s.body}>{researchAnswer}</Text>
+            {!!researchSources.length && <>
+              <Text style={s.label}>SOURCE LINKS</Text>
+              {researchSources.map((source,index)=><TouchableOpacity key={source.url} onPress={() => Linking.openURL(source.url!)} accessibilityRole="link"><Text style={s.sourceLink}>{source.title || source.url}</Text></TouchableOpacity>)}
+            </>}
+            {researchRemaining !== null && <Text style={s.mutedCaps}>{researchRemaining} FREE REPORTS REMAINING THIS MONTH</Text>}
+            <Text style={s.disclaimer}>Research supports troubleshooting; it is not a confirmed diagnosis. Verify specifications and procedures for the exact vehicle or machine.</Text>
+          </View>}
         </>}
 
         {tab === "Garage" && <>
@@ -473,6 +553,11 @@ const s = StyleSheet.create({
   databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},
   databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},
   sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},
+  topicRow:{flexDirection:"row",flexWrap:"wrap",gap:8,marginBottom:8},
+  topicChip:{borderWidth:1,borderColor:"#3a414d",borderRadius:18,paddingHorizontal:11,paddingVertical:8,backgroundColor:"#11151c"},
+  topicActive:{borderColor:"#ef5058",backgroundColor:"#35191d"},
+  topicText:{color:"#aab3c0",fontSize:10,fontWeight:"700"},
+  topicTextActive:{color:"#fff"},
   codeBadge:{alignSelf:"flex-start",backgroundColor:"#3a171c",borderWidth:1,borderColor:"#8d2d35",borderRadius:7,paddingHorizontal:10,paddingVertical:6,marginBottom:13},
   codeBadgeText:{color:"#ff7b82",fontWeight:"900",fontSize:12,letterSpacing:1},
   label:{color:"#ef646b",fontSize:9,letterSpacing:1.3,fontWeight:"900",marginTop:9,marginBottom:7},
