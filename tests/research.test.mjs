@@ -478,3 +478,19 @@ test("adds no-drive guidance for critical braking, steering, and wheel faults", 
     assert.ok(payload.input.includes("qualified inspection or recovery"));
   }
 });
+
+
+test("Vehicle History Intelligence is presented as a Pro-exclusive feature", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(html, /id="vhiProGate"/);
+  assert.match(html, /TORQWISE PRO TECHNICIAN[^<]*EXCLUSIVE/);
+  assert.match(html, /Unlock with Pro — \\$29\\.99 CAD\\/month/);
+  assert.match(html, /id="vhiProContent" class="hidden"/);
+  assert.match(html, /vhiContent\\.classList\\.toggle\\('hidden',!pro\\)/);
+  assert.match(html, /vhiGate\\.classList\\.toggle\\('hidden',pro\\)/);
+  assert.match(html, /CARFAX API status: not connected/);
+  assert.match(html, /id="vhiExport"/);
+  assert.match(html, /torqwise-odometer-timeline-/);
+  assert.match(html, /not independently verified/);
+});
