@@ -351,6 +351,7 @@ export default async (req) => {
     ? "You are TORQWISE answering a follow-up about a previous automotive or heavy-equipment report. Treat the prior report as context, not proof. Start from the new evidence and the previous confirmed measurements, not from the previous answer's conclusions. Separate confirmed observations from hypotheses, keep a short ranked differential, and explain how the new information changes that ranking. Recommend the single most informative safe next test where possible, with normal/abnormal branches and what each result would imply. If the user supplies a test result, interpret that result directly before suggesting more checks. Correct or qualify unsupported prior claims, especially part fitment. Never say a part fits a specific year/model unless supplied context verifies it. State the precise missing detail or specification when it blocks a conclusion. Do not invent specifications, procedures, or source links. Keep the response focused and do not repeat the entire earlier checklist."
     : instructions + " For parts questions, never infer fitment from a part number alone. Identify what source supports each claimed application, distinguish seller cross-reference listings from OEM-confirmed fitment, and explicitly say when reliable fitment evidence is unavailable.";
   let upstream;
+  let payload;
   try {
     upstream = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -388,7 +389,7 @@ export default async (req) => {
         const retryAnswer = retry.ok ? extractText(retryPayload) : "";
         if (retryAnswer) {
           payload = retryPayload;
-          upstream = retry;
+          upstream = null;
           // Continue through the normal answer/source handling below.
         } else {
           try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
@@ -404,12 +405,11 @@ export default async (req) => {
       return json({ error: "Could not reach the AI research service. Please retry shortly." }, 502);
     }
   }
-  let payload;
-  try { payload = await upstream.json(); } catch {
+  try { if (!payload) payload = await upstream.json(); } catch {
     try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: "The AI service returned an unreadable response." }, 502);
   }
-  if (!upstream.ok) {
+  if (upstream && !upstream.ok) {
     try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     console.error("TORQWISE OpenAI API error:", upstream.status, payload?.error?.code || "unknown");
     if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website." }, 502);
