@@ -8,11 +8,12 @@
 - [x] Local vehicle garage persistence
 - [x] Runtime loader for the website's generic DTC JSON, local cache and starter fallback
 - [x] Local diagnostic case history with save, reopen, delete, timestamp, and a 100-case cap
+- [x] User-facing retry action and error state when the hosted diagnostic library cannot be refreshed
 - [x] CI type-check, iOS JavaScript bundle export and Expo config validation
 
-## Stage 2 — Core product reliability (next)
+## Stage 2 — Core product reliability (in progress)
 - [ ] Verify the deployed site serves `/assets/dtc-database.json`; test actual iPhone network behavior and the 9,000-record threshold.
-- [ ] Add a user-facing connection state with retry action, last successful sync time, and a clear distinction between cached and starter data.
+- [ ] Add a complete connection state that clearly distinguishes fresh, cached, and starter data and records the last successful library sync.
 - [ ] Add automated tests for VIN validation, DTC normalization, malformed data, cache corruption and offline behavior.
 - [ ] Extend saved diagnostic cases with technician notes, vehicle association, and export after core local persistence is device-tested.
 - [ ] Validate long diagnostic content on smaller iPhones, including keyboard dismissal and scrolling.
