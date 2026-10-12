@@ -4,7 +4,7 @@ The repository now contains the website, account integration, server-side resear
 
 ## Required Supabase migrations
 
-Before enabling AI research, run `supabase/research-usage.sql` in the Supabase SQL Editor. This creates the private usage table and the atomic monthly reservation/release functions used by the server. The endpoint fails closed if this migration is missing; do not bypass that check. Free accounts are limited to 3 successful AI research reports per calendar month. Pro access is determined server-side from the subscription table.
+Before enabling AI research, run `supabase/research-usage.sql` and `supabase/pro-service-bundle.sql` in the Supabase SQL Editor. These create the private usage tables and atomic monthly reservation/release functions used by the server. The endpoints fail closed if a required migration is missing; do not bypass those checks. Free accounts are limited to 3 successful AI research reports per calendar month. Active Pro subscribers get 3 combined monthly included requests across Parts Research, Estimate Comparison, and Used Vehicle Research. After the three included service requests are used, additional fixed-scope requests remain available at the listed one-time prices. Pro access is determined server-side from the subscription table and configured Pro Stripe Price ID.
 
 ## Required Netlify environment variables
 Set these on the Netlify site, with Functions/runtime scope. Start with Stripe test mode; switch to live credentials only when you are ready to accept real payments:
@@ -26,7 +26,7 @@ Never put secret keys in HTML, commit them to Git, or send them in chat/screensh
 
 ## Supabase
 1. Open the staging Supabase project SQL Editor.
-2. Run `supabase/subscriptions.sql`, `supabase/research-usage.sql`, `supabase/customer-requests.sql`, and `supabase/account-history.sql`. The last script creates the per-account saved research, diagnostic, parts, and job history table.
+2. Run `supabase/subscriptions.sql`, `supabase/research-usage.sql`, `supabase/customer-requests.sql`, `supabase/pro-service-bundle.sql`, and `supabase/account-history.sql`. The last script creates the per-account saved research, diagnostic, parts, and job history table.
 3. Confirm email/password authentication is enabled and email confirmation settings are suitable for testing.
 4. Keep the service-role key server-side only.
 5. Add the final site origin to Supabase Auth's allowed redirect URLs for email confirmation and password reset.
@@ -55,7 +55,7 @@ The Stripe sandbox product, price, enabled webhook endpoint/event list, and port
 - `POST /.netlify/functions/create-service-checkout`: verifies the signed-in user owns the request, applies the server-side CAD price for fixed-scope research, and creates/reuses a hosted one-time Stripe Checkout session.
 - `POST /.netlify/functions/create-portal`: verifies the signed-in user and creates a Stripe customer portal session for an existing subscription.
 - `GET /.netlify/functions/public-config`: returns only the public Supabase URL and anon key for the browser; it never returns secret keys.
-- `POST /.netlify/functions/create-request`: validates the signed-in account and stores a customer research request.
+- `POST /.netlify/functions/create-request`: validates the signed-in account, verifies active Pro entitlement server-side, and reserves one of three combined monthly included fixed-scope service requests when available; further requests retain their regular one-time price.
 - `GET /.netlify/functions/list-requests`: returns only the signed-in customer's saved request history.
 - `GET/PATCH /.netlify/functions/admin-requests`: operator-only request management, restricted to `TORQWISE_ADMIN_USER_IDS`.
 - `GET /.netlify/functions/billing-status`: verifies the user and returns that user's subscription state.
