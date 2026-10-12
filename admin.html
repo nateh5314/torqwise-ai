@@ -1,16 +1,76 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101114"><title>TORQWISE Operator</title><style>
-:root{color-scheme:dark;--bg:#101114;--panel:#191a1f;--line:#34353d;--text:#f4f4f5;--muted:#b3b4bc;--red:#f0444b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}header,main{max-width:1150px;margin:auto;padding:24px}header{border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.brand{font-weight:900;letter-spacing:2px;color:var(--red)}a{color:#ff777c}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin:18px 0}.muted{color:var(--muted)}input,button,select{font:inherit;border-radius:8px;padding:10px 12px;border:1px solid var(--line);background:#111216;color:var(--text)}input{display:block;width:100%;margin:8px 0 14px}button{background:var(--red);border-color:var(--red);font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.request{border-top:1px solid var(--line);padding:18px 0}.meta{color:var(--muted);font-size:.88rem}.statusrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.statusrow select{max-width:220px}#notice{white-space:pre-wrap}.hidden{display:none!important}
-</style></head><body><header><div><a class="brand" href="/">TORQWISE</a><div class="muted">Private operator dashboard</div></div><a href="/">Return to website</a></header><main><h1>Research requests</h1><p class="muted">Only user IDs listed in the Netlify environment variable <code>TORQWISE_ADMIN_USER_IDS</code> can access customer requests.</p><section id="login" class="card"><h2>Operator sign in</h2><form id="loginForm"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form><p id="loginNotice" class="muted"></p></section><section id="workspace" class="card hidden"><div class="statusrow"><h2 style="margin-right:auto">Customer requests</h2><button id="refresh">Refresh</button><button id="logout">Sign out</button></div><p id="notice" class="muted"></p><div id="requests"></div></section></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101114"><title>TORQWISE Operator</title>
+<style>
+:root{color-scheme:dark;--bg:#101114;--panel:#191a1f;--line:#34353d;--text:#f4f4f5;--muted:#b3b4bc;--red:#f0444b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+header,main{max-width:1150px;margin:auto;padding:24px}header{border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:900;letter-spacing:2px;color:var(--red)}a{color:#ff777c}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin:18px 0}
+.muted{color:var(--muted)}input,button,select{font:inherit;border-radius:8px;padding:10px 12px;border:1px solid var(--line);background:#111216;color:var(--text)}
+input{display:block;width:100%;margin:8px 0 14px}button{background:var(--red);border-color:var(--red);font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+.request{border-top:1px solid var(--line);padding:18px 0}.meta{color:var(--muted);font-size:.88rem}.statusrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.statusrow select{max-width:220px}#notice{white-space:pre-wrap}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header><div><a class="brand" href="/">TORQWISE</a><div class="muted">Private operator dashboard</div></div><a href="/">Return to website</a></header>
+<main>
+<h1>Research requests</h1><p class="muted">Only user IDs listed in the Netlify environment variable <code>TORQWISE_ADMIN_USER_IDS</code> can access customer requests.</p>
+<section id="login" class="card"><h2>Operator sign in</h2><form id="loginForm"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required><button id="loginButton" type="submit">Sign in</button></form><p id="loginNotice" class="muted" role="status"></p></section>
+<section id="workspace" class="card hidden"><div class="statusrow"><h2 style="margin-right:auto">Customer requests</h2><button id="refresh">Refresh</button><button id="logout">Sign out</button></div><p id="notice" class="muted" role="status"></p><div id="requests"></div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
 let client=null,session=null;
 const el=id=>document.getElementById(id);
-async function init(){try{const r=await fetch('/.netlify/functions/public-config',{cache:'no-store'});if(!r.ok)throw new Error('Account service is not configured.');const c=await r.json();client=window.supabase.createClient(c.url,c.anonKey);const x=await client.auth.getSession();session=x.data.session;if(session)await loadRequests();}catch(e){el('notice').textContent=e.message;el('loginNotice').textContent=e.message;}}
-async function api(method,body){const r=await fetch('/.netlify/functions/admin-requests',{method,headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.error||'Request failed');return d;}
-async function loadRequests(){if(!session)return;el('login').classList.add('hidden');el('workspace').classList.remove('hidden');el('notice').textContent='Loading requests…';try{const d=await api('GET');el('notice').textContent=d.requests.length+' saved request(s).';el('requests').replaceChildren();for(const q of d.requests){const card=document.createElement('article');card.className='request';const title=document.createElement('h3');title.textContent=q.request_code+' · '+q.label;const meta=document.createElement('p');meta.className='meta';meta.textContent=q.customer_email+' · '+q.vehicle+' · '+new Date(q.created_at).toLocaleString();const detail=document.createElement('p');detail.textContent=q.details;const price=document.createElement('p');price.className='meta';price.textContent='Starting price: '+(q.quoted_price==null?'quote required':'CA$'+Number(q.quoted_price).toFixed(2))+' · Payment: '+(q.payment_status||'unpaid')+(q.paid_at?' ('+new Date(q.paid_at).toLocaleDateString()+')':'')+' · Preferred timeline: '+(q.preferred_timeline||q.deadline||'Flexible');const row=document.createElement('div');row.className='statusrow';const select=document.createElement('select');for(const v of ['Request received','In progress','Awaiting customer','Completed','Declined']){const opt=document.createElement('option');opt.value=v;opt.textContent=v;select.append(opt)}select.value=q.status;const save=document.createElement('button');save.textContent='Save status';save.onclick=async()=>{save.disabled=true;try{await api('PATCH',{request_code:q.request_code,status:select.value});el('notice').textContent='Updated '+q.request_code+'.';}catch(e){el('notice').textContent=e.message;}finally{save.disabled=false}};row.append(select,save);card.append(title,meta,detail,price,row);el('requests').append(card)}}catch(e){el('notice').textContent=e.message;}}
-el('loginForm').addEventListener('submit',async e=>{e.preventDefault();el('loginNotice').textContent='Signing in…';try{const r=await client.auth.signInWithPassword({email:el('email').value.trim(),password:el('password').value});if(r.error)throw r.error;session=r.data.session;await loadRequests()}catch(err){el('loginNotice').textContent=err.message}});
-el('refresh').onclick=loadRequests;el('logout').onclick=async()=>{await client.auth.signOut();session=null;el('workspace').classList.add('hidden');el('login').classList.remove('hidden')};init();
-</script></body></html>+Number(q.quoted_price).toFixed(2))+' · Payment: '+(q.payment_status||'unpaid')+(q.paid_at?' ('+new Date(q.paid_at).toLocaleDateString()+')':'')+' · Preferred timeline: '+(q.preferred_timeline||q.deadline||'Flexible');const row=document.createElement('div');row.className='statusrow';const select=document.createElement('select');for(const v of ['Request received','In progress','Awaiting customer','Completed','Declined']){const opt=document.createElement('option');opt.value=v;opt.textContent=v;select.append(opt)}select.value=q.status;const save=document.createElement('button');save.textContent='Save status';save.onclick=async()=>{save.disabled=true;try{await api('PATCH',{request_code:q.request_code,status:select.value});el('notice').textContent='Updated '+q.request_code+'.';}catch(e){el('notice').textContent=e.message;}finally{save.disabled=false}};row.append(select,save);card.append(title,meta,detail,price,row);el('requests').append(card)}}catch(e){el('notice').textContent=e.message;}}
-el('loginForm').addEventListener('submit',async e=>{e.preventDefault();el('loginNotice').textContent='Signing in…';try{const r=await client.auth.signInWithPassword({email:el('email').value.trim(),password:el('password').value});if(r.error)throw r.error;session=r.data.session;await loadRequests()}catch(err){el('loginNotice').textContent=err.message}});
-el('refresh').onclick=loadRequests;el('logout').onclick=async()=>{await client.auth.signOut();session=null;el('workspace').classList.add('hidden');el('login').classList.remove('hidden')};init();
-</script></body></html>
+async function init(){
+ try{
+  const r=await fetch('/.netlify/functions/public-config',{cache:'no-store'});
+  if(!r.ok)throw new Error('Account service is not configured.');
+  const c=await r.json();client=window.supabase.createClient(c.url,c.anonKey);
+  const x=await client.auth.getSession();session=x.data.session;
+  if(session)await loadRequests();
+ }catch(e){el('notice').textContent=e.message;el('loginNotice').textContent=e.message;}
+}
+async function api(method,body){
+ const r=await fetch('/.netlify/functions/admin-requests',{method,headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:body?JSON.stringify(body):undefined,cache:'no-store'});
+ let d={};try{d=await r.json()}catch{}
+ if(!r.ok)throw new Error(d.error||'Request failed');return d;
+}
+async function loadRequests(){
+ if(!session)return;
+ el('login').classList.add('hidden');el('workspace').classList.remove('hidden');el('notice').textContent='Loading requests…';
+ try{
+  const d=await api('GET');const requests=Array.isArray(d.requests)?d.requests:[];
+  el('notice').textContent=requests.length+' saved request(s).';el('requests').replaceChildren();
+  for(const q of requests){
+   const card=document.createElement('article');card.className='request';
+   const title=document.createElement('h3');title.textContent=q.request_code+' · '+(q.label||q.service||'Research request');
+   const meta=document.createElement('p');meta.className='meta';meta.textContent=[q.customer_email,q.vehicle,new Date(q.created_at).toLocaleString()].filter(Boolean).join(' · ');
+   const detail=document.createElement('p');detail.textContent=q.details||'No details supplied.';
+   const price=document.createElement('p');price.className='meta';
+   const amount=q.quoted_price==null?'quote required':'CA$'+Number(q.quoted_price).toFixed(2);
+   const payment=q.payment_status||'unpaid';
+   price.textContent=(q.included_with_pro?'Pro included · no payment required':'Starting price: '+amount+' · Payment: '+payment)+(q.paid_at?' ('+new Date(q.paid_at).toLocaleDateString()+')':'')+' · Preferred timeline: '+(q.preferred_timeline||q.deadline||'Flexible');
+   const row=document.createElement('div');row.className='statusrow';
+   const select=document.createElement('select');select.setAttribute('aria-label','Status for '+q.request_code);
+   for(const v of ['Request received','In progress','Awaiting customer','Completed','Declined']){const opt=document.createElement('option');opt.value=v;opt.textContent=v;select.append(opt)}
+   select.value=q.status||'Request received';
+   const save=document.createElement('button');save.textContent='Save status';
+   save.onclick=async()=>{save.disabled=true;try{await api('PATCH',{request_code:q.request_code,status:select.value});el('notice').textContent='Updated '+q.request_code+'.';}catch(e){el('notice').textContent=e.message;}finally{save.disabled=false}};
+   row.append(select,save);card.append(title,meta,detail,price,row);el('requests').append(card);
+  }
+ }catch(e){el('notice').textContent=e.message;}
+}
+el('loginForm').addEventListener('submit',async e=>{
+ e.preventDefault();el('loginButton').disabled=true;el('loginNotice').textContent='Signing in…';
+ try{const r=await client.auth.signInWithPassword({email:el('email').value.trim(),password:el('password').value});if(r.error)throw r.error;session=r.data.session;await loadRequests();}
+ catch(err){el('loginNotice').textContent=err.message;}
+ finally{el('loginButton').disabled=false;}
+});
+el('refresh').onclick=loadRequests;
+el('logout').onclick=async()=>{if(client)await client.auth.signOut();session=null;el('workspace').classList.add('hidden');el('login').classList.remove('hidden')};
+init();
+</script>
+</body></html>

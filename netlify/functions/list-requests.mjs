@@ -25,7 +25,7 @@ export default async (req) => {
     let user;
     try { user = await auth.json(); } catch { return json({ error: "Your session could not be verified. Please sign in again." }, 401); }
     if (!user || typeof user.id !== "string" || !user.id) return json({ error: "Your session could not be verified. Please sign in again." }, 401);
-    const result = await fetch(base + "/rest/v1/customer_requests?user_id=eq." + encodeURIComponent(user.id) + "&select=request_code,service,label,quoted_price,payment_status,paid_at,status,customer_email,customer_type,vehicle,details,deadline,preferred_timeline,created_at&order=created_at.desc&limit=100", {
+    const result = await fetch(base + "/rest/v1/customer_requests?user_id=eq." + encodeURIComponent(user.id) + "&select=request_code,service,label,quoted_price,payment_status,paid_at,included_with_pro,status,customer_email,customer_type,vehicle,details,deadline,preferred_timeline,created_at&order=created_at.desc&limit=100", {
       headers: { apikey: service, authorization: "Bearer " + service },
       signal: AbortSignal.timeout(10000)
     });

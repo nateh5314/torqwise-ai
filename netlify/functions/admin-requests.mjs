@@ -18,7 +18,7 @@ export default async req => {
     if (!admins.includes(user.id)) return json({ error: "You are not authorized to access the operator dashboard." }, 403);
     const headers = { apikey: service, authorization: "Bearer " + service, "content-type": "application/json" };
     if (req.method === "GET") {
-      const result = await fetch(base + "/rest/v1/customer_requests?select=request_code,service,label,quoted_price,payment_status,paid_at,status,customer_email,customer_type,vehicle,details,deadline,preferred_timeline,created_at&order=created_at.desc&limit=250", { headers });
+      const result = await fetch(base + "/rest/v1/customer_requests?select=request_code,service,label,quoted_price,payment_status,paid_at,included_with_pro,status,customer_email,customer_type,vehicle,details,deadline,preferred_timeline,created_at&order=created_at.desc&limit=250", { headers });
       if (!result.ok) throw new Error("Could not load requests");
       return json({ requests: await result.json() });
     }
@@ -36,15 +36,15 @@ export default async req => {
     if (body.status === "Awaiting customer" && env("RESEND_API_KEY") && env("EMAIL_FROM") && env("SITE_URL") && rows[0].customer_email) {
       try {
         const request = rows[0];
-        const amount = request.quoted_price == null ? "a quote to be confirmed" : "CA$" + Number(request.quoted_price).toFixed(2);
+        const amount = request.included_with_pro === true ? "included with TORQWISE Pro (no payment required)" : request.quoted_price == null ? "a quote to be confirmed" : "CA$" + Number(request.quoted_price).toFixed(2);
         const email = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { authorization: "Bearer " + env("RESEND_API_KEY"), "content-type": "application/json" },
           body: JSON.stringify({
             from: env("EMAIL_FROM"),
             to: [request.customer_email],
-            subject: "Your TORQWISE research request is ready for payment",
-            text: "Your TORQWISE request " + code + " has been reviewed and is ready for the next step.\n\nService: " + (request.label || request.service) + "\nPrice: " + amount + "\n\nSign in to your TORQWISE account at " + env("SITE_URL").replace(/\/$/, "") + "/#account to review the request and use secure checkout when available. Custom research remains quote-first. If the scope or price does not look right, contact support before paying."
+            subject: request.included_with_pro === true ? "Your TORQWISE Pro research request is in progress" : "Your TORQWISE research request is ready for payment",
+            text: "Your TORQWISE request " + code + " has been reviewed.\n\nService: " + (request.label || request.service) + "\nPrice: " + amount + "\n\nSign in to your TORQWISE account at " + env("SITE_URL").replace(/\/$/, "") + "/#account to review the request. " + (request.included_with_pro === true ? "This request is covered by your Pro monthly allowance; no checkout is needed." : "Use secure checkout when available. Custom research remains quote-first. If the scope or price does not look right, contact support before paying.")
           })
         });
         if (!email.ok) console.error("Customer ready-for-payment email failed:", email.status);
