@@ -364,7 +364,7 @@ export default async (req) => {
         max_output_tokens: followUp ? 900 : 1800,
         store: false,
       }),
-      signal: AbortSignal.timeout(38000),
+      signal: AbortSignal.timeout(12000),
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
@@ -382,7 +382,7 @@ export default async (req) => {
             max_output_tokens: followUp ? 900 : 1400,
             store: false,
           }),
-          signal: AbortSignal.timeout(18000),
+          signal: AbortSignal.timeout(9000),
         });
         let retryPayload = {};
         try { retryPayload = await retry.json(); } catch {}
@@ -432,7 +432,7 @@ export default async (req) => {
           max_output_tokens: 2200,
           store: false,
         }),
-        signal: AbortSignal.timeout(38000),
+        signal: AbortSignal.timeout(12000),
       });
       let retryPayload = {};
       try { retryPayload = await retry.json(); } catch {}
