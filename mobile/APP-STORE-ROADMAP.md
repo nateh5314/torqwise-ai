@@ -61,6 +61,6 @@ A successful JavaScript bundle or cloud build is not the same as a signed, devic
 ## Known limitations — do not treat as complete
 - The app has not yet been signed, installed on a physical iPhone, submitted to TestFlight or reviewed by Apple.
 - The generic DTC dataset is downloaded at runtime from the production website. If the deployed site does not serve it correctly, only the starter codes are available.
-- Native account sign-in and AI research are wired to existing services but still require physical-device acceptance testing; cloud history and paid entitlement integration are not yet complete.
+- Native account sign-in and AI research are wired to existing services but still require physical-device acceptance testing; cloud history and complete feature parity/paid entitlement integration are not yet complete.
 - The bundle identifier is provisional until ownership and availability are confirmed.
 - The owner must configure their own Apple Developer and Expo accounts. No credentials belong in this repository.
