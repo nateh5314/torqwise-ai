@@ -363,9 +363,10 @@ export default async (req) => {
         // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
         ...(followUp ? {} : {}),
         max_output_tokens: followUp ? 700 : 1100,
+        reasoning: { effort: "low" },
         store: false,
       }),
-      signal: AbortSignal.timeout(7500),
+      signal: AbortSignal.timeout(16000),
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
