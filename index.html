@@ -1374,4 +1374,66 @@ Object.assign(DIAG_GUIDES,{
  P0740:torqGuidePair({beginner:"P0740 commonly indicates a torque-converter-clutch circuit or control fault. Wiring, solenoid, connector, controller command or an internal transmission issue may be involved.",topic:"Torque-converter clutch circuit",q1:"Are there slipping, shudder, overheating or abnormal-shift symptoms?",yes1:"Transmission symptom present",no1:"No obvious symptom",q2:"Have TCM codes, TCC command/slip data and the electrical circuit been checked with the correct service information?",yes2:"Data and circuit reviewed",no2:"Checks not completed",yesText:"Follow the transmission-specific diagnostic procedure and avoid towing or hard use if slipping or overheating is present.",noText:"Inspect accessible connectors and harness routing, then test circuit/control with the OEM pinout.",unknownText:"Save all transmission codes and freeze-frame. Fluid level/temperature procedures are transmission-specific.",next:"Do not condemn the torque converter from this code alone; separate electrical, hydraulic and mechanical evidence.",advanced:["Record TCM codes, freeze-frame and TCC command/slip data.","Inspect accessible connectors, harness and grounds.","Test TCC circuit/solenoid and module command using OEM specifications.","Check fluid level/condition only with the exact manufacturer procedure.","Verify TCC operation and confirm the code does not return after repair."]}),
 });
 </script>
+
+<style>
+#tw-install-entry{position:fixed;z-index:9998;right:16px;bottom:16px;box-shadow:0 8px 30px #0008}
+#tw-install-backdrop{position:fixed;inset:0;z-index:9999;background:#08090bd9;display:none;align-items:flex-end;justify-content:center;padding:16px}
+#tw-install-backdrop[aria-hidden="false"]{display:flex}
+#tw-install-panel{width:min(520px,100%);max-height:85vh;overflow:auto;background:#191b1f;border:1px solid #383b42;border-radius:18px;padding:22px;color:#f4f4f5;box-shadow:0 20px 70px #0009}
+#tw-install-panel h2{margin:0 0 8px;font-size:22px}#tw-install-panel p,#tw-install-panel li{color:#d0d1d5;font-size:14px;line-height:1.55}
+#tw-install-panel ol{padding-left:22px}#tw-install-panel .tw-install-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+#tw-install-panel button{min-height:44px}#tw-install-close{background:#25282e;border:1px solid #41444b}
+@media(min-width:760px){#tw-install-backdrop{align-items:center}#tw-install-entry{right:22px;bottom:22px}}
+</style>
+<button id="tw-install-entry" type="button" aria-haspopup="dialog">Add TORQWISE to Home Screen</button>
+<div id="tw-install-backdrop" aria-hidden="true">
+  <section id="tw-install-panel" role="dialog" aria-modal="true" aria-labelledby="tw-install-title" aria-describedby="tw-install-description">
+    <h2 id="tw-install-title">Keep TORQWISE close</h2>
+    <p id="tw-install-description">Add the TORQWISE web app to your home screen for a one-tap launch. This installs the website experience; it is not yet the separate App Store app.</p>
+    <div id="tw-install-steps"></div>
+    <div class="tw-install-actions">
+      <button id="tw-install-action" type="button">Install app</button>
+      <button id="tw-install-close" type="button" class="secondary">Not now</button>
+    </div>
+  </section>
+</div>
+<script>
+(function(){
+  const entry=document.getElementById('tw-install-entry');
+  const backdrop=document.getElementById('tw-install-backdrop');
+  const steps=document.getElementById('tw-install-steps');
+  const action=document.getElementById('tw-install-action');
+  const close=document.getElementById('tw-install-close');
+  if(!entry||!backdrop||!steps||!action||!close)return;
+  let installPrompt=null;
+  const ua=navigator.userAgent||'';
+  const isIOS=/iphone|ipad|ipod/i.test(ua)&&!window.MSStream;
+  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  function open(){backdrop.setAttribute('aria-hidden','false');close.focus();}
+  function hide(){backdrop.setAttribute('aria-hidden','true');entry.focus();}
+  function render(){
+    if(isStandalone){entry.hidden=true;return;}
+    if(isIOS){
+      steps.innerHTML='<p><strong>On your iPhone or iPad:</strong></p><ol><li>Tap the <strong>Share</strong> button in Safari.</li><li>Scroll and choose <strong>Add to Home Screen</strong>.</li><li>Leave the name as TORQWISE, then tap <strong>Add</strong>.</li></ol><p>If you are viewing this in another browser, open this page in Safari first.</p>';
+      action.textContent='Got it';action.onclick=hide;return;
+    }
+    if(installPrompt){
+      steps.innerHTML='<p>Use your browser’s install prompt to add TORQWISE to your device.</p>';
+      action.textContent='Install TORQWISE';
+      action.onclick=async()=>{try{installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;hide();}catch(e){steps.insertAdjacentHTML('beforeend','<p>Installation was not completed. Use your browser menu and choose Install app or Add to Home Screen.</p>');}};
+      return;
+    }
+    steps.innerHTML='<p>Open your browser menu and choose <strong>Install app</strong> or <strong>Add to Home Screen</strong>. The exact wording depends on your browser.</p>';
+    action.textContent='Got it';action.onclick=hide;
+  }
+  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;render();});
+  window.addEventListener('appinstalled',()=>{installPrompt=null;entry.hidden=true;hide();});
+  entry.addEventListener('click',()=>{render();open();});
+  close.addEventListener('click',hide);
+  backdrop.addEventListener('click',event=>{if(event.target===backdrop)hide();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&backdrop.getAttribute('aria-hidden')==='false')hide();});
+  render();
+})();
+</script>
+
 </body></html>
