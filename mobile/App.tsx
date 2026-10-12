@@ -4,6 +4,7 @@ import { ActivityIndicator, Linking, SafeAreaView, ScrollView, StatusBar, StyleS
 
 type Tab = "Home" | "Diagnose" | "VIN" | "Garage";
 type Dtc = { title: string; meaning: string; steps: string; causes?: string[]; symptoms?: string[]; sources?: string[] };
+type SavedCase = { id: string; code: string; title: string; meaning: string; savedAt: string };
 type DtcRecord = {
   code: string;
   title?: { en?: string };
@@ -40,6 +41,8 @@ export default function App() {
   const [bundledDtc, setBundledDtc] = useState<Record<string, Dtc>>({});
   const [databaseReady, setDatabaseReady] = useState(false);
   const [databaseCount, setDatabaseCount] = useState(0);
+  const [savedCases, setSavedCases] = useState<SavedCase[]>([]);
+  const [casesLoaded, setCasesLoaded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -120,6 +123,31 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem("@torqwise/diagnostic-cases/v1")
+      .then((stored) => {
+        if (!mounted) return;
+        if (stored) {
+          const parsed: unknown = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.every((item) =>
+            item && typeof item.id === "string" && typeof item.code === "string" &&
+            typeof item.title === "string" && typeof item.meaning === "string" &&
+            typeof item.savedAt === "string"
+          )) setSavedCases(parsed as SavedCase[]);
+        }
+      })
+      .catch(() => { if (mounted) setNotice("Saved diagnostic history could not be loaded."); })
+      .finally(() => { if (mounted) setCasesLoaded(true); });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!casesLoaded) return;
+    AsyncStorage.setItem("@torqwise/diagnostic-cases/v1", JSON.stringify(savedCases))
+      .catch(() => setNotice("Diagnostic history could not be saved on this device."));
+  }, [savedCases, casesLoaded]);
+
+  useEffect(() => {
     if (!garageLoaded) return;
     AsyncStorage.setItem("@torqwise/garage/v1", JSON.stringify(vehicles))
       .catch(() => setNotice("Garage changes could not be saved on this device."));
@@ -146,6 +174,27 @@ export default function App() {
     } catch { setError("VIN decoding is unavailable right now. Check your connection and try again."); }
     finally { setLoading(false); }
   }
+  function saveDiagnosticCase() {
+    const key = code.trim().toUpperCase();
+    if (!dtc || !/^[PBCU][0-9A-F]{4}$/.test(key)) {
+      setNotice("Enter a valid supported fault code before saving a case.");
+      return;
+    }
+    if (savedCases.some(item => item.code === key && item.title === dtc.title)) {
+      setNotice("This diagnostic case is already saved.");
+      return;
+    }
+    const saved: SavedCase = {
+      id: `${Date.now()}-${key}`,
+      code: key,
+      title: dtc.title,
+      meaning: dtc.meaning,
+      savedAt: new Date().toISOString()
+    };
+    setSavedCases(current => [saved, ...current].slice(0, 100));
+    setNotice(`${key} saved to diagnostic history on this device.`);
+  }
+
   function addVehicle() {
     const value = vehicle.trim();
     if (!value) return;
@@ -192,10 +241,8 @@ export default function App() {
             <Text style={s.panelTitle}>{dtc.title}</Text><Text style={s.label}>WHAT IT MEANS</Text><Text style={s.body}>{dtc.meaning}</Text>
             {!!dtc.causes?.length && <><Text style={s.label}>POSSIBLE CAUSES IN THE REFERENCE DATA</Text><Text style={s.body}>{dtc.causes.join(" · ")}</Text></>}
             {!!dtc.symptoms?.length && <><Text style={s.label}>ASSOCIATED SYMPTOMS</Text><Text style={s.body}>{dtc.symptoms.join(" · ")}</Text></>}
-            {!!dtc.causes?.length && <><Text style={s.label}>POSSIBLE CAUSES IN THE REFERENCE DATA</Text><Text style={s.body}>{dtc.causes.join(" · ")}</Text></>}
-            {!!dtc.symptoms?.length && <><Text style={s.label}>ASSOCIATED SYMPTOMS</Text><Text style={s.body}>{dtc.symptoms.join(" · ")}</Text></>}
             <Text style={s.label}>SUGGESTED NEXT STEPS</Text><Text style={s.body}>{dtc.steps}</Text>
-            {!!dtc.sources?.length && <><Text style={s.label}>REFERENCE SOURCES</Text>{dtc.sources.map(source => <TouchableOpacity key={source} onPress={() => Linking.openURL(source)}><Text style={s.sourceLink}>{source}</Text></TouchableOpacity>)}</>}
+            <TouchableOpacity style={s.secondary} onPress={saveDiagnosticCase}><Text style={s.secondaryText}>SAVE TO DIAGNOSTIC HISTORY</Text></TouchableOpacity>
             {!!dtc.sources?.length && <><Text style={s.label}>REFERENCE SOURCES</Text>{dtc.sources.map(source => <TouchableOpacity key={source} onPress={() => Linking.openURL(source)}><Text style={s.sourceLink}>{source}</Text></TouchableOpacity>)}</>}
             <TouchableOpacity style={s.primary} onPress={openWeb}><Text style={s.primaryText}>OPEN FULL RESEARCH HUB  ↗</Text></TouchableOpacity>
           </View> : <View style={s.panel}><Text style={s.panelTitle}>No starter definition found</Text><Text style={s.body}>The full library is not available on this connection. Try again later or open the TORQWISE workspace to continue researching other codes.</Text><TouchableOpacity style={s.secondary} onPress={openWeb}><Text style={s.secondaryText}>OPEN TORQWISE WEB</Text></TouchableOpacity></View>}
@@ -219,6 +266,19 @@ export default function App() {
           <View style={s.formRow}><TextInput style={[s.input,{flex:1,marginBottom:0}]} value={vehicle} onChangeText={setVehicle} placeholder="e.g. 2018 Ford F-150 5.0L" placeholderTextColor="#7e8794" returnKeyType="done" onSubmitEditing={addVehicle}/><TouchableOpacity style={s.addButton} onPress={addVehicle}><Text style={s.primaryText}>ADD</Text></TouchableOpacity></View>
           {vehicles.length === 0 ? <View style={s.empty}><Text style={s.emptyIcon}>▣</Text><Text style={s.panelTitle}>Your garage is ready</Text><Text style={s.body}>Add a vehicle to start your local list. Cloud sync and account-linked history are planned for a later integration phase.</Text></View> :
             vehicles.map((v,i)=><View style={s.vehicleRow} key={v+i}><View style={{flex:1}}><Text style={s.panelTitle}>{v}</Text><Text style={s.mutedCaps}>SAVED ON THIS DEVICE</Text></View><TouchableOpacity onPress={()=>setVehicles(current=>current.filter((_,index)=>index!==i))}><Text style={s.remove}>REMOVE</Text></TouchableOpacity></View>)}
+          <Text style={s.section}>SAVED DIAGNOSTIC CASES ({savedCases.length})</Text>
+          {savedCases.length === 0 ? <View style={s.empty}><Text style={s.emptyIcon}>⌁</Text><Text style={s.panelTitle}>No saved cases yet</Text><Text style={s.body}>Look up a fault code and tap “Save to diagnostic history” to keep a reference on this device.</Text></View> :
+            savedCases.map(item => <View style={s.vehicleRow} key={item.id}>
+              <View style={{flex:1}}>
+                <Text style={s.codeBadgeText}>{item.code}</Text>
+                <Text style={s.panelTitle}>{item.title}</Text>
+                <Text style={s.body}>{item.meaning}</Text>
+                <Text style={s.mutedCaps}>{new Date(item.savedAt).toLocaleDateString()}</Text>
+              </View>
+              <TouchableOpacity onPress={() => { setCode(item.code); setTab("Diagnose"); }} accessibilityLabel={`Reopen saved case ${item.code}`}><Text style={s.sourceLink}>OPEN</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setSavedCases(current => current.filter(saved => saved.id !== item.id))} accessibilityLabel={`Delete saved case ${item.code}`}><Text style={s.remove}>DELETE</Text></TouchableOpacity>
+            </View>)}
+          <Text style={s.disclaimer}>Diagnostic history is stored locally on this device. It does not sync to an account or cloud service yet.</Text>
           <Text style={s.disclaimer}>Garage entries are saved on this device. Cloud sync and account-linked history are not connected yet.</Text>
         </>}
 
