@@ -465,6 +465,31 @@ test("downgrades fitment evidence that has no inspectable source URL", async () 
 });
 
 
+test("retries once when the AI provider returns no usable text", async () => {
+  const calls = configure({ openaiResponse: response({ output: [] }) });
+  const configuredFetch = globalThis.fetch;
+  let aiCalls = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url) === "https://api.openai.com/v1/responses") {
+      calls.push({ url: String(url), options });
+      aiCalls += 1;
+      return aiCalls === 1
+        ? response({ output: [], status: "incomplete" })
+        : response({ output: [{ type: "message", content: [{ type: "output_text", text: "Candidate strut research summary. Exact fitment remains unverified.", annotations: [] }] }] });
+    }
+    return configuredFetch(url, options);
+  };
+  const result = await handler(request({ body: {
+    asset: "2013 G37xS", topic: "parts",
+    question: "Research front struts; compare supported candidates and state what fitment evidence is missing."
+  }}));
+  assert.equal(result.status, 200);
+  const data = await result.json();
+  assert.match(data.answer, /Candidate strut research summary/);
+  assert.equal(aiCalls, 2);
+  assert.ok(calls.some(c => c.url === base + "/rest/v1/rpc/release_research_usage") === false);
+});
+
 test("adds no-drive guidance for critical braking, steering, and wheel faults", async () => {
   for (const symptoms of ["Brake pedal goes to floor", "Lost steering control", "Tire sidewall bulge"]) {
     const calls = configure();
