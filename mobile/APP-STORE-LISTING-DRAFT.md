@@ -12,7 +12,7 @@ Automotive diagnostics & VINs
 Look up generic OBD-II fault codes, decode a VIN, and keep your vehicles organized in one mobile workspace built for drivers and automotive technicians.
 
 ## Description
-TORQWISE brings core automotive reference tools into an iPhone-first workspace.
+TORQWISE brings automotive reference tools and authenticated technical research into a native mobile workspace for drivers and technicians.
 
 **Diagnostic code reference**
 - Search generic OBD-II powertrain, body, chassis, and network codes when the reference library is available.
@@ -22,6 +22,10 @@ TORQWISE brings core automotive reference tools into an iPhone-first workspace.
 **VIN lookup**
 - Submit a 17-character VIN to retrieve available vehicle information from the NHTSA vPIC service.
 - Results depend on manufacturer data and may be incomplete for some vehicles or model years.
+
+**AI technical research**
+- Submit automotive and heavy-equipment questions through TORQWISE's authenticated server-side research service.
+- Review generated reports and source links when the service returns them. Research availability depends on account access, service configuration, network access, and usage allowance.
 
 **Vehicle garage**
 - Keep a convenient list of vehicles on your device.
@@ -52,6 +56,7 @@ Create final, truthful screenshots from the release candidate on real iPhone-siz
 3. VIN — example VIN workflow and decoded result.
 4. Garage — saved vehicle list.
 5. Diagnostic history — only if that feature is implemented and tested.
+6. AI research — only after authenticated requests, usage limits, error states, and source links are verified on the release candidate.
 
 Do not show planned, unavailable, or simulated functionality as if it were live.
 
@@ -61,6 +66,7 @@ Do not show planned, unavailable, or simulated functionality as if it were live.
 - [ ] Publish verified support and privacy-policy pages.
 - [ ] Complete privacy nutrition labels from actual app behavior.
 - [ ] Confirm the DTC database is reliably reachable and cache/fallback states are accurate.
+- [ ] Test sign-in, account creation, AI research, server-side usage limits, and source links on physical iPhones.
 - [ ] Test the final signed build on physical iPhones.
 - [ ] Confirm subscription and payment behavior complies with Apple's current rules before enabling paid features.
 - [ ] Confirm all screenshots and claims match the submitted binary.
