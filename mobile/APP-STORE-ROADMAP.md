@@ -17,7 +17,8 @@
 - [x] Add a 60-second timeout, bounded input payloads and clear network/timeout/unreadable-response errors to native AI research.
 - [x] Configure EAS Android preview builds to produce an installable APK and production builds to produce an Android App Bundle; this config still requires a real cloud build and device install test.
 - [ ] Verify the deployed site serves `/assets/dtc-database.json`; test actual iPhone network behavior and the 9,000-record threshold.
-- [ ] Add a complete connection state that clearly distinguishes fresh, cached, and starter data and records the last successful library sync.
+- [x] Add a connection state that distinguishes fresh, cached, and starter diagnostic data and persists the last successful library sync timestamp.
+- [ ] Verify status transitions, corrupted cache recovery, offline refresh, and the hosted 9,000-record library on physical iOS and Android devices.
 - [ ] Add automated tests for VIN validation, DTC normalization, malformed data, cache corruption, offline behavior, and native research response parsing.
 - [ ] Add vehicle association and export for saved diagnostic cases after core local persistence is device-tested.
 - [x] Add optional technician notes (test results, measurements, symptoms) to locally saved diagnostic cases.
