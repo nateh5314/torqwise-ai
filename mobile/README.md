@@ -39,3 +39,31 @@ npx eas-cli build --platform ios --profile production
 ```
 
 See [APP-STORE-ROADMAP.md](./APP-STORE-ROADMAP.md) for the complete release checklist. No Apple, Expo, or API credentials are stored in this repository.
+
+
+## Build a real test install
+
+The latest repository CI run passed dependency installation, TypeScript type-check, iOS JavaScript bundle export, and Expo configuration validation. This validates the source and JS bundle; it does **not** create a signed installable binary.
+
+### Android preview APK
+1. Install Node.js 20+ and enter `mobile/`.
+2. Sign in to an Expo account you control: `npx eas-cli login`.
+3. Run `npx eas-cli build:configure` if EAS asks to configure the project.
+4. Start a preview build: `npm run build:android:preview`.
+5. When EAS finishes, use the returned link to install the APK on an Android phone and run the acceptance checklist.
+
+### iPhone TestFlight build
+1. You need an active Apple Developer Program membership and access to App Store Connect.
+2. Confirm `ca.torqwise.automotive` is available and belongs to your Apple team. Create the App Store Connect app record using the same bundle ID.
+3. Sign in to EAS and configure Apple signing credentials when prompted.
+4. Run `npm run build:ios:production`.
+5. Upload the successful signed build with `npm run submit:ios`, complete App Store Connect privacy, age-rating, export-compliance and review information, then invite yourself as an internal TestFlight tester.
+
+### Before relying on the test build
+- Confirm the public Supabase URL and anon key are configured by the public-config endpoint; never bundle a service-role key or OpenAI key.
+- Test account creation, email confirmation, sign-in/out, session expiry, AI research limits and paid-plan recognition.
+- Test diagnostics online/offline, VIN errors, saved-case export and privacy/account-deletion expectations.
+- Complete a proper account-deletion process and subscription purchase/restore compliance before public release.
+- Keep production website code separate until native acceptance testing passes.
+
+**Owner-controlled steps remain:** this repository does not contain an Expo login session, Apple signing credentials, or an App Store Connect record. Source-code changes alone cannot create or upload a signed iPhone app.
