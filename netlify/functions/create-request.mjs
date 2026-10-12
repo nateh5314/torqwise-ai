@@ -43,13 +43,13 @@ export default async (req) => {
     const proPriceId = env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID");
     if (proPriceId && ["parts", "estimate", "used"].includes(serviceId)) {
       try {
-        const subs = await fetch(base + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) + "&select=status,price_id&order=updated_at.desc&limit=20", {
+        const subs = await fetch(base + "/rest/v1/subscriptions?user_id=eq." + encodeURIComponent(user.id) + "&select=status,price_id,current_period_end&order=updated_at.desc&limit=20", {
           headers: { apikey: service, authorization: "Bearer " + service },
           signal: AbortSignal.timeout(8000)
         });
         if (!subs.ok) throw new Error("subscription lookup failed");
         const subRows = await subs.json();
-        isPro = Array.isArray(subRows) && subRows.some(row => row.price_id === proPriceId && ["active", "trialing"].includes(row.status));
+        isPro = Array.isArray(subRows) && subRows.some(row => row.price_id === proPriceId && ["active", "trialing"].includes(row.status) && (!row.current_period_end || Date.parse(row.current_period_end) > Date.now()));
       } catch (e) {
         console.error("Pro entitlement lookup failed:", e?.message || "unknown");
         return json({ error: "We could not verify your Pro subscription right now. Please retry shortly; no request was submitted." }, 503);
