@@ -234,7 +234,8 @@ export default function App() {
 
         {tab === "Diagnose" && <>
           <Text style={s.eyebrow}>DIAGNOSTIC WORKSPACE</Text><Text style={s.pageTitle}>Fault code lookup</Text>
-          <Text style={s.body}>Search the generic OBD-II library, then verify the cause with testing.</Text>\n          <View style={s.databasePill}><View style={[s.dot, databaseCount >= 9000 ? {backgroundColor:"#58cf9a"} : {backgroundColor:"#e9ad58"}]}/><Text style={s.databaseText}>{databaseCount >= 9000 ? `${databaseCount.toLocaleString()} GENERIC CODES AVAILABLE` : databaseReady ? "STARTER CODE SET · FULL LIBRARY UNAVAILABLE" : "LOADING DIAGNOSTIC LIBRARY…"}</Text></View>
+          <Text style={s.body}>Search the generic OBD-II library, then verify the cause with testing.</Text>
+          <View style={s.databasePill}><View style={[s.dot, databaseCount >= 9000 ? {backgroundColor:"#58cf9a"} : {backgroundColor:"#e9ad58"}]}/><Text style={s.databaseText}>{databaseCount >= 9000 ? `${databaseCount.toLocaleString()} GENERIC CODES AVAILABLE` : databaseReady ? "STARTER CODE SET · FULL LIBRARY UNAVAILABLE" : "LOADING DIAGNOSTIC LIBRARY…"}</Text></View>
           <TextInput style={s.input} value={code} onChangeText={setCode} autoCapitalize="characters" autoCorrect={false} placeholder="Enter code, e.g. P0300" placeholderTextColor="#7e8794" accessibilityLabel="OBD-II diagnostic trouble code"/>
           {dtc ? <View style={s.panel}>
             <View style={s.codeBadge}><Text style={s.codeBadgeText}>{code.trim().toUpperCase()}</Text></View>
