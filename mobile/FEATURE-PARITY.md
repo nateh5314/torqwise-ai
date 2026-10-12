@@ -16,7 +16,7 @@ The clients should have equivalent **entitlements and core service availability*
 | AI technical research | Existing website research workflow | Native Research screen via server endpoint with 60-second timeout, bounded request fields, readable timeout/network/JSON errors | Partial; verify equivalent request fields, sources, report output, limits and error states on devices |
 | Parts finder / price comparison | Website supplier search and pilot request flows | Native Tools screen with supplier search and AI research hand-off | Partial; native search is a starting point, not parity with the website request/quote workflow |
 | Estimate comparison | Website request workflow | Native Tools can prepare an AI research prompt | Not equivalent yet; map the website's complete form, pricing/quote disclosures and saved request state |
-| Used-vehicle research | Website service request | No dedicated native workflow | Missing parity |
+| Used-vehicle research | Website service request | Native buyer research brief through AI Research | Partial; research prompt is implemented, but not equivalent to the full website request/quote workflow |
 | Service manuals, diagrams, specifications, bulletins | Website research categories and external search tools | Native Tools searches plus AI research categories | Partial; verify identical categories and source-handling, do not claim verified coverage without testing |
 | Garage and maintenance history | Website/local and account-history features vary by workflow | Device-local garage and diagnostic cases | Not equivalent; native history does not sync and maintenance schedules are not yet a dedicated record feature |
 | Saved cases / account history | Website has existing account-history hooks | Local-only native diagnostic cases | Not equivalent; define cloud-sync ownership, merge, export and offline behavior before claiming parity |
@@ -48,4 +48,4 @@ The clients should have equivalent **entitlements and core service availability*
 - [ ] Complete compliant subscription purchase/restore and privacy disclosures before store submission.
 
 ## Honest status
-The app has a useful native foundation, but it is **not yet feature-equivalent** to the website. The native Tools screen adds mobile entry points for parts, estimate review, recalls/service information and maintenance planning, but some flows are search or research hand-offs rather than full website workflow parity. Keep this document current as each gap is implemented and tested.
+The app has a useful native foundation, but it is **not yet feature-equivalent** to the website. The native Tools screen now includes parts-price and OEM-reference searches, estimate-review preparation, recall/service-information searches, maintenance planning, and used-vehicle buyer research. These remain search or research hand-offs rather than full website workflow parity. Keep this document current as each gap is implemented and tested.
