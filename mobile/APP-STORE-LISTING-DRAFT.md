@@ -12,7 +12,7 @@ Automotive diagnostics & VINs
 Look up generic OBD-II fault codes, decode a VIN, and keep your vehicles organized in one mobile workspace built for drivers and automotive technicians.
 
 ## Description
-TORQWISE brings automotive reference tools and authenticated technical research into a native mobile workspace for drivers and technicians.
+TORQWISE brings the essential TORQWISE workflows to your phone: fault-code reference, VIN lookup, a local vehicle garage, saved diagnostic notes, and authenticated AI research. Sign in with your TORQWISE website account. The website remains the deeper technical workspace.
 
 **Diagnostic code reference**
 - Search generic OBD-II powertrain, body, chassis, and network codes when the reference library is available.
@@ -25,7 +25,7 @@ TORQWISE brings automotive reference tools and authenticated technical research 
 
 **AI technical research**
 - Submit automotive and heavy-equipment questions through TORQWISE's authenticated server-side research service.
-- Review generated reports and source links when the service returns them. Research availability depends on account access, service configuration, network access, and usage allowance.
+- Review generated reports and source links when the service returns them. Research access uses the same server-side account entitlement and usage allowance as the website. The app is a focused mobile version; the website contains the deeper technical workspace.
 
 **Vehicle garage**
 - Keep a convenient list of vehicles on your device.
