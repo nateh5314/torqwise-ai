@@ -15,7 +15,7 @@ function env(name) {
 }
 export default async (req) => {
   if (req.method !== "GET") return json({ error: "Use GET." }, 405);
-  const base = env("SUPABASE_URL"), anon = env("SUPABASE_ANON_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
+  const base = env("SUPABASE_URL"), anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY"), service = env("SUPABASE_SERVICE_ROLE_KEY");
   if (!base || !anon || !service) return json({ error: "Customer request storage is not configured yet." }, 503);
   const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return json({ error: "Sign in to view customer requests." }, 401);
