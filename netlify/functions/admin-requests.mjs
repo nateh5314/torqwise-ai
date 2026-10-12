@@ -44,7 +44,7 @@ export default async req => {
             from: env("EMAIL_FROM"),
             to: [request.customer_email],
             subject: request.included_with_pro === true ? "Your TORQWISE Pro research request is in progress" : "Your TORQWISE research request is ready for payment",
-            text: "Your TORQWISE request " + code + " has been reviewed.\\n\\nService: " + (request.label || request.service) + "\\nPrice: " + amount + "\\n\\nSign in to your TORQWISE account at " + env("SITE_URL").replace(/\\/$/, "") + "/#account to review the request. " + (request.included_with_pro === true ? "This request is covered by your Pro monthly allowance; no checkout is needed." : "Use secure checkout when available. Custom research remains quote-first. If the scope or price does not look right, contact support before paying.")
+            text: "Your TORQWISE request " + code + " has been reviewed.\n\nService: " + (request.label || request.service) + "\nPrice: " + amount + "\n\nSign in to your TORQWISE account at " + env("SITE_URL").replace(/\/$/, "") + "/#account to review the request. " + (request.included_with_pro === true ? "This request is covered by your Pro monthly allowance; no checkout is needed." : "Use secure checkout when available. Custom research remains quote-first. If the scope or price does not look right, contact support before paying.")
           })
         });
         if (!email.ok) console.error("Customer ready-for-payment email failed:", email.status);
