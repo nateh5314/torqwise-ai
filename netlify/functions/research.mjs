@@ -382,10 +382,42 @@ export default async (req) => {
     if (upstream.status === 429) return json({ error: "The AI service is rate-limited or out of available API credit. Check API billing and usage." }, 429);
     return json({ error: "The AI service returned an error. Check API usage and Netlify function logs." }, 502);
   }
-  const answer = extractText(payload);
+  let answer = extractText(payload);
+  // A successful Responses API call can occasionally finish without a text block.
+  // Retry once without web search to recover from transient tool/completion issues.
   if (!answer) {
-    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
-    return json({ error: "The AI service did not return a usable answer. Please retry with a more specific question." }, 502);
+    console.warn("TORQWISE research returned no text; attempting one concise fallback response.");
+    try {
+      const retry = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { "authorization": `Bearer ${env("OPENAI_API_KEY")}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          model: env("OPENAI_MODEL") || "gpt-5-mini",
+          instructions: requestInstructions + " Return a useful, concise answer even if some details cannot be verified. Explicitly label unknowns; do not invent facts or sources.",
+          input,
+          max_output_tokens: 2200,
+          store: false,
+        }),
+        signal: AbortSignal.timeout(38000),
+      });
+      let retryPayload = {};
+      try { retryPayload = await retry.json(); } catch {}
+      if (retry.ok) {
+        const retryAnswer = extractText(retryPayload);
+        if (retryAnswer) {
+          answer = retryAnswer;
+          payload = retryPayload;
+        }
+      } else {
+        console.error("TORQWISE fallback research request failed:", retry.status, retryPayload?.error?.code || "unknown");
+      }
+    } catch (retryError) {
+      console.error("TORQWISE fallback research request failed:", retryError?.name || "network error");
+    }
+  }
+  if (!answer) {
+    try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+    return json({ error: "The AI service could not produce a text answer after one retry. Your question was not answered; please try again shortly or narrow the request." }, 502);
   }
   return json({ answer, sources: followUp ? [] : extractSources(payload), fitmentMatches, model: payload.model || env("OPENAI_MODEL") || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
 };
