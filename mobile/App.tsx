@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
-import { ActivityIndicator, Linking, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type Tab = "Home" | "Diagnose" | "VIN" | "Garage" | "Research";
 type ResearchSource = { title?: string; url?: string };
@@ -187,6 +187,29 @@ export default function App() {
     } finally {
       setResearchBusy(false);
     }
+  }
+
+  function clearLocalData() {
+    Alert.alert(
+      "Clear local TORQWISE data?",
+      "This removes vehicles in My Garage and saved diagnostic cases from this device. It does not delete your online account or affect your AI research allowance.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear local data",
+          style: "destructive",
+          onPress: () => {
+            setVehicles([]);
+            setSavedCases([]);
+            void Promise.all([
+              AsyncStorage.removeItem("@torqwise/garage/v1"),
+              AsyncStorage.removeItem("@torqwise/diagnostic-cases/v1")
+            ]).then(() => setNotice("Local garage and diagnostic history cleared from this device."))
+              .catch(() => setNotice("The local data clear could not be confirmed. Please retry."));
+          }
+        }
+      ]
+    );
   }
 
   async function signOut() {
@@ -418,6 +441,11 @@ export default function App() {
               </>}
             {!!authMessage && <Text style={s.error}>{authMessage}</Text>}
           </View>
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>Privacy & local data</Text>
+            <Text style={s.body}>Your garage and saved diagnostic cases stay on this device. AI research questions and vehicle details you submit are sent to TORQWISE's server-side research service. Read the policy for more details.</Text>
+            <TouchableOpacity style={s.secondary} onPress={() => Linking.openURL(WEB + "privacy.html")} accessibilityRole="link"><Text style={s.secondaryText}>READ TORQWISE PRIVACY POLICY  ↗</Text></TouchableOpacity>
+          </View>
           <View style={s.panel}><Text style={s.panelTitle}>Built for evidence, not guesswork.</Text><Text style={s.body}>Code descriptions are starting points. Confirm faults with measurements and service information for the exact vehicle.</Text></View>
         </>}
 
@@ -510,6 +538,12 @@ export default function App() {
             </View>)}
           <Text style={s.disclaimer}>Diagnostic history is stored locally on this device. It does not sync to an account or cloud service yet.</Text>
           <Text style={s.disclaimer}>Garage entries are saved on this device. Cloud sync and account-linked history are not connected yet.</Text>
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>Manage local data</Text>
+            <Text style={s.body}>Remove your saved garage vehicles and diagnostic cases from this device. This does not delete your TORQWISE online account.</Text>
+            <TouchableOpacity style={s.secondary} onPress={clearLocalData} accessibilityRole="button"><Text style={s.secondaryText}>CLEAR GARAGE & DIAGNOSTIC HISTORY</Text></TouchableOpacity>
+            <TouchableOpacity style={s.secondary} onPress={() => Linking.openURL(WEB + "privacy.html")} accessibilityRole="link"><Text style={s.secondaryText}>READ PRIVACY POLICY  ↗</Text></TouchableOpacity>
+          </View>
         </>}
 
         {!!notice && <TouchableOpacity style={s.notice} onPress={()=>setNotice("")}><Text style={s.noticeText}>{notice}  ×</Text></TouchableOpacity>}
