@@ -503,4 +503,6 @@ test("Vehicle History Intelligence is presented as a Pro-exclusive feature", asy
   assert.ok(html.includes('Unknown — no authorized history provider connected'));
   assert.ok(html.includes('Buyer evidence checklist'));
   assert.ok(html.includes('no official recall lookup performed'));
+  assert.ok(html.includes('Conflicting readings on '));
+  assert.ok(html.includes('same-date conflict was found'));
 });
