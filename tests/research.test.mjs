@@ -478,3 +478,31 @@ test("adds no-drive guidance for critical braking, steering, and wheel faults", 
     assert.ok(payload.input.includes("qualified inspection or recovery"));
   }
 });
+
+
+test("Vehicle History Intelligence is presented as a Pro-exclusive feature", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(html, /id="vhiProGate"/);
+  assert.match(html, /TORQWISE PRO TECHNICIAN[^<]*EXCLUSIVE/);
+  assert.ok(html.includes("Unlock with Pro — $29.99 CAD/month"));
+  assert.match(html, /id="vhiProContent" class="hidden"/);
+  assert.ok(html.includes("vhiContent.classList.toggle('hidden',!pro)"));
+  assert.ok(html.includes("vhiGate.classList.toggle('hidden',pro)"));
+  assert.match(html, /CARFAX API status: not connected/);
+  assert.match(html, /id="vhiExport"/);
+  assert.match(html, /id="vhiReport"/);
+  assert.match(html, /torqwise-inspection-evidence-/);
+  assert.match(html, /This report summarizes user-entered records/);
+  assert.match(html, /torqwise-odometer-timeline-/);
+  assert.match(html, /not independently verified/);
+  assert.ok(html.includes('Accident / damage history'));
+  assert.ok(html.includes('Title / brand / lien status'));
+  assert.ok(html.includes('Recall status'));
+  assert.ok(html.includes('Ownership / registration history'));
+  assert.ok(html.includes('Unknown — no authorized history provider connected'));
+  assert.ok(html.includes('Buyer evidence checklist'));
+  assert.ok(html.includes('no official recall lookup performed'));
+  assert.ok(html.includes('Conflicting readings on '));
+  assert.ok(html.includes('same-date conflict was found'));
+});
