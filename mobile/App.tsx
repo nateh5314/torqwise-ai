@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
-import { ActivityIndicator, Alert, Linking, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, SafeAreaView, ScrollView, Share, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type Tab = "Home" | "Diagnose" | "VIN" | "Tools" | "Research" | "Garage";
 type ResearchSource = { title?: string; url?: string };
@@ -216,6 +216,24 @@ export default function App() {
       setResearchError(cause instanceof Error ? cause.message : "Research failed. Check your connection and try again.");
     } finally {
       setResearchBusy(false);
+    }
+  }
+
+  async function exportLocalData() {
+    const exportPayload = {
+      product: "TORQWISE Automotive Intelligence",
+      exportedAt: new Date().toISOString(),
+      note: "Local device export. Diagnostic guidance is not a confirmed diagnosis.",
+      vehicles,
+      diagnosticCases: savedCases
+    };
+    try {
+      await Share.share({
+        title: "TORQWISE local data export",
+        message: JSON.stringify(exportPayload, null, 2)
+      });
+    } catch {
+      setNotice("Could not open the share sheet to export local data. Please try again.");
     }
   }
 
@@ -675,6 +693,7 @@ export default function App() {
           <View style={s.panel}>
             <Text style={s.panelTitle}>Manage local data</Text>
             <Text style={s.body}>Remove your saved garage vehicles and diagnostic cases from this device. This does not delete your TORQWISE online account.</Text>
+            <TouchableOpacity style={s.secondary} onPress={exportLocalData} accessibilityRole="button"><Text style={s.secondaryText}>EXPORT GARAGE & DIAGNOSTIC HISTORY ↗</Text></TouchableOpacity>
             <TouchableOpacity style={s.secondary} onPress={clearLocalData} accessibilityRole="button"><Text style={s.secondaryText}>CLEAR GARAGE & DIAGNOSTIC HISTORY</Text></TouchableOpacity>
             <TouchableOpacity style={s.secondary} onPress={() => Linking.openURL(WEB + "privacy.html")} accessibilityRole="link"><Text style={s.secondaryText}>READ PRIVACY POLICY  ↗</Text></TouchableOpacity>
           </View>
