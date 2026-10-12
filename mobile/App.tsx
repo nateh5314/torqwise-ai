@@ -169,8 +169,10 @@ export default function App() {
       setError("Enter a valid 17-character VIN. The letters I, O and Q are not used."); return;
     }
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
     try {
-      const response = await fetch("https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/" + encodeURIComponent(value) + "?format=json");
+      const response = await fetch("https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/" + encodeURIComponent(value) + "?format=json", { signal: controller.signal });
       if (!response.ok) throw new Error("VIN service unavailable");
       const data = await response.json();
       const item = data?.Results?.[0];
@@ -178,8 +180,14 @@ export default function App() {
         .filter((v: unknown) => typeof v === "string" && v.trim() && v !== "Not Applicable");
       setVinResult(details.length ? details.join(" · ") : "No usable vehicle details were returned.");
       setNotice("Verify exact engine and configuration before ordering parts.");
-    } catch { setError("VIN decoding is unavailable right now. Check your connection and try again."); }
-    finally { setLoading(false); }
+    } catch (cause) {
+      setError(cause instanceof Error && cause.name === "AbortError"
+        ? "VIN lookup timed out after 12 seconds. Check your connection and try again."
+        : "VIN decoding is unavailable right now. Check your connection and try again.");
+    } finally {
+      clearTimeout(timeout);
+      setLoading(false);
+    }
   }
   function saveDiagnosticCase() {
     const key = code.trim().toUpperCase();
