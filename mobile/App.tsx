@@ -64,6 +64,7 @@ export default function App() {
   const [researchAnswer, setResearchAnswer] = useState("");
   const [researchSources, setResearchSources] = useState<ResearchSource[]>([]);
   const [researchRemaining, setResearchRemaining] = useState<number | null>(null);
+  const [researchIsPro, setResearchIsPro] = useState<boolean | null>(null);
   const [researchBusy, setResearchBusy] = useState(false);
   const [researchError, setResearchError] = useState("");
 
@@ -176,13 +177,19 @@ export default function App() {
         body: JSON.stringify({ asset: researchAsset.trim(), question: researchQuestion.trim(), topic: researchTopic })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : "Research could not be completed. Try again.");
+      if (typeof payload?.isPro === "boolean") setResearchIsPro(payload.isPro);
+      if (typeof payload?.remaining === "number") setResearchRemaining(payload.remaining);
+      if (!response.ok) {
+        if (response.status === 402) setResearchIsPro(false);
+        throw new Error(typeof payload?.error === "string" ? payload.error : "Research could not be completed. Try again.");
+      }
       if (typeof payload?.answer !== "string" || !payload.answer.trim()) throw new Error("The research service returned an empty report.");
       setResearchAnswer(payload.answer);
       setResearchSources(Array.isArray(payload.sources) ? payload.sources.filter((item: unknown): item is ResearchSource =>
         !!item && typeof item === "object" && typeof (item as ResearchSource).url === "string" && (item as ResearchSource).url!.startsWith("https://")
       ).slice(0, 12) : []);
       setResearchRemaining(typeof payload.remaining === "number" ? payload.remaining : null);
+      setResearchIsPro(typeof payload.isPro === "boolean" ? payload.isPro : false);
     } catch (cause) {
       setResearchError(cause instanceof Error ? cause.message : "Research failed. Check your connection and try again.");
     } finally {
@@ -415,6 +422,11 @@ export default function App() {
             <TouchableOpacity style={s.primary} onPress={() => setTab("Diagnose")}><Text style={s.primaryText}>START DIAGNOSING  →</Text></TouchableOpacity>
             <View style={s.rule}/><Text style={s.mutedCaps}>RESEARCH. TEST. VERIFY.</Text>
           </View>
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>The essentials, wherever you are</Text>
+            <Text style={s.body}>Use the app for quick fault-code reference, VIN lookup, local diagnostic notes and AI research. Sign in with the same TORQWISE account you use on the website.</Text>
+            <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>NEED THE DEEPER WORKSPACE? OPEN WEBSITE  ↗</Text></TouchableOpacity>
+          </View>
           <Text style={s.section}>QUICK ACCESS</Text>
           <View style={s.grid}>
             {([{title:"Fault codes", body:"Look up common OBD-II codes", icon:"⌁", action:() => setTab("Diagnose")},
@@ -429,9 +441,15 @@ export default function App() {
           <View style={s.panel}>
             {authLoading ? <View style={s.formRow}><ActivityIndicator color="#ef5058"/><Text style={s.body}>Connecting secure account service…</Text></View> :
               session ? <>
-                <Text style={s.panelTitle}>Signed in</Text>
-                <Text style={s.body}>{session.user.email || "Your TORQWISE account"}</Text>
-                <Text style={s.disclaimer}>Your session is stored using the device's secure storage. Cloud history and native AI research are still being integrated.</Text>
+                <Text style={s.panelTitle}>Your TORQWISE account</Text>
+                <Text style={s.body}>{session.user.email || "Signed in"}</Text>
+                <View style={s.planCard}>
+                  <Text style={s.planLabel}>AI RESEARCH ACCESS</Text>
+                  <Text style={s.planValue}>{researchIsPro === true ? "PRO TECHNICIAN · UNLIMITED" : researchIsPro === false ? "FREE PLAN" : "VERIFIED WHEN RESEARCH RUNS"}</Text>
+                  {researchRemaining !== null && researchIsPro !== true && <Text style={s.disclaimer}>{researchRemaining} free reports remaining this month.</Text>}
+                </View>
+                <Text style={s.disclaimer}>The app brings core TORQWISE workflows to your phone. The website remains the deeper workspace for expanded technical information and tools.</Text>
+                <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>OPEN FULL TORQWISE WEBSITE  ↗</Text></TouchableOpacity>
                 <TouchableOpacity style={s.secondary} onPress={signOut} disabled={authBusy}><Text style={s.secondaryText}>{authBusy ? "PLEASE WAIT…" : "SIGN OUT"}</Text></TouchableOpacity>
               </> : <>
                 <Text style={s.panelTitle}>{authMode === "signin" ? "Sign in to TORQWISE" : "Create your TORQWISE account"}</Text>
@@ -493,7 +511,14 @@ export default function App() {
 
         {tab === "Research" && <>
           <Text style={s.eyebrow}>SOURCE-LINKED AI WORKSPACE</Text><Text style={s.pageTitle}>Technical research</Text>
-          <Text style={s.body}>Ask a focused automotive or heavy-equipment question. TORQWISE checks your account allowance on the server and returns a report with source links when available.</Text>
+          <Text style={s.body}>Ask a focused automotive or heavy-equipment question. TORQWISE checks the same account and subscription entitlement used by the website.</Text>
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>Your access</Text>
+            <Text style={s.planValue}>{!session ? "SIGN IN TO CHECK YOUR PLAN" : researchIsPro === true ? "PRO TECHNICIAN · UNLIMITED RESEARCH" : researchIsPro === false ? "FREE PLAN" : "PLAN VERIFIED WHEN RESEARCH RUNS"}</Text>
+            {researchRemaining !== null && researchIsPro !== true && <Text style={s.disclaimer}>{researchRemaining} free reports remaining this month.</Text>}
+            <Text style={s.disclaimer}>Your server-verified account determines research access. The website provides deeper technical information and the full workspace.</Text>
+            <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>OPEN FULL WEBSITE WORKSPACE  ↗</Text></TouchableOpacity>
+          </View>
           {!session && <View style={s.panel}><Text style={s.panelTitle}>Sign-in required</Text><Text style={s.body}>Sign in with your existing TORQWISE account on the Home screen to use AI research.</Text><TouchableOpacity style={s.primary} onPress={() => setTab("Home")}><Text style={s.primaryText}>GO TO ACCOUNT  →</Text></TouchableOpacity></View>}
           <Text style={s.label}>VEHICLE / EQUIPMENT (OPTIONAL)</Text>
           <TextInput style={s.input} value={researchAsset} onChangeText={setResearchAsset} placeholder="e.g. 2018 Ford F-150 5.0L" placeholderTextColor="#7e8794" accessibilityLabel="Vehicle or equipment"/>
@@ -518,7 +543,7 @@ export default function App() {
               <Text style={s.label}>SOURCE LINKS</Text>
               {researchSources.map((source,index)=><TouchableOpacity key={source.url} onPress={() => Linking.openURL(source.url!)} accessibilityRole="link"><Text style={s.sourceLink}>{source.title || source.url}</Text></TouchableOpacity>)}
             </>}
-            {researchRemaining !== null && <Text style={s.mutedCaps}>{researchRemaining} FREE REPORTS REMAINING THIS MONTH</Text>}
+            {researchIsPro === true ? <Text style={s.mutedCaps}>PRO TECHNICIAN ACCESS · UNLIMITED RESEARCH</Text> : researchRemaining !== null && <Text style={s.mutedCaps}>{researchRemaining} FREE REPORTS REMAINING THIS MONTH</Text>}
             <Text style={s.disclaimer}>Research supports troubleshooting; it is not a confirmed diagnosis. Verify specifications and procedures for the exact vehicle or machine.</Text>
           </View>}
         </>}
@@ -593,6 +618,9 @@ const s = StyleSheet.create({
   databasePill:{alignSelf:"flex-start",flexDirection:"row",alignItems:"center",gap:7,borderWidth:1,borderColor:"#333a44",backgroundColor:"#11151c",borderRadius:8,paddingHorizontal:10,paddingVertical:8,marginBottom:8},
   databaseText:{color:"#b4bdc8",fontSize:9,fontWeight:"900",letterSpacing:0.5},
   sourceLink:{color:"#94baff",fontSize:10,lineHeight:15,marginBottom:7},
+  planCard:{padding:12,borderRadius:12,borderWidth:1,borderColor:"#333b47",backgroundColor:"#11151c",marginVertical:8},
+  planLabel:{color:"#8b95a3",fontSize:10,fontWeight:"800",letterSpacing:1.2},
+  planValue:{color:"#f4f6f8",fontSize:12,fontWeight:"800",letterSpacing:0.5,marginVertical:5},
   topicRow:{flexDirection:"row",flexWrap:"wrap",gap:8,marginBottom:8},
   topicChip:{borderWidth:1,borderColor:"#3a414d",borderRadius:18,paddingHorizontal:11,paddingVertical:8,backgroundColor:"#11151c"},
   topicActive:{borderColor:"#ef5058",backgroundColor:"#35191d"},
