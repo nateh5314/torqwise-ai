@@ -479,10 +479,12 @@ test("retries once when the AI provider returns no usable text", async () => {
     }
     return configuredFetch(url, options);
   };
-  const result = await handler(request({ body: {
+  const retryRequest = request({ body: {
     asset: "2013 G37xS", topic: "parts",
     question: "Research front struts; compare supported candidates and state what fitment evidence is missing."
-  }}));
+  }});
+  retryRequest.headers.set("x-nf-client-connection-ip", "198.51.100.77");
+  const result = await handler(retryRequest);
   assert.equal(result.status, 200);
   const data = await result.json();
   assert.match(data.answer, /Candidate strut research summary/);
