@@ -505,3 +505,43 @@ test("adds no-drive guidance for critical braking, steering, and wheel faults", 
     assert.ok(payload.input.includes("qualified inspection or recovery"));
   }
 });
+
+
+test("returns a concise fallback answer when the initial web-research request times out", async () => {
+  const calls = configure();
+  const configuredFetch = globalThis.fetch;
+  let aiCalls = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url) === "https://api.openai.com/v1/responses") {
+      calls.push({ url: String(url), options });
+      aiCalls += 1;
+      if (aiCalls === 1) {
+        const error = new Error("timed out");
+        error.name = "TimeoutError";
+        throw error;
+      }
+      return response({ output: [{ type: "message", content: [{
+        type: "output_text",
+        text: "Preliminary guidance: exact part fitment remains unverified.",
+        annotations: []
+      }] }], model: "gpt-5-mini" });
+    }
+    return configuredFetch(url, options);
+  };
+  const timeoutRequest = request({ body: {
+    asset: "2013 Infiniti G37xS",
+    topic: "parts",
+    question: "Research front struts and distinguish confirmed fitment from candidates."
+  }});
+  timeoutRequest.headers.set("x-nf-client-connection-ip", "198.51.100.78");
+  try {
+    const result = await handler(timeoutRequest);
+    assert.equal(result.status, 200);
+    const data = await result.json();
+    assert.match(data.answer, /exact part fitment remains unverified/i);
+    assert.equal(aiCalls, 2);
+    assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/release_research_usage"));
+  } finally {
+    globalThis.fetch = configuredFetch;
+  }
+});
