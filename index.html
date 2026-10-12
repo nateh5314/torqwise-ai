@@ -1199,7 +1199,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       const button=card.querySelector('button');
       if(!price||!button||!keys[index])return;
       if(pro){
-        price.innerHTML='Included with Pro <small>while monthly allowance remains</small>';
+        price.innerHTML='Included with Pro <small>3 requests/month shared</small>';
         button.textContent=['Request with Pro →','Compare with Pro →','Research with Pro →'][index];
       }else{
         price.innerHTML=['$15 <small>CAD · fixed scope</small>','$25 <small>CAD · fixed scope</small>','$30 <small>CAD · fixed scope</small>'][index];
@@ -1209,7 +1209,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
     const serviceSelect=byId('service');
     if(serviceSelect){
       const labels=pro
-        ?['Parts Finder — included with Pro allowance','$25 CAD after allowance — Estimate Comparison','$30 CAD after allowance — Used Vehicle Research']
+        ?['Parts Finder — included (3 shared/month)','$25 after allowance — Estimate Comparison','$30 after allowance — Used Vehicle Research']
         :['Parts Finder — $15','Estimate Comparison — $25','Used Vehicle Research — $30'];
       [...serviceSelect.options].slice(0,3).forEach((option,index)=>{option.textContent=labels[index]||option.textContent;});
     }
