@@ -38,29 +38,43 @@ export default async () => {
     environment: Object.values(envStatus).every(Boolean),
     billingConfiguration: Boolean(billing.stripeSecretKey && billing.stripeProPriceId && billing.siteUrl),
     usageTable: "not_checked",
-    quotaFunction: "not_checked"
+    quotaFunction: "not_checked",
+    proServiceUsageTable: "not_checked",
+    proServiceQuotaFunction: "not_checked"
   };
   if (envStatus.supabaseUrl && envStatus.supabaseServiceRoleKey) {
     const base=supabaseBase();
     const key=env("SUPABASE_SERVICE_ROLE_KEY");
     const headers={apikey:key,authorization:"Bearer "+key};
-    try {
-      const table=await fetch(base+"/rest/v1/research_usage?select=id&limit=0",{headers});
-      checks.usageTable=table.ok ? "ready" : (table.status===404 ? "missing_migration" : "http_"+table.status);
-    } catch (e) {
-      checks.usageTable="unreachable";
-      checks.usageTableError = e instanceof Error ? e.message.slice(0,180) : "Network request failed";
+    const tableChecks = [
+      ["usageTable", "/rest/v1/research_usage?select=id&limit=0"],
+      ["proServiceUsageTable", "/rest/v1/pro_service_usage?select=id&limit=0"]
+    ];
+    for (const [name, path] of tableChecks) {
+      try {
+        const table=await fetch(base+path,{headers,signal:AbortSignal.timeout(5000)});
+        checks[name]=table.ok ? "ready" : (table.status===404 ? "missing_migration" : "http_"+table.status);
+      } catch (e) {
+        checks[name]="unreachable";
+        checks[name+"Error"] = e instanceof Error ? e.message.slice(0,180) : "Network request failed";
+      }
     }
-    try {
-      const rpc=await fetch(base+"/rest/v1/rpc/reserve_research_usage",{method:"OPTIONS",headers:{...headers,"content-type":"application/json"}});
-      checks.quotaFunction=rpc.status===404 ? "missing_migration" : (rpc.status<500 ? "reachable" : "http_"+rpc.status);
-    } catch (e) {
-      checks.quotaFunction="unreachable";
-      checks.quotaFunctionError = e instanceof Error ? e.message.slice(0,180) : "Network request failed";
+    const rpcChecks = [
+      ["quotaFunction", "/rest/v1/rpc/reserve_research_usage"],
+      ["proServiceQuotaFunction", "/rest/v1/rpc/reserve_pro_service_usage"]
+    ];
+    for (const [name, path] of rpcChecks) {
+      try {
+        const rpc=await fetch(base+path,{method:"OPTIONS",headers:{...headers,"content-type":"application/json"},signal:AbortSignal.timeout(5000)});
+        checks[name]=rpc.status===404 ? "missing_migration" : (rpc.status<500 ? "reachable" : "http_"+rpc.status);
+      } catch (e) {
+        checks[name]="unreachable";
+        checks[name+"Error"] = e instanceof Error ? e.message.slice(0,180) : "Network request failed";
+      }
     }
   }
   return json({
-    healthVersion: "2026-10-11-billing-readiness-v2",
+    healthVersion: "2026-10-12-pro-bundle-readiness-v3",
     deployContext: env("CONTEXT") || "unknown",
     branch: env("BRANCH") || "unknown",
     commitRef: (env("COMMIT_REF") || "unknown").slice(0, 12),
@@ -69,4 +83,4 @@ export default async () => {
     billing,
     checks
   });
-}
+};
