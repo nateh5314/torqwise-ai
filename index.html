@@ -144,6 +144,10 @@
 }
 
 .quick-start{position:relative;background:#151619;border-bottom:1px solid var(--line);padding:18px 0}.quick-start-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.quick-start-card{display:flex;align-items:center;gap:12px;min-width:0;padding:15px 16px;background:#1b1d21;border:1px solid #34363d;border-radius:12px;text-decoration:none;transition:border-color .18s,background .18s}.quick-start-card:hover{border-color:#8f343a;background:#211c1f}.quick-start-card:focus-visible{outline:3px solid var(--red2);outline-offset:3px}.quick-start-icon{display:grid;place-items:center;flex:0 0 40px;height:40px;border-radius:10px;background:#352024;color:#ff777f;font-size:24px}.quick-start-card strong,.quick-start-card small{display:block}.quick-start-card strong{font-size:14px}.quick-start-card small{color:var(--muted);font-size:12px;line-height:1.35;margin-top:3px}.quick-start-arrow{margin-left:auto;color:#ff777f;font-size:20px}.quick-start-card>span:nth-child(2){min-width:0}@media(max-width:700px){.quick-start-grid{grid-template-columns:1fr}.quick-start-card{padding:13px 14px}}
+
+/* Vehicle History Intelligence */
+.vhi-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vhi-stat{padding:14px;border:1px solid var(--line);background:#121316;border-radius:10px}.vhi-stat strong{display:block;font-size:18px}.vhi-record{display:grid;grid-template-columns:1fr auto;gap:12px;padding:12px;border-bottom:1px solid var(--line)}.vhi-record:last-child{border-bottom:0}.vhi-pill{display:inline-flex;align-items:center;border:1px solid #45474e;border-radius:99px;padding:4px 8px;font-size:11px;color:#d2d3d8}.vhi-pill.warn{border-color:#8b632a;color:#f4d18c;background:#2b2316}.vhi-pill.good{border-color:#2f6547;color:#b7f0ce;background:#15281d}@media(max-width:700px){.vhi-grid{grid-template-columns:1fr}.vhi-record{grid-template-columns:1fr}}
+
 </style></head>
 <body>
 <div class="topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
@@ -240,6 +244,41 @@
 
 <section class="section" id="vin-lookup"><div class="wrap"><div class="sectionhead"><div><div class="eyebrow">Vehicle identification</div><h2>Decode a VIN.</h2><p class="sub">Look up the VIN against the U.S. National Highway Traffic Safety Administration's public vPIC decoder. An internet connection is required; incomplete or non-U.S.-market VINs may return limited data.</p></div></div><div class="card"><form id="vinForm"><div class="field"><label for="vinInput">17-character VIN</label><div class="diag-search"><input id="vinInput" maxlength="17" autocapitalize="characters" placeholder="e.g. 1FTEW1EP5JFA00001" autocomplete="off" required><button type="submit" id="vinSubmit">Decode VIN</button></div><small>VINs normally use 17 characters and exclude I, O and Q. Do not use this result alone to confirm parts fitment.</small></div></form><div id="vinMessage" class="notice hidden" role="status" style="margin-top:14px"></div><div id="vinResult" style="margin-top:14px"></div><p class="tiny">Data source: NHTSA vPIC public API. This lookup is not an OEM parts catalogue and may not identify every option or engine variant.</p></div></div></section>
 
+
+
+<section class="section alt" id="vehicle-history"><div class="wrap">
+ <div class="sectionhead"><div><div class="eyebrow">Vehicle History Intelligence · Early access</div><h2>Look beyond the odometer.</h2><p class="sub">Organize available history evidence, compare dated kilometre readings, and identify inconsistencies before you buy. TORQWISE does not yet have a live CARFAX Canada connection; no third-party history report is implied here.</p></div></div>
+ <div class="vhi-grid">
+  <div class="card">
+   <div class="diag-label">Step 1 · Vehicle identity</div><h3 style="margin-top:8px">Start with a VIN</h3>
+   <p>Decode a VIN above first, or enter it here. Vehicle decoding identifies the vehicle; it does not reveal accident history or true mileage.</p>
+   <div class="field"><label for="vhiVin">17-character VIN</label><input id="vhiVin" maxlength="17" autocapitalize="characters" placeholder="Enter VIN" autocomplete="off"></div>
+   <div class="formbuttons"><button type="button" id="vhiUseVin">Use decoded VIN</button><a class="btn secondary" href="https://www.carfax.ca/order" target="_blank" rel="noopener noreferrer">Check CARFAX report options ↗</a></div>
+   <div id="vhiProviderStatus" class="notice" role="status">CARFAX API status: not connected. TORQWISE is not retrieving or displaying CARFAX records yet.</div>
+   <p class="tiny">A report may contain gaps. Confirm material findings with the seller, repair records, lien checks where appropriate, and an independent inspection.</p>
+  </div>
+  <div class="card">
+   <div class="diag-label">Step 2 · Odometer evidence</div><h3 style="margin-top:8px">Build a kilometre timeline</h3>
+   <p>Add readings from dated service invoices, inspection documents, listings, or other records you have. TORQWISE will flag decreasing readings; it cannot prove which reading is correct.</p>
+   <form id="vhiReadingForm">
+    <div class="formgrid">
+     <div class="field"><label for="vhiDate">Reading date</label><input id="vhiDate" type="date" required></div>
+     <div class="field"><label for="vhiKm">Odometer (km)</label><input id="vhiKm" type="number" min="0" max="9999999" step="1" required placeholder="e.g. 184250"></div>
+     <div class="field full"><label for="vhiSource">Evidence source</label><select id="vhiSource" required><option value="">Select source</option><option>Service / repair invoice</option><option>Provincial inspection record</option><option>Vehicle listing</option><option>Seller-provided document</option><option>Other document</option></select></div>
+     <div class="field full"><label for="vhiNote">Reference note (optional)</label><input id="vhiNote" maxlength="140" placeholder="e.g. invoice date or document description"></div>
+    </div>
+    <div class="formbuttons"><button type="submit">Add reading</button><button class="secondary" type="button" id="vhiClear">Clear this VIN's readings</button></div>
+   </form>
+  </div>
+ </div>
+ <div class="card" style="margin-top:16px">
+  <div class="sectionhead"><div><div class="diag-label">Evidence review</div><h3 style="margin-top:8px">Odometer timeline and risk flags</h3><p class="sub">Readings are stored locally in this browser on this device. They are not uploaded to TORQWISE and are not independently verified.</p></div><span id="vhiRiskBadge" class="vhi-pill">Awaiting readings</span></div>
+  <div id="vhiSummary" class="vhi-grid"><div class="vhi-stat"><span class="tiny">Readings recorded</span><strong>0</strong></div><div class="vhi-stat"><span class="tiny">History assessment</span><strong>Not enough evidence</strong></div></div>
+  <div id="vhiTimeline" style="margin-top:14px"><div class="empty">Add dated kilometre readings to build a timeline.</div></div>
+  <div id="vhiWarnings" aria-live="polite"></div>
+ </div>
+ <p class="tiny" style="margin-top:12px">Important: an increasing sequence does not prove the odometer is accurate. Missing, conflicting, or decreasing records require follow-up. CARFAX Canada integration will require approved API access, credentials, and commercial terms.</p>
+</div></section>
 
 <section class="section alt" id="parts-market"><div class="wrap">
  <div class="sectionhead"><div><div class="eyebrow">TORQWISE parts marketplace · Beta</div><h2>Compare parts without opening ten tabs.</h2><p class="sub">Build a shortlist, then search multiple suppliers with the same part and vehicle details. TORQWISE will grow toward verified fitment, live stock, delivered-price comparisons, and checkout integrations.</p></div></div>
@@ -1406,4 +1445,41 @@ Object.assign(DIAG_GUIDES,{
  P0740:torqGuidePair({beginner:"P0740 commonly indicates a torque-converter-clutch circuit or control fault. Wiring, solenoid, connector, controller command or an internal transmission issue may be involved.",topic:"Torque-converter clutch circuit",q1:"Are there slipping, shudder, overheating or abnormal-shift symptoms?",yes1:"Transmission symptom present",no1:"No obvious symptom",q2:"Have TCM codes, TCC command/slip data and the electrical circuit been checked with the correct service information?",yes2:"Data and circuit reviewed",no2:"Checks not completed",yesText:"Follow the transmission-specific diagnostic procedure and avoid towing or hard use if slipping or overheating is present.",noText:"Inspect accessible connectors and harness routing, then test circuit/control with the OEM pinout.",unknownText:"Save all transmission codes and freeze-frame. Fluid level/temperature procedures are transmission-specific.",next:"Do not condemn the torque converter from this code alone; separate electrical, hydraulic and mechanical evidence.",advanced:["Record TCM codes, freeze-frame and TCC command/slip data.","Inspect accessible connectors, harness and grounds.","Test TCC circuit/solenoid and module command using OEM specifications.","Check fluid level/condition only with the exact manufacturer procedure.","Verify TCC operation and confirm the code does not return after repair."]}),
 });
 </script>
+
+<script>
+(function(){
+ const vinInput=document.getElementById('vhiVin'), form=document.getElementById('vhiReadingForm');
+ if(!vinInput||!form)return;
+ const safeVin=()=>vinInput.value.trim().toUpperCase();
+ const validVin=v=>/^[A-HJ-NPR-Z0-9]{17}$/.test(v);
+ const key=v=>'torqwise_vhi_readings_v1_'+v;
+ const escape=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+ function load(){const v=safeVin();if(!validVin(v))return[];try{const a=JSON.parse(localStorage.getItem(key(v))||'[]');return Array.isArray(a)?a.filter(x=>x&&typeof x.date==='string'&&Number.isFinite(Number(x.km))):[]}catch(e){return[]}}
+ function save(a){const v=safeVin();if(!validVin(v))return false;try{localStorage.setItem(key(v),JSON.stringify(a));return true}catch(e){return false}}
+ function render(){
+  const v=safeVin(), timeline=document.getElementById('vhiTimeline'),summary=document.getElementById('vhiSummary'),badge=document.getElementById('vhiRiskBadge'),warnings=document.getElementById('vhiWarnings');
+  if(!validVin(v)){timeline.innerHTML='<div class="empty">Enter a valid 17-character VIN to review or save readings for that vehicle.</div>';summary.innerHTML='<div class="vhi-stat"><span class="tiny">Readings recorded</span><strong>0</strong></div><div class="vhi-stat"><span class="tiny">History assessment</span><strong>Not enough evidence</strong></div>';badge.textContent='Awaiting VIN';badge.className='vhi-pill';warnings.innerHTML='';return}
+  const a=load().sort((x,y)=>x.date.localeCompare(y.date)||Number(x.km)-Number(y.km));
+  const drops=[];for(let i=1;i<a.length;i++){if(Number(a[i].km)<Number(a[i-1].km))drops.push({from:a[i-1],to:a[i],delta:Number(a[i-1].km)-Number(a[i].km)})}
+  const duplicateDates=new Set();for(let i=1;i<a.length;i++){if(a[i].date===a[i-1].date&&Number(a[i].km)!==Number(a[i-1].km))duplicateDates.add(a[i].date)}
+  summary.innerHTML='<div class="vhi-stat"><span class="tiny">Readings recorded</span><strong>'+a.length+'</strong></div><div class="vhi-stat"><span class="tiny">History assessment</span><strong>'+(drops.length?'Inconsistency flagged':a.length<2?'Not enough evidence':'No decrease in entered records')+'</strong></div>';
+  badge.textContent=drops.length?'Review readings':a.length>=2?'Timeline assembled':'Awaiting readings';badge.className='vhi-pill '+(drops.length?'warn':a.length>=2?'good':'');
+  if(!a.length){timeline.innerHTML='<div class="empty">No readings saved for this VIN yet.</div>';warnings.innerHTML='';return}
+  timeline.innerHTML=a.map((x,i)=>'<div class="vhi-record"><div><strong>'+escape(x.km.toLocaleString())+' km</strong><div class="tiny">'+escape(x.date)+' · '+escape(x.source||'Unspecified source')+'</div>'+(x.note?'<div class="tiny">'+escape(x.note)+'</div>':'')+'</div><button type="button" class="secondary" data-vhi-remove="'+i+'" aria-label="Remove reading from '+escape(x.date)+'">Remove</button></div>').join('');
+  timeline.querySelectorAll('[data-vhi-remove]').forEach(b=>b.addEventListener('click',()=>{const current=load().sort((x,y)=>x.date.localeCompare(y.date)||Number(x.km)-Number(y.km));current.splice(Number(b.dataset.vhiRemove),1);save(current);render()}));
+  const msgs=[];drops.forEach(d=>msgs.push('Possible odometer inconsistency: '+d.from.km.toLocaleString()+' km on '+d.from.date+' is higher than '+d.to.km.toLocaleString()+' km on '+d.to.date+' ('+d.delta.toLocaleString()+' km decrease). Verify the original documents and vehicle odometer.'));
+  duplicateDates.forEach(d=>msgs.push('Conflicting readings are recorded for '+d+'. Check the original evidence.'));
+  if(a.length<2)msgs.push('Add at least one more dated reading before comparing trends.');
+  msgs.push('These are user-entered records, not verified CARFAX data. No decrease found does not establish true mileage or rule out odometer tampering.');
+  warnings.innerHTML=msgs.map((m,i)=>'<div class="notice '+(i===msgs.length-1?'':'')+'" role="note">'+escape(m)+'</div>').join('');
+ }
+ document.getElementById('vhiUseVin').addEventListener('click',()=>{const v=(document.getElementById('vinInput')?.value||'').trim().toUpperCase();if(validVin(v)){vinInput.value=v;render();document.getElementById('vehicle-history').scrollIntoView({behavior:'smooth',block:'start'})}else{document.getElementById('vhiProviderStatus').textContent='Enter or decode a valid 17-character VIN above first, then select “Use decoded VIN”.'}});
+ vinInput.addEventListener('input',render);
+ form.addEventListener('submit',e=>{e.preventDefault();const v=safeVin(),date=document.getElementById('vhiDate').value,km=Number(document.getElementById('vhiKm').value),source=document.getElementById('vhiSource').value,note=document.getElementById('vhiNote').value.trim();if(!validVin(v)){alert('Enter a valid 17-character VIN first.');return}if(!date||!Number.isFinite(km)||km<0||!source)return;const a=load();a.push({date,km,source,note,addedAt:new Date().toISOString()});if(!save(a)){alert('Could not save readings in this browser. Check device storage settings.');return}document.getElementById('vhiKm').value='';document.getElementById('vhiNote').value='';render()});
+ document.getElementById('vhiClear').addEventListener('click',()=>{const v=safeVin();if(!validVin(v)){alert('Enter a valid VIN first.');return}if(confirm('Clear all locally saved readings for this VIN?')){localStorage.removeItem(key(v));render()}});
+ const oldVin=document.getElementById('vinInput');if(oldVin){oldVin.addEventListener('change',()=>{const v=oldVin.value.trim().toUpperCase();if(validVin(v))vinInput.value=v;render()})}
+ render();
+})();
+</script>
+
 </body></html>
