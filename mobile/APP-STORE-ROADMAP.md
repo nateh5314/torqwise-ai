@@ -13,7 +13,9 @@
 
 ## Stage 2 — Core product reliability (in progress)
 - [x] Add a detailed app-versus-website feature-parity matrix with current status and acceptance tests (`mobile/FEATURE-PARITY.md`).
-- [x] Add a native Tools screen for parts-price searches, OEM reference searches, estimate-review preparation, recall/service searches and maintenance-planning prompts. These are initial mobile workflows, not yet full parity with every website flow.
+- [x] Add a native Tools screen for parts-price searches, OEM reference searches, estimate-review preparation, recall/service searches, maintenance-planning prompts, and used-vehicle pre-purchase research. These are initial mobile workflows, not yet full parity with every website flow.
+- [x] Add a 60-second timeout, bounded input payloads and clear network/timeout/unreadable-response errors to native AI research.
+- [x] Configure EAS Android preview builds to produce an installable APK and production builds to produce an Android App Bundle; this config still requires a real cloud build and device install test.
 - [ ] Verify the deployed site serves `/assets/dtc-database.json`; test actual iPhone network behavior and the 9,000-record threshold.
 - [ ] Add a complete connection state that clearly distinguishes fresh, cached, and starter data and records the last successful library sync.
 - [ ] Add automated tests for VIN validation, DTC normalization, malformed data, cache corruption, offline behavior, and native research response parsing.
@@ -42,6 +44,7 @@
 - [ ] Test on physical iPhones across supported iOS versions: fresh install, upgrade, offline, poor connectivity, API failures, privacy permissions and subscription restore.
 - [ ] Confirm ownership/availability of bundle ID `ca.torqwise.automotive` and set production app metadata.
 - [ ] Confirm Apple Developer Program membership, App Store Connect app record and signing credentials.
+- [ ] Confirm Google Play Console developer account, package-name availability, signing, data-safety form and testing track.
 
 ## Stage 5 — TestFlight and release
 1. Build a signed internal preview and install it on a real iPhone.
@@ -61,7 +64,7 @@ npx eas-cli build --platform ios --profile production
 A successful JavaScript bundle or cloud build is not the same as a signed, device-tested, App Store-approved release.
 
 ## Known limitations — do not treat as complete
-- The app has not yet been signed, installed on a physical iPhone, submitted to TestFlight or reviewed by Apple.
+- The app has not yet been signed, installed on a physical iPhone/Android device, submitted to TestFlight/Google Play testing, or reviewed by either store.
 - The generic DTC dataset is downloaded at runtime from the production website. If the deployed site does not serve it correctly, only the starter codes are available.
 - Native account sign-in and AI research are wired to existing services but still require physical-device acceptance testing; the native Tools screen is an initial implementation. Cloud history, several website workflows, and complete feature parity/paid entitlement integration are not yet complete.
 - The bundle identifier is provisional until ownership and availability are confirmed.
