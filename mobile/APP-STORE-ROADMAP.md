@@ -22,6 +22,8 @@
 - [ ] Add automated tests for VIN validation, DTC normalization, malformed data, cache corruption, offline behavior, and native research response parsing.
 - [ ] Add vehicle association and export for saved diagnostic cases after core local persistence is device-tested.
 - [x] Add optional technician notes (test results, measurements, symptoms) to locally saved diagnostic cases.
+- [x] Add user-triggered export of local garage and diagnostic-case history through the native share sheet; local data can be backed up or transferred without cloud sync.
+- [ ] Test export on physical iOS/Android devices with empty data, large case histories and special characters.
 - [ ] Validate long diagnostic content on smaller iPhones, including keyboard dismissal and scrolling.
 - [ ] Add user-friendly errors for invalid VINs, network timeouts, empty search results and storage failures.
 
