@@ -30,9 +30,10 @@
 - [ ] Confirm whether native digital subscriptions must use StoreKit / Apple's in-app purchase flow. Do not enable web checkout in the iOS app until the applicable Apple rules have been reviewed.
 
 ## Stage 4 — Privacy, accessibility and review
-- [ ] Publish a public privacy policy and support page with real contact details.
+- [ ] Review and publish the privacy policy and support page with real contact details after confirming production data flows.
 - [ ] Complete App Store Connect privacy labels based on actual network traffic, SDKs, identifiers, analytics and account data.
-- [ ] Provide account deletion in-app if account creation is supported; explain retention and deletion of cloud data.
+- [x] Add in-app privacy-policy access and a confirmation-protected action to clear local garage and diagnostic-case data.
+- [ ] Implement and test in-app account deletion for server-side account data; the current clear-data control only removes local garage entries and saved diagnostic cases.
 - [ ] Review VoiceOver labels, Dynamic Type, contrast, keyboard behavior, reduced motion and touch target sizes.
 - [ ] Create final app icon, launch screen, screenshots for required device sizes, subtitle, description, keywords and support URL.
 - [ ] Test on physical iPhones across supported iOS versions: fresh install, upgrade, offline, poor connectivity, API failures, privacy permissions and subscription restore.
