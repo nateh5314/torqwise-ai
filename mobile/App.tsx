@@ -417,7 +417,7 @@ export default function App() {
         {tab === "Home" && <>
           <View style={s.hero}>
             <Text style={s.eyebrow}>THE TECHNICIAN'S WORKSPACE</Text>
-            <Text style={s.heroTitle}>Find the fault.{"\n"}Prove the fix.</Text>
+            <Text accessibilityRole="header" style={s.heroTitle}>Find the fault.{"\n"}Prove the fix.</Text>
             <Text style={s.heroBody}>Automotive research and guided diagnostics, built for the real world.</Text>
             <TouchableOpacity style={s.primary} onPress={() => setTab("Diagnose")}><Text style={s.primaryText}>START DIAGNOSING  →</Text></TouchableOpacity>
             <View style={s.rule}/><Text style={s.mutedCaps}>RESEARCH. TEST. VERIFY.</Text>
@@ -510,7 +510,7 @@ export default function App() {
         </>}
 
         {tab === "Research" && <>
-          <Text style={s.eyebrow}>SOURCE-LINKED AI WORKSPACE</Text><Text style={s.pageTitle}>Technical research</Text>
+          <Text style={s.eyebrow}>SOURCE-LINKED AI WORKSPACE</Text><Text accessibilityRole="header" style={s.pageTitle}>Technical research</Text>
           <Text style={s.body}>Ask a focused automotive or heavy-equipment question. TORQWISE checks the same account and subscription entitlement used by the website.</Text>
           <View style={s.panel}>
             <Text style={s.panelTitle}>Your access</Text>
@@ -580,7 +580,7 @@ export default function App() {
         {!!notice && <TouchableOpacity style={s.notice} onPress={()=>setNotice("")}><Text style={s.noticeText}>{notice}  ×</Text></TouchableOpacity>}
         <View style={s.footer}><Text style={s.footerBrand}>TORQWISE</Text><Text style={s.footerText}>Automotive intelligence for better decisions.</Text><TouchableOpacity onPress={openWeb}><Text style={s.footerLink}>OPEN WEB WORKSPACE  ↗</Text></TouchableOpacity></View>
       </ScrollView>
-      <View style={s.tabs}>{TABS.map(item=>{const active=tab===item.label;return <TouchableOpacity key={item.label} style={s.tab} onPress={()=>{setTab(item.label);setNotice("");}} accessibilityRole="button" accessibilityState={{selected:active}}><Text style={[s.tabIcon,active&&s.active]}>{item.icon}</Text><Text style={[s.tabLabel,active&&s.active]}>{item.label.toUpperCase()}</Text>{active&&<View style={s.indicator}/>}</TouchableOpacity>})}</View>
+      <View style={s.tabs}>{TABS.map(item=>{const active=tab===item.label;return <TouchableOpacity key={item.label} style={s.tab} onPress={()=>{setTab(item.label);setNotice("");}} accessibilityRole="tab" accessibilityLabel={`${item.label} screen`} accessibilityHint={`Open the ${item.label} section`} accessibilityState={{selected:active}}><Text accessible={false} style={[s.tabIcon,active&&s.active]}>{item.icon}</Text><Text accessible={false} style={[s.tabLabel,active&&s.active]}>{item.label.toUpperCase()}</Text>{active&&<View accessible={false} style={s.indicator}/>}</TouchableOpacity>})}</View>
     </SafeAreaView>
   );
 }
@@ -647,7 +647,7 @@ const s = StyleSheet.create({
   footerText:{color:"#8993a0",fontSize:11,marginTop:7,marginBottom:13},
   footerLink:{color:"#ff6b73",fontSize:10,fontWeight:"900",letterSpacing:0.7,padding:8},
   tabs:{minHeight:68,backgroundColor:"#0d1015",borderTopWidth:1,borderTopColor:"#282e38",flexDirection:"row",justifyContent:"space-around",alignItems:"center",paddingBottom:5},
-  tab:{minWidth:62,alignItems:"center",justifyContent:"center",paddingTop:7,position:"relative"},
+  tab:{minWidth:62,minHeight:48,alignItems:"center",justifyContent:"center",paddingTop:7,paddingHorizontal:6,position:"relative"},
   tabIcon:{color:"#737d8b",fontSize:20,marginBottom:3},
   tabLabel:{color:"#737d8b",fontSize:8,fontWeight:"900",letterSpacing:0.7},
   active:{color:"#ff5962"},
