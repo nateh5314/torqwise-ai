@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, Linking, SafeAreaView, ScrollView, StatusBar,
 type Tab = "Home" | "Diagnose" | "VIN" | "Garage" | "Research";
 type ResearchSource = { title?: string; url?: string };
 type Dtc = { title: string; meaning: string; steps: string; causes?: string[]; symptoms?: string[]; sources?: string[] };
-type SavedCase = { id: string; code: string; title: string; meaning: string; savedAt: string };
+type SavedCase = { id: string; code: string; title: string; meaning: string; notes?: string; savedAt: string };
 type DtcRecord = {
   code: string;
   title?: { en?: string };
@@ -48,6 +48,7 @@ export default function App() {
   const [databaseSyncTime, setDatabaseSyncTime] = useState<string | null>(null);
   const [databaseLoadError, setDatabaseLoadError] = useState("");
   const [savedCases, setSavedCases] = useState<SavedCase[]>([]);
+  const [caseNotes, setCaseNotes] = useState("");
   const [casesLoaded, setCasesLoaded] = useState(false);
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -383,6 +384,7 @@ export default function App() {
       code: key,
       title: dtc.title,
       meaning: dtc.meaning,
+      notes: caseNotes.trim().slice(0, 1200),
       savedAt: new Date().toISOString()
     };
     setSavedCases(current => [saved, ...current].slice(0, 100));
@@ -468,6 +470,9 @@ export default function App() {
             {!!dtc.causes?.length && <><Text style={s.label}>POSSIBLE CAUSES IN THE REFERENCE DATA</Text><Text style={s.body}>{dtc.causes.join(" · ")}</Text></>}
             {!!dtc.symptoms?.length && <><Text style={s.label}>ASSOCIATED SYMPTOMS</Text><Text style={s.body}>{dtc.symptoms.join(" · ")}</Text></>}
             <Text style={s.label}>SUGGESTED NEXT STEPS</Text><Text style={s.body}>{dtc.steps}</Text>
+            <Text style={s.label}>TECHNICIAN NOTES (OPTIONAL)</Text>
+            <TextInput style={[s.input,{minHeight:82,textAlignVertical:"top"}]} value={caseNotes} onChangeText={setCaseNotes} placeholder="Record test results, measurements, symptoms, or what you have verified…" placeholderTextColor="#7e8794" multiline maxLength={1200} accessibilityLabel="Technician notes for saved diagnostic case"/>
+            <Text style={s.counter}>{caseNotes.length}/1200</Text>
             <TouchableOpacity style={s.secondary} onPress={saveDiagnosticCase}><Text style={s.secondaryText}>SAVE TO DIAGNOSTIC HISTORY</Text></TouchableOpacity>
             {!!dtc.sources?.length && <><Text style={s.label}>REFERENCE SOURCES</Text>{dtc.sources.map(source => <TouchableOpacity key={source} onPress={() => Linking.openURL(source)}><Text style={s.sourceLink}>{source}</Text></TouchableOpacity>)}</>}
             <TouchableOpacity style={s.primary} onPress={openWeb}><Text style={s.primaryText}>OPEN FULL RESEARCH HUB  ↗</Text></TouchableOpacity>
@@ -531,6 +536,7 @@ export default function App() {
                 <Text style={s.codeBadgeText}>{item.code}</Text>
                 <Text style={s.panelTitle}>{item.title}</Text>
                 <Text style={s.body}>{item.meaning}</Text>
+                {!!item.notes && <><Text style={s.label}>TECHNICIAN NOTES</Text><Text style={s.body}>{item.notes}</Text></>}
                 <Text style={s.mutedCaps}>{new Date(item.savedAt).toLocaleDateString()}</Text>
               </View>
               <TouchableOpacity onPress={() => { setCode(item.code); setTab("Diagnose"); }} accessibilityLabel={`Reopen saved case ${item.code}`}><Text style={s.sourceLink}>OPEN</Text></TouchableOpacity>
