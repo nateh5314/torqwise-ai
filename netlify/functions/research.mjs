@@ -439,9 +439,40 @@ Use the provided context, technician observations, measurements, codes, prior fi
     return json({ error: "The AI service rejected this request. Check the model configuration and research request, then retry." }, 502);
   }
   if (!payload) {
-    console.error("TORQWISE OpenAI response was not valid JSON.");
-    try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
-    return json({ error: "The AI service returned an unreadable response. Please retry; if it continues, check the Netlify research function logs." }, 502);
+    // A proxy/CDN can occasionally return a non-JSON body even when the
+    // upstream request technically completes. Do not stop here: make one
+    // independent, bounded retry without web search before failing the report.
+    console.warn("TORQWISE received a non-JSON AI response; retrying without web search.");
+    try {
+      const retry = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { "authorization": `Bearer ${env("OPENAI_API_KEY")}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          model: env("OPENAI_MODEL") || "gpt-5-mini",
+          instructions: requestInstructions + " The previous request returned an unreadable response. Provide a concise evidence-led answer, clearly label unknowns, and never invent citations, part numbers, or fitment.",
+          input,
+          max_output_tokens: followUp ? 900 : 1400,
+          store: false,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      let retryPayload = {};
+      try { retryPayload = await retry.json(); } catch {}
+      const retryAnswer = retry.ok ? extractText(retryPayload) : "";
+      if (retryAnswer) {
+        payload = retryPayload;
+      } else {
+        console.error("TORQWISE no-web fallback failed:", retry.status, retryPayload?.error?.code || "unreadable");
+        try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+        return json({ error: retry.status === 429
+          ? "The AI service is rate-limited or out of available API credit. Check API billing and usage."
+          : "TORQWISE could not get a readable answer from the AI service after retrying. Check OpenAI API usage and the Netlify research function logs." }, retry.status === 429 ? 429 : 502);
+      }
+    } catch (retryError) {
+      console.error("TORQWISE non-JSON fallback failed:", retryError?.name || "network error");
+      try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+      return json({ error: "TORQWISE could not reach the AI service after retrying. Please check OpenAI API status and Netlify function logs." }, 502);
+    }
   }
   let answer = extractText(payload);
   // A successful Responses API call can occasionally finish without a text block.
