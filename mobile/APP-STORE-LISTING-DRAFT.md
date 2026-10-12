@@ -25,6 +25,7 @@ TORQWISE brings core automotive reference tools into an iPhone-first workspace.
 
 **Vehicle garage**
 - Keep a convenient list of vehicles on your device.
+- Save supported fault-code references locally with a timestamp, reopen them later, or remove them from the device.
 
 **Built for practical workflows**
 TORQWISE is designed to help drivers and technicians organize automotive research. Always use vehicle-specific service information, appropriate safety procedures, and qualified professional judgment before performing repairs.
