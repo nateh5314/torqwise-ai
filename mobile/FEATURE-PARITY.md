@@ -18,7 +18,7 @@ The clients should have equivalent **entitlements and core service availability*
 | Estimate comparison | Website request workflow | Native Tools can prepare an AI research prompt | Not equivalent yet; map the website's complete form, pricing/quote disclosures and saved request state |
 | Used-vehicle research | Website service request | Native buyer research brief through AI Research | Partial; research prompt is implemented, but not equivalent to the full website request/quote workflow |
 | Service manuals, diagrams, specifications, bulletins | Website research categories and external search tools | Native Tools searches plus AI research categories | Partial; verify identical categories and source-handling, do not claim verified coverage without testing |
-| Garage and maintenance history | Website/local and account-history features vary by workflow | Device-local garage and diagnostic cases | Not equivalent; native history does not sync and maintenance schedules are not yet a dedicated record feature |
+| Garage and maintenance history | Website/local and account-history features vary by workflow | Device-local garage and diagnostic cases with user-triggered JSON export via share sheet | Not equivalent; native history does not sync and maintenance schedules are not yet a dedicated record feature; export needs device testing |
 | Saved cases / account history | Website has existing account-history hooks | Local-only native diagnostic cases | Not equivalent; define cloud-sync ownership, merge, export and offline behavior before claiming parity |
 | Subscription management | Existing website billing/portal | No native purchase/restore flow yet | Release blocker; preserve website billing and implement a policy-compliant native entitlement/purchase approach |
 | Account deletion / privacy | Website process must be verified | Local data clearing only | Release blocker; local clearing is not account deletion |
@@ -41,7 +41,7 @@ The clients should have equivalent **entitlements and core service availability*
 - [ ] Compare VIN results for valid, invalid, unsupported, timed-out and malformed responses.
 - [ ] Compare research report content, source links, usage counters, timeout behavior and error messages on physical devices (native request bounds and timeout are now implemented).
 - [ ] Test parts/estimate/used-vehicle workflows from input through final result, including all quote and payment disclosures.
-- [ ] Decide and implement cross-device garage/case history, conflict resolution, export and account deletion.
+- [ ] Decide and implement cross-device garage/case history, conflict resolution and account deletion. Local garage/case export is implemented but still needs physical-device validation.
 - [ ] Test each client independently on a fresh install with the other client never opened.
 - [ ] Test offline launch, stale cache, reconnect and server outage.
 - [ ] Complete accessibility and physical-device tests on iOS and Android.
