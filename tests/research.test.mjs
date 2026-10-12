@@ -487,8 +487,8 @@ test("Vehicle History Intelligence is presented as a Pro-exclusive feature", asy
   assert.match(html, /TORQWISE PRO TECHNICIAN[^<]*EXCLUSIVE/);
   assert.ok(html.includes("Unlock with Pro — $29.99 CAD/month"));
   assert.match(html, /id="vhiProContent" class="hidden"/);
-  assert.match(html, /vhiContent\\.classList\\.toggle\\('hidden',!pro\\)/);
-  assert.match(html, /vhiGate\\.classList\\.toggle\\('hidden',pro\\)/);
+  assert.ok(html.includes("vhiContent.classList.toggle('hidden',!pro)"));
+  assert.ok(html.includes("vhiGate.classList.toggle('hidden',pro)"));
   assert.match(html, /CARFAX API status: not connected/);
   assert.match(html, /id="vhiExport"/);
   assert.match(html, /torqwise-odometer-timeline-/);
