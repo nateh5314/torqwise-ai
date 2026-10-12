@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { ActivityIndicator, Alert, Linking, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-type Tab = "Home" | "Diagnose" | "VIN" | "Garage" | "Research";
+type Tab = "Home" | "Diagnose" | "VIN" | "Tools" | "Research" | "Garage";
 type ResearchSource = { title?: string; url?: string };
 type Dtc = { title: string; meaning: string; steps: string; causes?: string[]; symptoms?: string[]; sources?: string[] };
 type SavedCase = { id: string; code: string; title: string; meaning: string; notes?: string; savedAt: string };
@@ -27,7 +27,7 @@ const CODES: Record<string, Dtc> = {
   P0442: { title: "EVAP system small leak", meaning: "The evaporative-emissions monitor detected a leak-sized condition.", steps: "Inspect the fuel cap and EVAP hoses, then follow the OEM-approved leak-test procedure." }
 };
 const TABS: { label: Tab; icon: string }[] = [
-  { label: "Home", icon: "⌂" }, { label: "Diagnose", icon: "⌁" }, { label: "VIN", icon: "▤" }, { label: "Research", icon: "⌕" }, { label: "Garage", icon: "▣" }
+  { label: "Home", icon: "⌂" }, { label: "Diagnose", icon: "⌁" }, { label: "VIN", icon: "▤" }, { label: "Tools", icon: "⚒" }, { label: "Research", icon: "⌕" }, { label: "Garage", icon: "▣" }
 ];
 
 export default function App() {
@@ -58,6 +58,9 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authMessage, setAuthMessage] = useState("");
+  const [toolVehicle, setToolVehicle] = useState("");
+  const [toolRequest, setToolRequest] = useState("");
+  const [toolRegion, setToolRegion] = useState("Canada");
   const [researchAsset, setResearchAsset] = useState("");
   const [researchQuestion, setResearchQuestion] = useState("");
   const [researchTopic, setResearchTopic] = useState("diagnostic");
@@ -218,6 +221,38 @@ export default function App() {
         }
       ]
     );
+  }
+
+  async function openToolSearch(kind: "shopping" | "oem" | "recall" | "service") {
+    const subject = [toolVehicle.trim(), toolRequest.trim()].filter(Boolean).join(" ");
+    if (!subject) {
+      setNotice("Enter a vehicle or equipment and what you need to find.");
+      return;
+    }
+    const query = [subject, kind === "shopping" ? "parts price comparison" : kind === "oem" ? "OEM parts catalog part number" : kind === "recall" ? "official recall technical service bulletin" : "official service specifications repair procedure wiring diagram", toolRegion.trim()].filter(Boolean).join(" ");
+    const url = kind === "shopping"
+      ? "https://www.google.com/search?tbm=shop&q=" + encodeURIComponent(query)
+      : "https://www.google.com/search?q=" + encodeURIComponent(query);
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setNotice("Could not open the search. Check your connection and try again.");
+    }
+  }
+
+  function sendToolToResearch(topic: string, instruction: string) {
+    if (!toolVehicle.trim() && !toolRequest.trim()) {
+      setNotice("Enter vehicle/equipment details and what you need help with first.");
+      return;
+    }
+    setResearchAsset(toolVehicle.trim());
+    setResearchTopic(topic);
+    setResearchQuestion([instruction, toolRequest.trim(), toolRegion.trim() ? "Region: " + toolRegion.trim() : ""].filter(Boolean).join("\n"));
+    setResearchError("");
+    setResearchAnswer("");
+    setResearchSources([]);
+    setTab("Research");
+    setNotice("Your request is ready in AI Research. Review it, add details, and run the report.");
   }
 
   async function signOut() {
@@ -507,6 +542,43 @@ export default function App() {
           {!!error && <Text style={s.error}>{error}</Text>}
           {!!vinResult && <View style={s.panel}><Text style={s.label}>DECODED VEHICLE DETAILS</Text><Text style={s.panelTitle}>{vinResult}</Text><Text style={s.body}>Confirm engine, drivetrain, trim, and production details before making a repair or parts decision.</Text><TouchableOpacity style={s.secondary} onPress={() => {setVehicle(vinResult);setTab("Garage");}}><Text style={s.secondaryText}>ADD DETAILS TO GARAGE</Text></TouchableOpacity></View>}
           <Text style={s.disclaimer}>VIN decoding is not an OEM parts catalogue and may not return every configuration detail.</Text>
+        </>}
+
+        {tab === "Tools" && <>
+          <Text style={s.eyebrow}>MOBILE WORKSHOP TOOLS</Text>
+          <Text accessibilityRole="header" style={s.pageTitle}>Parts, service & planning</Text>
+          <Text style={s.body}>Use these tools directly in the app. Supplier and web searches open separately; AI-assisted research uses your TORQWISE account and server-enforced plan allowance.</Text>
+          <Text style={s.label}>VEHICLE / EQUIPMENT</Text>
+          <TextInput style={s.input} value={toolVehicle} onChangeText={setToolVehicle} placeholder="Year, make, model, engine or serial" placeholderTextColor="#7e8794" accessibilityLabel="Vehicle or equipment for workshop tools"/>
+          <Text style={s.label}>PART, REPAIR OR QUESTION</Text>
+          <TextInput style={[s.input,{minHeight:84,textAlignVertical:"top"}]} value={toolRequest} onChangeText={setToolRequest} placeholder="e.g. front wheel bearing, P0420 diagnosis, estimate line items…" placeholderTextColor="#7e8794" multiline maxLength={1200} accessibilityLabel="Part, repair or workshop question"/>
+          <Text style={s.label}>REGION (OPTIONAL)</Text>
+          <TextInput style={s.input} value={toolRegion} onChangeText={setToolRegion} placeholder="Country or delivery region" placeholderTextColor="#7e8794" accessibilityLabel="Parts and service search region"/>
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>Find parts and compare prices</Text>
+            <Text style={s.body}>Search shopping results or look for OEM catalog references. Confirm exact fitment, availability, shipping and final price with the supplier before ordering.</Text>
+            <TouchableOpacity style={s.primary} onPress={() => void openToolSearch("shopping")} accessibilityRole="button"><Text style={s.primaryText}>COMPARE PART PRICES ↗</Text></TouchableOpacity>
+            <TouchableOpacity style={s.secondary} onPress={() => void openToolSearch("oem")} accessibilityRole="button"><Text style={s.secondaryText}>SEARCH OEM PART REFERENCES ↗</Text></TouchableOpacity>
+            <TouchableOpacity style={s.secondary} onPress={() => sendToolToResearch("parts","Research candidate replacement parts, OEM references, fitment evidence, alternatives and source links for this request. Do not claim confirmed fitment without authoritative evidence.")} accessibilityRole="button"><Text style={s.secondaryText}>RESEARCH THIS PART WITH TORQWISE →</Text></TouchableOpacity>
+          </View>
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>Repair estimate comparison</Text>
+            <Text style={s.body}>Enter the repair job or estimate line items above, then send them to AI Research for an organized comparison, questions to ask, and clearly flagged uncertainties.</Text>
+            <TouchableOpacity style={s.primary} onPress={() => sendToolToResearch("service","Help compare this repair estimate. Organize the line items, distinguish parts and labour where details allow, identify missing information, and suggest questions to ask the repair shop. Do not invent local labour rates or claim a quote is fair without evidence.")} accessibilityRole="button"><Text style={s.primaryText}>PREPARE ESTIMATE REVIEW →</Text></TouchableOpacity>
+          </View>
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>Recalls, bulletins & service information</Text>
+            <Text style={s.body}>Search for official recall notices, technical service bulletins, service procedures, wiring diagrams and specifications. Verify year, model, engine, serial/VIN and market applicability.</Text>
+            <TouchableOpacity style={s.secondary} onPress={() => void openToolSearch("recall")} accessibilityRole="button"><Text style={s.secondaryText}>SEARCH RECALLS & SERVICE BULLETINS ↗</Text></TouchableOpacity>
+            <TouchableOpacity style={s.secondary} onPress={() => void openToolSearch("service")} accessibilityRole="button"><Text style={s.secondaryText}>SEARCH SERVICE SPECS & DIAGRAMS ↗</Text></TouchableOpacity>
+            <TouchableOpacity style={s.secondary} onPress={() => sendToolToResearch("bulletin","Research applicable recalls, technical service bulletins, campaigns and official service information. Prefer manufacturer or government sources and state uncertainty when exact applicability cannot be confirmed.")} accessibilityRole="button"><Text style={s.secondaryText}>ASK TORQWISE TO RESEARCH THIS →</Text></TouchableOpacity>
+          </View>
+          <View style={s.panel}>
+            <Text style={s.panelTitle}>Maintenance planning</Text>
+            <Text style={s.body}>Ask for a maintenance plan based on the exact vehicle/equipment, mileage or hours, operating conditions and available service information.</Text>
+            <TouchableOpacity style={s.secondary} onPress={() => sendToolToResearch("service","Build a maintenance planning outline for this vehicle/equipment using source-linked service information. Ask for missing mileage/hours, operating conditions and engine details rather than inventing interval specifications.")} accessibilityRole="button"><Text style={s.secondaryText}>BUILD A MAINTENANCE PLAN →</Text></TouchableOpacity>
+          </View>
+          <Text style={s.disclaimer}>External searches open a browser and may not have live fitment or price verification. AI reports use the same server-side account allowance as TORQWISE web research. These tools do not replace OEM service information or professional verification.</Text>
         </>}
 
         {tab === "Research" && <>
