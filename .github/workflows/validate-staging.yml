@@ -25,11 +25,15 @@ jobs:
           python3 - <<'PY'
           import re, pathlib, subprocess, tempfile
           pages = ["index.html", "admin.html", "support.html"]
+          pattern = re.compile(r'<script\\b([^>]*)>([\\s\\S]*?)</script\\s*>', re.IGNORECASE)
           with tempfile.TemporaryDirectory() as directory:
               for page in pages:
                   html = pathlib.Path(page).read_text()
-                  scripts = re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script\s*>", html, re.IGNORECASE)
-                  for number, script in enumerate(scripts):
+                  for number, (attributes, script) in enumerate(pattern.findall(html)):
+                      type_match = re.search(r"""\\btype\\s*=\\s*["']([^"']+)["']""", attributes, re.IGNORECASE)
+                      if type_match and type_match.group(1).lower() in ("application/ld+json", "importmap"):
+                          print(f"Skipping non-JavaScript script: {page} script {number}")
+                          continue
                       if not script.strip():
                           continue
                       path = pathlib.Path(directory) / f"{pathlib.Path(page).stem}-{number}.js"
