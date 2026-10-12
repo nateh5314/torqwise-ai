@@ -20,6 +20,8 @@ Scan the QR code with Expo Go on an iPhone, or run `npx expo start --ios` on a M
 - Device-memory garage list for initial usability testing
 - Local diagnostic case history with save, reopen, delete and timestamps
 - Retry and error messaging when the hosted diagnostic library cannot be loaded
+- Native email/password sign-in and account creation using Supabase with device secure session storage
+- Authenticated AI research requests through the existing server-side Netlify endpoint
 - Link to the existing full TORQWISE research workspace
 
 ## Before App Store / Google Play submission
