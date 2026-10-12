@@ -15,7 +15,8 @@
 - [ ] Verify the deployed site serves `/assets/dtc-database.json`; test actual iPhone network behavior and the 9,000-record threshold.
 - [ ] Add a complete connection state that clearly distinguishes fresh, cached, and starter data and records the last successful library sync.
 - [ ] Add automated tests for VIN validation, DTC normalization, malformed data, cache corruption, offline behavior, and native research response parsing.
-- [ ] Extend saved diagnostic cases with technician notes, vehicle association, and export after core local persistence is device-tested.
+- [ ] Add vehicle association and export for saved diagnostic cases after core local persistence is device-tested.
+- [x] Add optional technician notes (test results, measurements, symptoms) to locally saved diagnostic cases.
 - [ ] Validate long diagnostic content on smaller iPhones, including keyboard dismissal and scrolling.
 - [ ] Add user-friendly errors for invalid VINs, network timeouts, empty search results and storage failures.
 
@@ -60,6 +61,6 @@ A successful JavaScript bundle or cloud build is not the same as a signed, devic
 ## Known limitations — do not treat as complete
 - The app has not yet been signed, installed on a physical iPhone, submitted to TestFlight or reviewed by Apple.
 - The generic DTC dataset is downloaded at runtime from the production website. If the deployed site does not serve it correctly, only the starter codes are available.
-- Account sign-in, cloud history, native AI research and paid entitlement integration are not yet complete.
+- Native account sign-in and AI research are wired to existing services but still require physical-device acceptance testing; cloud history and paid entitlement integration are not yet complete.
 - The bundle identifier is provisional until ownership and availability are confirmed.
 - The owner must configure their own Apple Developer and Expo accounts. No credentials belong in this repository.
