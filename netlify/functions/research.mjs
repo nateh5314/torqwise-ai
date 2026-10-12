@@ -367,8 +367,42 @@ export default async (req) => {
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
-    try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
-    return json({ error: err?.name === "TimeoutError" ? "AI research timed out while waiting for the research provider. Please retry with a narrower question." : "Could not reach the AI research service. Please retry shortly." }, err?.name === "TimeoutError" ? 504 : 502);
+    // Web search can exceed the function's useful response window. On timeout,
+    // try a bounded no-web-search response rather than immediately returning 504.
+    if (err?.name === "TimeoutError") {
+      try {
+        const retry = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: { "authorization": `Bearer ${env("OPENAI_API_KEY")}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            model: env("OPENAI_MODEL") || "gpt-5-mini",
+            instructions: requestInstructions + " Web research timed out. Give the best concise evidence-led answer possible from available knowledge, clearly label anything unverified, and never invent citations, part numbers, or fitment.",
+            input,
+            max_output_tokens: followUp ? 900 : 1400,
+            store: false,
+          }),
+          signal: AbortSignal.timeout(18000),
+        });
+        let retryPayload = {};
+        try { retryPayload = await retry.json(); } catch {}
+        const retryAnswer = retry.ok ? extractText(retryPayload) : "";
+        if (retryAnswer) {
+          payload = retryPayload;
+          upstream = retry;
+          // Continue through the normal answer/source handling below.
+        } else {
+          try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+          return json({ error: "Web research timed out and the AI could not complete a concise fallback. Please retry with a narrower question; your report allowance was returned." }, 504);
+        }
+      } catch (retryError) {
+        console.error("TORQWISE timeout fallback failed:", retryError?.name || "network error");
+        try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+        return json({ error: "AI research timed out. Please retry with a narrower question; your report allowance was returned." }, 504);
+      }
+    } else {
+      try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+      return json({ error: "Could not reach the AI research service. Please retry shortly." }, 502);
+    }
   }
   let payload;
   try { payload = await upstream.json(); } catch {
