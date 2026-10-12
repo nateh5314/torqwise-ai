@@ -28,8 +28,11 @@ jobs:
           with tempfile.TemporaryDirectory() as directory:
               for page in pages:
                   html = pathlib.Path(page).read_text()
-                  scripts = re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script\s*>", html, re.IGNORECASE)
-                  for number, script in enumerate(scripts):
+                  scripts = re.findall(r"<script([^>]*)>([\s\S]*?)</script\s*>", html, re.IGNORECASE)
+                  for number, (attributes, script) in enumerate(scripts):
+                      # JSON-LD contains structured data, not executable JavaScript.
+                      if re.search(r"""\btype\s*=\s*["']application/ld\+json["']""", attributes, re.IGNORECASE):
+                          continue
                       if not script.strip():
                           continue
                       path = pathlib.Path(directory) / f"{pathlib.Path(page).stem}-{number}.js"

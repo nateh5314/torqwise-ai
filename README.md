@@ -80,3 +80,14 @@ Use [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) to finish configuration and test 
 - [ ] Account history saves and loads after a fresh sign-in; deletion remains account-scoped.
 - [ ] AI endpoint succeeds with a low-risk question, or clearly reports that it is unavailable.
 - [ ] No API key is visible in the page source or browser requests.
+
+
+## Install TORQWISE on a phone
+
+TORQWISE is configured as an installable Progressive Web App (PWA). It uses the existing website, sign-in, diagnostic workflows, and subscription endpoints; installing it does not create a separate account or subscription.
+
+- **iPhone (Safari):** open https://torqwiseauto.netlify.app/, tap Share, then **Add to Home Screen**. Launch TORQWISE from the new home-screen icon.
+- **Android (Chrome):** open https://torqwiseauto.netlify.app/ and use **Install app** or **Add to Home screen** from the browser menu when offered.
+- Keep an internet connection for sign-in, AI research, billing, VIN lookups, and other server-backed features. The service worker deliberately does not cache the main HTML or Netlify Functions, to avoid serving stale application code or server responses.
+
+The current setup is a web app, not yet an App Store or Google Play native listing. Store publication can be evaluated after mobile installation and core flows are tested on real devices.
