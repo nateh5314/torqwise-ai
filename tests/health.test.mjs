@@ -39,8 +39,8 @@ test("health endpoint verifies usage table and reports whether quota function is
   const calls=[];
   globalThis.fetch=async(url,options={})=>{
     calls.push({url:String(url),options});
-    if(String(url).includes("/rest/v1/research_usage?"))return new Response("[]",{status:200});
-    if(String(url).endsWith("/rest/v1/rpc/reserve_research_usage"))return new Response(null,{status:204});
+    if(String(url).includes("/rest/v1/research_usage?") || String(url).includes("/rest/v1/pro_service_usage?"))return new Response("[]",{status:200});
+    if(String(url).endsWith("/rest/v1/rpc/reserve_research_usage") || String(url).endsWith("/rest/v1/rpc/reserve_pro_service_usage"))return new Response(null,{status:204});
     throw new Error("Unexpected URL "+url);
   };
   const response=await handler();
@@ -56,7 +56,7 @@ test("health endpoint verifies usage table and reports whether quota function is
   assert.equal(JSON.stringify(data).includes("server-test-secret"),false);
   assert.equal(JSON.stringify(data).includes("openai-test-secret"),false);
   assert.equal(JSON.stringify(data).includes("whsec_test_placeholder"),false);
-  assert.equal(calls.length,2);
+  assert.equal(calls.length,4);
 });
 
 test("health endpoint accepts the supported Pro price alias",async()=>{
@@ -71,8 +71,8 @@ test("health endpoint accepts the supported Pro price alias",async()=>{
   });
   delete process.env.STRIPE_PRO_PRICE_ID;
   globalThis.fetch=async(url,options={})=>{
-    if(String(url).includes("/rest/v1/research_usage?"))return new Response("[]",{status:200});
-    if(String(url).endsWith("/rest/v1/rpc/reserve_research_usage"))return new Response(null,{status:204});
+    if(String(url).includes("/rest/v1/research_usage?") || String(url).includes("/rest/v1/pro_service_usage?"))return new Response("[]",{status:200});
+    if(String(url).endsWith("/rest/v1/rpc/reserve_research_usage") || String(url).endsWith("/rest/v1/rpc/reserve_pro_service_usage"))return new Response(null,{status:204});
     throw new Error("Unexpected URL "+url);
   };
   const data=await (await handler()).json();
