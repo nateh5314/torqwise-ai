@@ -485,7 +485,7 @@ test("Vehicle History Intelligence is presented as a Pro-exclusive feature", asy
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.match(html, /id="vhiProGate"/);
   assert.match(html, /TORQWISE PRO TECHNICIAN[^<]*EXCLUSIVE/);
-  assert.match(html, /Unlock with Pro — \\$29\\.99 CAD\\/month/);
+  assert.ok(html.includes("Unlock with Pro — $29.99 CAD/month"));
   assert.match(html, /id="vhiProContent" class="hidden"/);
   assert.match(html, /vhiContent\\.classList\\.toggle\\('hidden',!pro\\)/);
   assert.match(html, /vhiGate\\.classList\\.toggle\\('hidden',pro\\)/);
