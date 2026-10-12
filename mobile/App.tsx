@@ -425,7 +425,7 @@ export default function App() {
           <View style={s.panel}>
             <Text style={s.panelTitle}>The essentials, wherever you are</Text>
             <Text style={s.body}>Use the app for quick fault-code reference, VIN lookup, local diagnostic notes and AI research. Sign in with the same TORQWISE account you use on the website.</Text>
-            <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>NEED THE DEEPER WORKSPACE? OPEN WEBSITE  ↗</Text></TouchableOpacity>
+            <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>PREFER A BIGGER SCREEN? OPEN WEBSITE  ↗</Text></TouchableOpacity>
           </View>
           <Text style={s.section}>QUICK ACCESS</Text>
           <View style={s.grid}>
@@ -448,8 +448,8 @@ export default function App() {
                   <Text style={s.planValue}>{researchIsPro === true ? "PRO TECHNICIAN · UNLIMITED" : researchIsPro === false ? "FREE PLAN" : "VERIFIED WHEN RESEARCH RUNS"}</Text>
                   {researchRemaining !== null && researchIsPro !== true && <Text style={s.disclaimer}>{researchRemaining} free reports remaining this month.</Text>}
                 </View>
-                <Text style={s.disclaimer}>The app brings core TORQWISE workflows to your phone. The website remains the deeper workspace for expanded technical information and tools.</Text>
-                <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>OPEN FULL TORQWISE WEBSITE  ↗</Text></TouchableOpacity>
+                <Text style={s.disclaimer}>The app and website are separate interfaces for the same TORQWISE service. The same features and plan benefits should be available on both; the website is optimized for longer, detailed sessions.</Text>
+                <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>OPEN TORQWISE WEBSITE  ↗</Text></TouchableOpacity>
                 <TouchableOpacity style={s.secondary} onPress={signOut} disabled={authBusy}><Text style={s.secondaryText}>{authBusy ? "PLEASE WAIT…" : "SIGN OUT"}</Text></TouchableOpacity>
               </> : <>
                 <Text style={s.panelTitle}>{authMode === "signin" ? "Sign in to TORQWISE" : "Create your TORQWISE account"}</Text>
@@ -493,7 +493,7 @@ export default function App() {
             <Text style={s.counter}>{caseNotes.length}/1200</Text>
             <TouchableOpacity style={s.secondary} onPress={saveDiagnosticCase}><Text style={s.secondaryText}>SAVE TO DIAGNOSTIC HISTORY</Text></TouchableOpacity>
             {!!dtc.sources?.length && <><Text style={s.label}>REFERENCE SOURCES</Text>{dtc.sources.map(source => <TouchableOpacity key={source} onPress={() => Linking.openURL(source)}><Text style={s.sourceLink}>{source}</Text></TouchableOpacity>)}</>}
-            <TouchableOpacity style={s.primary} onPress={openWeb}><Text style={s.primaryText}>OPEN FULL RESEARCH HUB  ↗</Text></TouchableOpacity>
+            <TouchableOpacity style={s.primary} onPress={openWeb}><Text style={s.primaryText}>OPEN WEBSITE RESEARCH VIEW  ↗</Text></TouchableOpacity>
           </View> : <View style={s.panel}><Text style={s.panelTitle}>No starter definition found</Text><Text style={s.body}>The full library is not available on this connection. Try again later or open the TORQWISE workspace to continue researching other codes.</Text><TouchableOpacity style={s.secondary} onPress={openWeb}><Text style={s.secondaryText}>OPEN TORQWISE WEB</Text></TouchableOpacity></View>}
           <Text style={s.disclaimer}>Generic OBD-II guidance only. Definitions and test procedures vary by vehicle; this is not a confirmed diagnosis.</Text>
         </>}
@@ -516,8 +516,8 @@ export default function App() {
             <Text style={s.panelTitle}>Your access</Text>
             <Text style={s.planValue}>{!session ? "SIGN IN TO CHECK YOUR PLAN" : researchIsPro === true ? "PRO TECHNICIAN · UNLIMITED RESEARCH" : researchIsPro === false ? "FREE PLAN" : "PLAN VERIFIED WHEN RESEARCH RUNS"}</Text>
             {researchRemaining !== null && researchIsPro !== true && <Text style={s.disclaimer}>{researchRemaining} free reports remaining this month.</Text>}
-            <Text style={s.disclaimer}>Your server-verified account determines research access. The website provides deeper technical information and the full workspace.</Text>
-            <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>OPEN FULL WEBSITE WORKSPACE  ↗</Text></TouchableOpacity>
+            <Text style={s.disclaimer}>Your server-verified account determines research access. Use the app or website independently. Both should offer the same feature availability and subscription benefits; the website is better suited to extended work on a larger screen.</Text>
+            <TouchableOpacity style={s.secondary} onPress={openWeb} accessibilityRole="link"><Text style={s.secondaryText}>OPEN WEBSITE VIEW  ↗</Text></TouchableOpacity>
           </View>
           {!session && <View style={s.panel}><Text style={s.panelTitle}>Sign-in required</Text><Text style={s.body}>Sign in with your existing TORQWISE account on the Home screen to use AI research.</Text><TouchableOpacity style={s.primary} onPress={() => setTab("Home")}><Text style={s.primaryText}>GO TO ACCOUNT  →</Text></TouchableOpacity></View>}
           <Text style={s.label}>VEHICLE / EQUIPMENT (OPTIONAL)</Text>
