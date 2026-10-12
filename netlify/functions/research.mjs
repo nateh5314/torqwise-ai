@@ -416,16 +416,32 @@ Use the provided context, technician observations, measurements, codes, prior fi
       return json({ error: "Could not reach the AI research service. Please retry shortly." }, 502);
     }
   }
-  try { if (!payload) payload = await upstream.json(); } catch {
-    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
-    return json({ error: "The AI service returned an unreadable response." }, 502);
+  // Read the upstream body once as text first. Some upstream/proxy failures return
+  // non-JSON bodies; parsing JSON before checking HTTP status hid the real failure
+  // behind the generic "unreadable response" message.
+  if (!payload && upstream) {
+    let rawBody = "";
+    try { rawBody = await upstream.text(); } catch {}
+    if (rawBody) {
+      try { payload = JSON.parse(rawBody); }
+      catch {
+        console.error("TORQWISE OpenAI returned a non-JSON body:", upstream.status, rawBody.slice(0, 240));
+        payload = null;
+      }
+    }
   }
   if (upstream && !upstream.ok) {
-    try { await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
-    console.error("TORQWISE OpenAI API error:", upstream.status, payload?.error?.code || "unknown");
+    try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+    console.error("TORQWISE OpenAI API error:", upstream.status, payload?.error?.code || "non_json_or_unknown");
     if (upstream.status === 401) return json({ error: "The server rejected the API key. Check OPENAI_API_KEY in Netlify; never paste it into the website." }, 502);
     if (upstream.status === 429) return json({ error: "The AI service is rate-limited or out of available API credit. Check API billing and usage." }, 429);
-    return json({ error: "The AI service returned an error. Check API usage and Netlify function logs." }, 502);
+    if (upstream.status >= 500) return json({ error: "The AI service is temporarily unavailable. Please retry shortly." }, 502);
+    return json({ error: "The AI service rejected this request. Check the model configuration and research request, then retry." }, 502);
+  }
+  if (!payload) {
+    console.error("TORQWISE OpenAI response was not valid JSON.");
+    try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
+    return json({ error: "The AI service returned an unreadable response. Please retry; if it continues, check the Netlify research function logs." }, 502);
   }
   let answer = extractText(payload);
   // A successful Responses API call can occasionally finish without a text block.
