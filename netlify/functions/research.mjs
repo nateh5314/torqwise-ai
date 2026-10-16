@@ -283,6 +283,18 @@ export default async (req) => {
   ].filter(item => item.pattern.test(safetyText)).map(item => item.flag);
   const followUp = body.followUp === true;
   const previousAnswer = clean(body.previousAnswer, 8000);
+  // Vision input: accept a small number of browser-compressed images only.
+  // Never fetch arbitrary URLs supplied by the client; data URLs avoid SSRF.
+  const rawImages = Array.isArray(body.images) ? body.images : [];
+  if (rawImages.length > 4) return json({ error: "Attach up to 4 images per research question." }, 400);
+  const images = [];
+  for (const rawImage of rawImages) {
+    if (typeof rawImage !== "string" || rawImage.length > 5_500_000 ||
+        !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(rawImage)) {
+      return json({ error: "One of the images is invalid or too large. Use JPG, PNG, or WebP images under about 4 MB each." }, 400);
+    }
+    images.push(rawImage);
+  }
   if (followUp && (!question || !previousAnswer)) return json({ error: "A follow-up needs a question and the previous research report." }, 400);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
 
@@ -351,6 +363,12 @@ export default async (req) => {
         ...(repairsAttempted ? [`Repairs or parts already tried: ${repairsAttempted}`] : []),
         ...(fitmentMatches.length ? [`TORQWISE reviewed first-party fitment catalog records (use exact status and restrictions; do not overstate):\n${JSON.stringify(fitmentMatches)}`] : []),
       ].join("\n");
+  const requestInput = images.length
+    ? [{ role: "user", content: [
+        { type: "input_text", text: input + "\n\nAnalyze the attached workshop images as evidence. Describe only what is visibly supported, identify uncertainty, and relate observations to the vehicle/equipment context. Do not claim a hidden component has failed from appearance alone." },
+        ...images.map(image_url => ({ type: "input_image", image_url, detail: "high" })),
+      ] }]
+    : input;
   const instructions = `You are TORQWISE, a precise automotive and heavy-equipment research assistant. Deliver the most useful answer possible immediately; do not pad the report with generic safety disclaimers or repeat the question.
 
 Answer format:
