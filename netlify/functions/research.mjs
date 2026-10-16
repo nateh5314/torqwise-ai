@@ -246,8 +246,20 @@ function extractSources(response) {
       value.type === "url_citation"
     )) addSource(value.url, value.title || value.name);
     if (value.type === "web_search_call") {
-      visit(value.action?.sources, depth + 1);
-      visit(value.sources, depth + 1);
+      // Search action source objects may have only {url, title} and no type.
+      // Treat URLs as citations only inside this explicit search-source container.
+      const actionSources = value.action?.sources;
+      if (Array.isArray(actionSources)) {
+        for (const source of actionSources) {
+          if (source && typeof source === "object") addSource(source.url || source.uri, source.title || source.name);
+        }
+      }
+      const topLevelSources = value.sources;
+      if (Array.isArray(topLevelSources)) {
+        for (const source of topLevelSources) {
+          if (source && typeof source === "object") addSource(source.url || source.uri, source.title || source.name);
+        }
+      }
       visit(value.results, depth + 1);
     }
     for (const [key, child] of Object.entries(value)) {
