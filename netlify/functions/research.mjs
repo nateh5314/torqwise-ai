@@ -511,7 +511,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
         instructions: requestInstructions,
         input: requestInput,
         // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
-        ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: evidenceTopics.has(topic) ? "medium" : "low" }] } : {}),
+        ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: (evidenceTopics.has(topic) || needsCurrentEvidence || containsDtc) ? "medium" : "low" }] } : {}),
         max_output_tokens: followUp ? 700 : (deepReasoningTopics.has(topic) ? 1200 : (inferredIntent !== "general question and shop assistance" ? 1000 : 700)),
         reasoning: { effort: deepReasoningTopics.has(topic) || inferredIntent !== "general question and shop assistance" ? "medium" : "low" },
         store: false,
