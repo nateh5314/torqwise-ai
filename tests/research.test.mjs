@@ -291,6 +291,8 @@ test("returns only valid HTTP(S) citation links with bounded titles", async () =
     { url: "https://example.com/other", title: "T".repeat(240) },
     { url: "https://example.com/search-source", title: "Search source" }
   ]);
+  assert.ok(!data.sources.some(source => source.title.startsWith("Generic DTC reference:")),
+    "live citations should not be diluted by generic bundled DTC references");
   assert.ok(calls.some(c => c.url === "https://api.openai.com/v1/responses"));
 });
 
