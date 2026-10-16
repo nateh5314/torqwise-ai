@@ -842,6 +842,13 @@ document.body.dataset.appPage='chat';
 function torqSetChatPrompt(text){const input=document.getElementById('researchQuestion');if(input){input.value=text;input.focus();}}
 function torqToggleContext(){const details=document.getElementById('torqChatContext');if(details){details.open=!details.open;if(details.open)details.scrollIntoView({behavior:'smooth',block:'nearest'});}}
 function torqAppendChatMessage(role,text,extraClass=''){const thread=document.getElementById('torqChatThread');if(!thread)return null;const node=document.createElement('div');node.className='chat-message '+(role==='user'?'user-message':'assistant-message')+(extraClass?' '+extraClass:'');node.textContent=text;thread.appendChild(node);node.scrollIntoView({behavior:'smooth',block:'nearest'});return node;}
+function torqAppendChatImages(messageNode,images){
+ if(!messageNode||!Array.isArray(images)||!images.length)return;
+ const gallery=document.createElement('div');gallery.className='chat-sent-images';
+ gallery.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px';
+ images.forEach(item=>{const img=document.createElement('img');img.src=item.data;img.alt=item.name||'Workshop photo';img.loading='lazy';img.style.cssText='width:min(190px,42vw);max-height:180px;object-fit:contain;border-radius:9px;border:1px solid #555;background:#111';gallery.appendChild(img);});
+ messageNode.appendChild(gallery);
+}
 async function torqUseCurrentLocation(targetId,statusId){
  const input=document.getElementById(targetId),status=document.getElementById(statusId);
  if(!navigator.geolocation){if(status)status.textContent='Location is not available in this browser. Enter a Canadian city, province or postal code instead.';return;}
@@ -1003,7 +1010,8 @@ async function torqAskAI(){
  }:c;
  torqPrepareNewAnswer();
  const btn=document.getElementById('torqAiButton'),status=document.getElementById('torqAiStatus'),host=document.getElementById('torqAiOutput');
- torqAppendChatMessage('user',c.question||('Help me with '+(c.asset||context.asset)));
+ const userMessage=torqAppendChatMessage('user',c.question||('Help me with '+(c.asset||context.asset)));
+ torqAppendChatImages(userMessage,torqResearchImages);
  const loading=torqAppendChatMessage('assistant',isFollowUp?'TORQWISE is thinking through the follow-up…':'TORQWISE is researching current sources…','chat-loading');
  const input=document.getElementById('researchQuestion');if(input)input.value='';
  btn.disabled=true;btn.textContent=isFollowUp?'Thinking…':'Researching…';status.classList.remove('success');status.textContent=isFollowUp?'Using the conversation and previous findings to answer your follow-up…':'Researching your question and checking source material…';host.style.display='none';host.innerHTML='';
@@ -1013,7 +1021,7 @@ async function torqAskAI(){
   const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify(requestBody),signal:researchController.signal});
   let data={};try{data=await response.json()}catch(_){}
   if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));
-  torqChatHasActiveConversation=true;torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
+  torqChatHasActiveConversation=true;torqResearchImages=[];torqRenderImagePreview();torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
   try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}
   loading?.remove();torqRenderAiResult(data);
   torqSaveAccountHistory({kind:context.topic==='diagnostic'?'diagnostic':context.topic==='parts'?'parts':'research',title:(context.asset||'General research')+' — '+(c.question||context.topic||'Research report'),asset:context.asset,serial:context.serial,topic:context.topic,prompt:c.question,result:data.answer,sources:torqLastResearch.sources||[],metadata:{model:data.model||'',savedFrom:isFollowUp?'ai-chat-follow-up':'ai-research',diagnosticEvidence:{symptoms:context.symptoms||'',dtcs:context.dtcs||'',freezeFrame:context.freezeFrame||'',liveData:context.liveData||'',testsPerformed:context.testsPerformed||'',repairsAttempted:context.repairsAttempted||''}}});
