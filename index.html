@@ -877,7 +877,7 @@ async function torqAskFollowUp(button){
  const status=document.getElementById('torqAiStatus');button.disabled=true;button.textContent='Answering follow-up…';
  status.classList.remove('success');status.textContent='Answering using the previous report and the same equipment context. This clarification will not use another monthly report.';
  try{
-  const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify({...torqLastResearch.context,question,followUp:true,previousAnswer:torqLastResearch.answer})});
+  const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify({...torqLastResearch.context,question,followUp:true,previousAnswer:torqLastResearch.answer,images:torqResearchImages.map(item=>item.data)})});
   let data={};try{data=await response.json()}catch(_){}
   if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));
   torqLastResearch.answer=data.answer;
