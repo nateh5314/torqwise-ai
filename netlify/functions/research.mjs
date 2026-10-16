@@ -303,6 +303,12 @@ export default async (req) => {
     return json({ error: "Could not verify your AI research allowance. Check the Supabase subscriptions and research-usage migrations and the Supabase logs." }, 503);
   }
   if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
+  // Technical lookups need current evidence by default; allow an explicit environment override.
+  const webSearchSetting = env("TORQWISE_ENABLE_WEB_SEARCH").toLowerCase();
+  const evidenceTopics = new Set(["parts", "service", "diagram", "spec", "bulletin"]);
+  const useWebSearch = webSearchSetting === "true" ||
+    (!["false", "0", "off"].includes(webSearchSetting) && evidenceTopics.has(topic));
+  const deepReasoningTopics = new Set(["diagnostic", "parts", "service", "diagram", "spec", "bulletin"]);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
     service: "service procedures and manual availability",
@@ -370,9 +376,9 @@ Use the provided context, technician observations, measurements, codes, prior fi
         instructions: requestInstructions,
         input,
         // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
-        ...(!followUp && env("TORQWISE_ENABLE_WEB_SEARCH").toLowerCase() === "true" ? { tools: [{ type: "web_search", search_context_size: "low" }] } : {}),
-        max_output_tokens: followUp ? 700 : 1100,
-        reasoning: { effort: "low" },
+        ...(!followUp && useWebSearch ? { tools: [{ type: "web_search", search_context_size: evidenceTopics.has(topic) ? "medium" : "low" }] } : {}),
+        max_output_tokens: followUp ? 1200 : (deepReasoningTopics.has(topic) ? 1900 : 1400),
+        reasoning: { effort: deepReasoningTopics.has(topic) ? "medium" : "low" },
         store: false,
       }),
       signal: AbortSignal.timeout(9000),
