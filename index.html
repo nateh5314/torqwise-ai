@@ -256,7 +256,7 @@
    <div id="marketMessage" class="notice hidden" role="status"></div>
    <div id="marketLiveResults" class="hidden" aria-live="polite" style="margin-top:16px">
     <div class="dashhead" style="gap:12px;flex-wrap:wrap"><div><h3 id="marketLiveTitle">Part identification & price comparison</h3><p id="marketLiveMeta" class="tiny"></p></div><label class="tiny" for="marketSort">Sort offers <select id="marketSort" style="margin-left:6px;padding:8px;border-radius:8px;background:#202329;color:#fff;border:1px solid #45474e"><option value="price">Cheapest first</option><option value="price-desc">Most expensive first</option><option value="seller">Seller A–Z</option></select></label></div>
-    <div id="marketLiveDescription" class="notice"></div><div id="marketOfferList" class="diag-results"></div><div id="marketLiveNotes" class="market-disclaimer"></div>
+    <div id="marketLiveDescription" class="notice"></div><div id="marketOfferList" class="diag-results"></div><div id="marketLiveNotes" class="market-disclaimer"></div><div id="marketSearchFallbacks" class="market-item-actions" style="margin-top:10px"></div>
    </div>
    <div class="divider"></div><h3>Search suppliers</h3><p class="tiny">Opens supplier/search pages. Availability, fitment, shipping and final price must be confirmed on the seller's site.</p>
    <div class="market-suppliers">
@@ -1300,6 +1300,8 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
    $('marketLiveMeta').textContent='Checked '+new Date(data.checkedAt).toLocaleString()+' · Listed prices only; confirm final cost with seller.';
    $('marketLiveDescription').textContent='Part number: '+(data.partNumber||q.part)+' · '+(liveState.offers.length+' source-linked offers found. '+(data.sorting||''));
    $('marketLiveNotes').textContent=data.notes||'Verify exact vehicle fitment, shipping, taxes, stock and return policy before ordering.';
+   const fallbackHost=$('marketSearchFallbacks');
+   if(fallbackHost){const links=Array.isArray(data.searchLinks)?data.searchLinks:[];fallbackHost.innerHTML=links.map(link=>'<a class="btn" href="'+safe(link.url)+'" target="_blank" rel="noopener noreferrer">'+safe(link.label)+' ↗</a>').join('');}
    host.classList.remove('hidden');renderLiveOffers();
    m.classList.add('success');m.textContent=liveState.offers.length?'Part identified. Supplier offers are sorted by lowest price within each currency. CAD and USD are kept separate.':'Part research completed, but no source-verified price listings were found.';
   }catch(error){m.classList.remove('success');m.textContent=error?.message||'Parts research failed. Use the supplier links below as a fallback.'}
