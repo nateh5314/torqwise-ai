@@ -77,7 +77,7 @@ export default async function handler(req) {
   if (!part || part.length < 3) return json({ error: "Enter a part name or OEM part number (at least three characters)." }, 400);
   const base = (env("SUPABASE_URL") || "https://wnvmtjimldleqfjuuprl.supabase.co").replace(/\/+$/, "");
   const anon = env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY") || env("SUPABASE_PUNISHABLE_KEY");
-  const token = (req.headers.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!base || !anon || !token) return json({ error: "Sign in to use live parts research." }, 401);
   let userResponse;
   try { userResponse = await fetch(base + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token }, signal: AbortSignal.timeout(5000) }); }
