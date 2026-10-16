@@ -974,6 +974,7 @@ async function torqLookupFitment(button){
  }catch(err){result.textContent='Fitment lookup could not complete: '+(err.message||'unknown error');}
  finally{button.disabled=false;button.textContent='Search internal fitment catalog ↗';}
 }
+let torqChatHasActiveConversation=false;
 function torqPrepareNewAnswer(){
  const previous=document.getElementById('torqAiOutput');
  if(!previous||!previous.querySelector('h3'))return;
@@ -985,7 +986,7 @@ async function torqAskAI(){
  const c=torqGetContext();
  if(!c.asset&&!c.question){alert('Type a question first. Add vehicle details if they matter.');return;}
  const previous=torqLastResearch&&torqLastResearch.answer?torqLastResearch:null;
- const isFollowUp=!!previous;
+ const isFollowUp=torqChatHasActiveConversation&&!!previous;
  const context=isFollowUp?{
   ...previous.context,...c,
   asset:c.asset||previous.context.asset||'',
@@ -1012,7 +1013,7 @@ async function torqAskAI(){
   const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify(requestBody),signal:researchController.signal});
   let data={};try{data=await response.json()}catch(_){}
   if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));
-  torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
+  torqChatHasActiveConversation=true;torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
   try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}
   loading?.remove();torqRenderAiResult(data);
   torqSaveAccountHistory({kind:context.topic==='diagnostic'?'diagnostic':context.topic==='parts'?'parts':'research',title:(context.asset||'General research')+' — '+(c.question||context.topic||'Research report'),asset:context.asset,serial:context.serial,topic:context.topic,prompt:c.question,result:data.answer,sources:torqLastResearch.sources||[],metadata:{model:data.model||'',savedFrom:isFollowUp?'ai-chat-follow-up':'ai-research',diagnosticEvidence:{symptoms:context.symptoms||'',dtcs:context.dtcs||'',freezeFrame:context.freezeFrame||'',liveData:context.liveData||'',testsPerformed:context.testsPerformed||'',repairsAttempted:context.repairsAttempted||''}}});
