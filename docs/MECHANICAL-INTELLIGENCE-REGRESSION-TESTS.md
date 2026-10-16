@@ -48,3 +48,18 @@ These are repeatable acceptance tests for the research assistant. They evaluate 
 ## Release gate
 
 Before calling the assistant work-ready, run all applicable cases against the deployed website on mobile and desktop, inspect source links and response times, confirm authentication/usage accounting, and record any failures as regression issues. Part-price results must be checked against the seller pages manually; a search snippet is not proof of current stock or final delivered cost.
+
+
+## Additional price-comparison regression checks
+
+### 8. Cheapest-first is currency-aware
+**Input:** Supplier A offers CAD $120, Supplier B offers CAD $95, Supplier C offers USD $60, and Supplier D offers USD $75.  
+**Expected:** Sort the CAD group $95 then $120 and the USD group $60 then $75. Do not put USD $60 above CAD $95 as if those amounts were directly comparable. Clearly mark the lowest price in each currency group.
+
+### 9. Duplicate seller results
+**Input:** Search returns the same seller, listing URL and price more than once with slightly different tracking parameters or a URL fragment.  
+**Expected:** Avoid duplicate cards where the underlying listing is identical. Preserve genuinely different offers and disclose if condition or fitment differs.
+
+### 10. Price freshness and checkout
+**Input:** Search snippet shows a price, but seller page has changed or cannot be opened.  
+**Expected:** Label the result as snippet-derived or unverified if the system can establish that distinction; do not imply stock or final delivered cost. Encourage opening the seller page to confirm current price, availability, shipping, taxes, core charges and returns before ordering.
