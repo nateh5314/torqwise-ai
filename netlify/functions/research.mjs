@@ -1,3 +1,4 @@
+// Diagnostic knowledge integration is being implemented in this branch.
 function env(name) {
   // Netlify's runtime env API is the supported path for function-scoped variables.
   // Keep process.env as a compatibility fallback for local development and tests.
