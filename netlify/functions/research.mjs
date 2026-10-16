@@ -530,14 +530,15 @@ Use the provided context, technician observations, measurements, codes, prior fi
           method: "POST",
           headers: { "authorization": `Bearer ${env("OPENAI_API_KEY")}`, "content-type": "application/json" },
           body: JSON.stringify({
-            model: env("OPENAI_MODEL") || "gpt-5-mini",
-            instructions: requestInstructions + " Web research timed out. Give the best concise evidence-led answer possible from available knowledge, clearly label anything unverified, and never invent citations, part numbers, or fitment.",
+            model: env("TORQWISE_FALLBACK_MODEL") || "gpt-4.1-mini",
+            instructions: requestInstructions + " Web research timed out. This is a fast recovery response, not a live-verified research report. Give the most useful concise guidance available, clearly label specifications, prices, sources, and fitment that are not verified, and never invent citations, part numbers, or fitment.",
             input: requestInput,
-            max_output_tokens: followUp ? 900 : 1400,
+            max_output_tokens: followUp ? 500 : 700,
+            reasoning: { effort: "low" },
             store: false,
           }),
-          // A concise no-search fallback should finish within the remaining function budget.
-          signal: AbortSignal.timeout(8000),
+          // Use a faster no-search model and a shorter deadline so recovery does not consume the entire function window.
+          signal: AbortSignal.timeout(6000),
         });
         let retryPayload = {};
         try { retryPayload = await retry.json(); } catch {}
