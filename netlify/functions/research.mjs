@@ -222,31 +222,45 @@ function extractSources(response) {
   const sources = new Map();
   const addSource = (candidateUrl, candidateTitle) => {
     if (typeof candidateUrl !== "string") return;
-    const url = candidateUrl.trim();
-    if (!/^https?:\/\//i.test(url)) return;
     let parsed;
-    try { parsed = new URL(url); } catch { return; }
+    try { parsed = new URL(candidateUrl.trim()); } catch { return; }
     if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) return;
+    const url = parsed.href;
     const title = typeof candidateTitle === "string" && candidateTitle.trim()
       ? candidateTitle.trim().slice(0, 240)
-      : url;
+      : parsed.hostname;
     if (!sources.has(url)) sources.set(url, { url, title });
   };
-  for (const item of Array.isArray(response.output) ? response.output : []) {
-    if (item.type === "message" && Array.isArray(item.content)) {
-      for (const part of item.content) {
-        for (const annotation of Array.isArray(part.annotations) ? part.annotations : []) {
-          if (annotation.type === "url_citation") addSource(annotation.url, annotation.title);
+  const visit = (value, depth = 0) => {
+    if (!value || typeof value !== "object" || depth > 8) return;
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, depth + 1);
+      return;
+    }
+    // Responses API citations may be attached to message annotations, while
+    // search results can appear under action.sources or a top-level sources list.
+    if (value.type === "url_citation") addSource(value.url, value.title);
+    if (typeof value.url === "string" && (
+      value.type === "web_search_result" ||
+      value.type === "search_result" ||
+      value.type === "url_citation"
+    )) addSource(value.url, value.title || value.name);
+    if (value.type === "web_search_call") {
+      visit(value.action?.sources, depth + 1);
+      visit(value.sources, depth + 1);
+      visit(value.results, depth + 1);
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (["url", "uri"].includes(key) && typeof child === "string") {
+        if (value.type === "web_search_result" || value.type === "search_result") {
+          addSource(child, value.title || value.name);
         }
+      } else if (child && typeof child === "object") {
+        visit(child, depth + 1);
       }
     }
-    if (item.type === "web_search_call") {
-      const found = item.action?.sources || item.sources || [];
-      for (const source of Array.isArray(found) ? found : []) {
-        addSource(source?.url || source?.uri, source?.title);
-      }
-    }
-  }
+  };
+  visit(response);
   return [...sources.values()].slice(0, 12);
 }
 
@@ -416,7 +430,6 @@ export default async (req) => {
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
         ...(localDtcEvidence.length ? [`Bundled generic DTC reference data (generic definitions only; not proof of failure; cite supplied source URLs when relevant and verify OEM-enhanced codes for the exact vehicle): ${JSON.stringify(localDtcEvidence)}`] : []),
-        ...(localDtcEvidence.length ? [`Curated generic DTC notes (starting points only, not proof of a failed component): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes and status: ${dtcs}`] : []),
