@@ -381,7 +381,8 @@ Use the provided context, technician observations, measurements, codes, prior fi
         reasoning: { effort: deepReasoningTopics.has(topic) ? "medium" : "low" },
         store: false,
       }),
-      signal: AbortSignal.timeout(9000),
+      // Allow technical web research more time, while preserving room for a fallback.
+      signal: AbortSignal.timeout(13000),
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
@@ -399,7 +400,8 @@ Use the provided context, technician observations, measurements, codes, prior fi
             max_output_tokens: followUp ? 900 : 1400,
             store: false,
           }),
-          signal: AbortSignal.timeout(9000),
+          // A concise no-search fallback should finish within the remaining function budget.
+          signal: AbortSignal.timeout(8000),
         });
         let retryPayload = {};
         try { retryPayload = await retry.json(); } catch {}
