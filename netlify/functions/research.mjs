@@ -630,5 +630,15 @@ Use the provided context, technician observations, measurements, codes, prior fi
     try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
     return json({ error: "The AI service could not produce a text answer after one retry. Your question was not answered; please try again shortly or narrow the request." }, 502);
   }
-  return json({ answer, sources: extractSources(payload), fitmentMatches, model: payload.model || env("OPENAI_MODEL") || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
+  const responseSources = new Map();
+  for (const source of [
+    ...extractSources(payload),
+    ...localDtcEvidence.flatMap(item => (item.sources || []).map(url => ({
+      url,
+      title: `Generic DTC reference: ${item.code}`
+    })))
+  ]) {
+    if (source?.url && !responseSources.has(source.url)) responseSources.set(source.url, source);
+  }
+  return json({ answer, sources: [...responseSources.values()].slice(0, 12), fitmentMatches, model: payload.model || env("OPENAI_MODEL") || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
 };
