@@ -861,15 +861,20 @@ function torqRenderImagePreview(){
  });
  if(!torqResearchImages.length){const label=document.createElement("span");label.className="tiny";label.textContent="No images attached.";host.appendChild(label)}
 }
-document.getElementById("torqResearchImages")?.addEventListener("change",async event=>{
+async function torqHandleImageSelection(event){
  const files=Array.from(event.target.files||[]);
  if(torqResearchImages.length+files.length>4){alert("Attach up to 4 images per question.");event.target.value="";return}
  const status=document.getElementById("torqAiStatus");const input=event.target;input.disabled=true;
  try{for(const file of files){const image=await torqCompressImage(file);torqResearchImages.push(image)}torqRenderImagePreview();if(status)status.textContent=torqResearchImages.length+" workshop image(s) ready. Ask TORQWISE to analyze them with your question."}
  catch(error){alert(error.message||"Could not prepare the selected images.");}
  finally{input.disabled=false;input.value=""}
-});
+}
+document.getElementById("torqResearchImages")?.addEventListener("change",torqHandleImageSelection);
+document.getElementById("torqCameraInput")?.addEventListener("change",torqHandleImageSelection);
 document.body.dataset.appPage='chat';
+function torqToggleAttachMenu(){const menu=document.getElementById("torqAttachMenu"),button=document.getElementById("torqAttachToggle");if(!menu||!button)return;menu.hidden=!menu.hidden;button.setAttribute("aria-expanded",String(!menu.hidden));}
+function torqChooseAttachment(kind){const menu=document.getElementById("torqAttachMenu"),button=document.getElementById("torqAttachToggle");if(menu)menu.hidden=true;if(button)button.setAttribute("aria-expanded","false");const target=document.getElementById(kind==="camera"?"torqCameraInput":kind==="photos"?"torqResearchImages":"torqResearchFiles");target?.click();}
+document.addEventListener("click",event=>{const wrap=document.querySelector(".attach-menu-wrap");if(wrap&&!wrap.contains(event.target)){const menu=document.getElementById("torqAttachMenu"),button=document.getElementById("torqAttachToggle");if(menu)menu.hidden=true;if(button)button.setAttribute("aria-expanded","false");}});
 function torqSetChatPrompt(text){const input=document.getElementById('researchQuestion');if(input){input.value=text;input.focus();}}
 function torqToggleContext(){const details=document.getElementById('torqChatContext');if(details){details.open=!details.open;if(details.open)details.scrollIntoView({behavior:'smooth',block:'nearest'});}}
 function torqAppendChatMessage(role,text,extraClass=''){const thread=document.getElementById('torqChatThread');if(!thread)return null;const node=document.createElement('div');node.className='chat-message '+(role==='user'?'user-message':'assistant-message')+(extraClass?' '+extraClass:'');node.textContent=text;thread.appendChild(node);node.scrollIntoView({behavior:'smooth',block:'nearest'});return node;}
