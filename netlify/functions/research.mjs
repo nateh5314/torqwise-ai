@@ -303,6 +303,12 @@ export default async (req) => {
     return json({ error: "Could not verify your AI research allowance. Check the Supabase subscriptions and research-usage migrations and the Supabase logs." }, 503);
   }
   if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
+  // Technical lookups need current evidence by default; allow an explicit environment override.
+  const webSearchSetting = env("TORQWISE_ENABLE_WEB_SEARCH").toLowerCase();
+  const evidenceTopics = new Set(["parts", "service", "diagram", "spec", "bulletin"]);
+  const useWebSearch = webSearchSetting === "true" ||
+    (!["false", "0", "off"].includes(webSearchSetting) && evidenceTopics.has(topic));
+  const deepReasoningTopics = new Set(["diagnostic", "parts", "service", "diagram", "spec", "bulletin"]);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
     service: "service procedures and manual availability",
@@ -354,7 +360,7 @@ Answer format:
 4. The single best next action or test, including what a normal vs abnormal result means.
 5. Exact unresolved details only when they materially affect the answer.
 
-Use the provided context, technician observations, measurements, codes, prior findings, and first-party fitment records. Interpret supplied data directly and update hypotheses rather than restarting with generic checklists. Distinguish confirmed facts, likely explanations, and unknowns. Never invent part numbers, OEM specifications, torque values, wiring details, service bulletins, citations, or source links. Do not claim live web research or source verification unless actual source results are present. For fitment, state VERIFIED MATCH only with exact credible application evidence; use HIGH-CONFIDENCE CROSS-REFERENCE only when independent credible catalog evidence agrees; otherwise state NOT YET VERIFIED. Still give useful known guidance and the most specific next step rather than only asking for a VIN. Never recommend replacing a component without evidence supporting its failure. Preserve exact DTC status and freeze-frame; test before replacing parts. Flag critical hazards concisely. For repair and parts questions, be decisive about what is supported, but transparent about uncertainty. This is research support, not a confirmed diagnosis.`;
+Use the provided context, technician observations, measurements, codes, prior findings, and first-party fitment records. Interpret supplied data directly and update hypotheses rather than restarting with generic checklists. Distinguish confirmed facts, likely explanations, and unknowns. Never invent part numbers, OEM specifications, torque values, wiring details, service bulletins, citations, or source links. For an unfamiliar part number, preserve the exact query, normalize spacing/hyphens/case for alternate searches, identify the component from credible catalogs, then search supplier listings; an internal-catalog miss is not evidence that the part is unknown. Compare distinct offers by condition, fitment evidence, currency and total cost when available; mark unavailable fields honestly and sort cheapest first only within comparable groups. Do not claim live web research or source verification unless actual source results are present. For fitment, state VERIFIED MATCH only with exact credible application evidence; use HIGH-CONFIDENCE CROSS-REFERENCE only when independent credible catalog evidence agrees; otherwise state NOT YET VERIFIED. Still give useful known guidance and the most specific next step rather than only asking for a VIN. Never recommend replacing a component without evidence supporting its failure. Preserve exact DTC status and freeze-frame; test before replacing parts. Flag critical hazards concisely. For repair and parts questions, be decisive about what is supported, but transparent about uncertainty. This is research support, not a confirmed diagnosis.`;
 
   const requestInstructions = followUp
     ? "You are TORQWISE answering a follow-up about a previous automotive or heavy-equipment report. Treat the prior report as context, not proof. Start from the new evidence and the previous confirmed measurements, not from the previous answer's conclusions. Separate confirmed observations from hypotheses, keep a short ranked differential, and explain how the new information changes that ranking. Recommend the single most informative safe next test where possible, with normal/abnormal branches and what each result would imply. If the user supplies a test result, interpret that result directly before suggesting more checks. Correct or qualify unsupported prior claims, especially part fitment. Never say a part fits a specific year/model unless supplied context verifies it. State the precise missing detail or specification when it blocks a conclusion. Do not invent specifications, procedures, or source links. Keep the response focused and do not repeat the entire earlier checklist."
@@ -370,9 +376,9 @@ Use the provided context, technician observations, measurements, codes, prior fi
         instructions: requestInstructions,
         input,
         // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
-        ...(!followUp && env("TORQWISE_ENABLE_WEB_SEARCH").toLowerCase() === "true" ? { tools: [{ type: "web_search", search_context_size: "low" }] } : {}),
-        max_output_tokens: followUp ? 700 : 1100,
-        reasoning: { effort: "low" },
+        ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: evidenceTopics.has(topic) ? "medium" : "low" }] } : {}),
+        max_output_tokens: followUp ? 1200 : (deepReasoningTopics.has(topic) ? 1900 : 1400),
+        reasoning: { effort: deepReasoningTopics.has(topic) ? "medium" : "low" },
         store: false,
       }),
       signal: AbortSignal.timeout(9000),
