@@ -256,6 +256,12 @@ export default async (req) => {
   const serial = clean(body.serial, 100);
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
+  const userLocation = clean(body.location, 180);
+  const userCoordinates = clean(body.coordinates, 80);
+  const locationContext = userLocation
+    ? `User-approved location for nearby requests: ${userLocation}${userCoordinates ? ` (approximate coordinates: ${userCoordinates})` : ""}. Use this as the local search area when the question asks for nearby businesses or services; prioritize Canadian results and CAD where relevant.`
+    : "No current location has been shared. If the user asks for nearby options, do not assume a US ZIP code or silently invent a location. Ask for a Canadian city/province or suggest the Use current location control.";
+
   const symptoms = clean(body.symptoms, 1200);
   const dtcs = clean(body.dtcs || body.faultCodes, 800);
   const freezeFrame = clean(body.freezeFrame, 1200);
@@ -317,7 +323,7 @@ export default async (req) => {
   if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
   // Infer intent from the actual request so the assistant works as a general shop partner,
   // not just a diagnostic form. Fresh commercial and technical facts need source-backed search.
-  const requestText = [asset, serial, question, symptoms, dtcs, freezeFrame, liveData, testsPerformed, repairsAttempted].join(" ").toLowerCase();
+  const requestText = [asset, serial, question, symptoms, dtcs, freezeFrame, liveData, testsPerformed, repairsAttempted, userLocation].join(" ").toLowerCase();
   const intentPatterns = [
     { intent: "parts sourcing and purchasing", pattern: /\b(cheapest|lowest price|best price|price compare|buy|where (?:can i|to) (?:get|buy|find)|supplier|retailer|in stock|availability|available now|fastest|quickest|deliver(?:y|ed)?|shipping|ship to|order|part number|oem number|aftermarket|cross.?reference|tire|tyre|what size)\b/ },
     { intent: "installation or service procedure", pattern: /\b(install|installation|remove and replace|replacement procedure|how to fit|mount(?:ing)?|setup|set up|vehicle lift|two.?post lift|four.?post lift|alignment|service procedure)\b/ },
@@ -346,6 +352,7 @@ export default async (req) => {
     ? [
         `Asset / vehicle / equipment: ${asset || "Not provided"}`,
         `VIN / serial / PIN: ${serial || "Not provided"}`,
+        locationContext,
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Inferred task intent: ${inferredIntent}. Answer the actual user request even if the selected category is imperfect.`,
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
@@ -362,6 +369,7 @@ export default async (req) => {
     : [
         `Asset / vehicle / equipment: ${asset || "Not provided"}`,
         `VIN / serial / PIN: ${serial || "Not provided"}`,
+        locationContext,
         `Research category selected: ${topicNames[topic] || topicNames.general}`,
         `Inferred task intent: ${inferredIntent}. Answer the actual user request even if the selected category is imperfect.`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
