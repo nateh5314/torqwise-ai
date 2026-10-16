@@ -543,6 +543,12 @@ test("returns a concise fallback answer when the initial web-research request ti
     const data = await result.json();
     assert.match(data.answer, /exact part fitment remains unverified/i);
     assert.equal(aiCalls, 2);
+    const fallbackCall = calls.filter(c => c.url === "https://api.openai.com/v1/responses")[1];
+    const fallbackPayload = JSON.parse(fallbackCall.options.body);
+    assert.equal(fallbackPayload.model, "gpt-4.1-mini");
+    assert.equal(fallbackPayload.reasoning.effort, "low");
+    assert.equal(fallbackPayload.max_output_tokens, 700);
+    assert.equal(fallbackCall.options.signal instanceof AbortSignal, true);
     assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/release_research_usage"));
   } finally {
     globalThis.fetch = configuredFetch;
