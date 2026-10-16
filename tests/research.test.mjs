@@ -547,3 +547,22 @@ test("returns a concise fallback answer when the initial web-research request ti
     globalThis.fetch = configuredFetch;
   }
 });
+
+test("uses deeper live web-search context for lookup-sensitive questions even in the general category", async () => {
+  const calls = configure();
+  const result = await handler(request({
+    body: {
+      asset: "2021 Chevrolet Silverado 1500 5.3L",
+      topic: "general",
+      question: "What is the front axle nut torque specification?"
+    }
+  }));
+  assert.equal(result.status, 200);
+  const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+  assert.ok(aiCall, "AI provider should be called");
+  const payload = JSON.parse(aiCall.options.body);
+  assert.ok(payload.tools?.some(tool => tool.type === "web_search"),
+    "lookup-sensitive specifications should trigger live web research");
+  assert.equal(payload.tools.find(tool => tool.type === "web_search").search_context_size, "medium",
+    "technical specifications should request medium research context even when topic is general");
+});
