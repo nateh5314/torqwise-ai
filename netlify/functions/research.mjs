@@ -53,7 +53,7 @@ async function getResearchAccess(req, followUp = false) {
   if (!base || !anon || !service) return { error: 'Research accounts are not configured yet.', status: 503 };
   const token = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return { error: 'Sign in to use AI research. Free accounts include 3 reports per month.', status: 401 };
-  const userResponse = await fetch(base + '/auth/v1/user', { headers: { apikey: anon, authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(8000) });
+  const userResponse = await fetch(base + '/auth/v1/user', { headers: { apikey: anon, authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(5000) });
   if (!userResponse.ok) return { error: 'Your session expired. Please sign in again.', status: 401 };
   let user;
   try { user = await userResponse.json(); } catch { return { error: 'Your session could not be verified. Please sign in again.', status: 401 }; }
@@ -66,7 +66,7 @@ async function getResearchAccess(req, followUp = false) {
   // The live environment must use its matching live price ID and credentials.
   const proPriceId = (env("STRIPE_PRICE_PRO") || env("STRIPE_PRO_PRICE_ID") || "").trim();
   let subs = [];
-  const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status,price_id&order=updated_at.desc&limit=10', { headers, signal: AbortSignal.timeout(8000) });
+  const subsResponse = await fetch(base + '/rest/v1/subscriptions?user_id=eq.' + encodeURIComponent(user.id) + '&select=status,price_id&order=updated_at.desc&limit=10', { headers, signal: AbortSignal.timeout(5000) });
   if (subsResponse.ok) {
     let result;
     try { result = await subsResponse.json(); } catch {
@@ -93,7 +93,7 @@ async function getResearchAccess(req, followUp = false) {
     method: 'POST',
     headers: { apikey: service, authorization: 'Bearer ' + service, 'content-type': 'application/json' },
     body: JSON.stringify({ p_user_id: user.id, p_monthly_limit: 3 }),
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(5000),
   });
   if (!reserveResponse.ok) throw new Error('Usage reservation failed; apply supabase/research-usage.sql before enabling AI research');
   const reservation = await reserveResponse.json();
@@ -375,13 +375,13 @@ Use the provided context, technician observations, measurements, codes, prior fi
         model: env("OPENAI_MODEL") || "gpt-5-mini",
         instructions: requestInstructions,
         input,
-        // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
+        // Allow a realistic window for evidence-led research while retaining a bounded fallback. The browser request budget and Netlify's synchronous execution limit must remain aligned. The model must still clearly label unverified fitment/specifications and never invent citations.
         ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: evidenceTopics.has(topic) ? "medium" : "low" }] } : {}),
         max_output_tokens: followUp ? 1200 : (deepReasoningTopics.has(topic) ? 1900 : 1400),
         reasoning: { effort: deepReasoningTopics.has(topic) ? "medium" : "low" },
         store: false,
       }),
-      signal: AbortSignal.timeout(9000),
+      signal: AbortSignal.timeout(18000),
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
@@ -399,7 +399,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
             max_output_tokens: followUp ? 900 : 1400,
             store: false,
           }),
-          signal: AbortSignal.timeout(9000),
+          signal: AbortSignal.timeout(12000),
         });
         let retryPayload = {};
         try { retryPayload = await retry.json(); } catch {}
