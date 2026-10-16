@@ -254,6 +254,10 @@
     <div class="formbuttons"><button type="submit">Compare supplier searches ↗</button><button type="button" class="secondary" id="marketSaveButton">Add to shortlist</button><button type="button" class="secondary" id="marketAiButton">Research this part with AI</button></div>
    </form>
    <div id="marketMessage" class="notice hidden" role="status"></div>
+   <div id="marketLiveResults" class="hidden" aria-live="polite" style="margin-top:16px">
+    <div class="dashhead" style="gap:12px;flex-wrap:wrap"><div><h3 id="marketLiveTitle">Part identification & price comparison</h3><p id="marketLiveMeta" class="tiny"></p></div><label class="tiny" for="marketSort">Sort offers <select id="marketSort" style="margin-left:6px;padding:8px;border-radius:8px;background:#202329;color:#fff;border:1px solid #45474e"><option value="price">Cheapest first</option><option value="price-desc">Most expensive first</option><option value="seller">Seller A–Z</option></select></label></div>
+    <div id="marketLiveDescription" class="notice"></div><div id="marketOfferList" class="diag-results"></div><div id="marketLiveNotes" class="market-disclaimer"></div>
+   </div>
    <div class="divider"></div><h3>Search suppliers</h3><p class="tiny">Opens supplier/search pages. Availability, fitment, shipping and final price must be confirmed on the seller's site.</p>
    <div class="market-suppliers">
     <div class="market-supplier"><strong>Google Shopping</strong><p>Broad price discovery across retailers.</p><button type="button" data-market="shopping">Search prices ↗</button></div>
@@ -1040,6 +1044,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
       const supabaseUrl=/^https?:\/\//i.test(rawSupabaseUrl)?rawSupabaseUrl:/^[a-z0-9-]+\.supabase\.co$/i.test(rawSupabaseUrl)?'https://'+rawSupabaseUrl:/^[a-z0-9]{15,30}$/i.test(rawSupabaseUrl)?'https://'+rawSupabaseUrl+'.supabase.co':rawSupabaseUrl;
       if(!/^https?:\/\//i.test(supabaseUrl)) throw new Error('Invalid Supabase URL from public configuration. Please redeploy and refresh the site.');
       client=window.supabase.createClient(supabaseUrl,cfg.anonKey);
+      window.torqwiseGetSession=async()=>{if(!client)throw new Error('Account service is not ready. Refresh and sign in.');const result=await client.auth.getSession();return result.data?.session||null;};
       const {data}=await client.auth.getSession();
       currentUser=data.session?.user||null;
       ready=true;
@@ -1273,6 +1278,34 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
  function write(items){localStorage.setItem(KEY,JSON.stringify(items.slice(0,50)));render()}
  function query(){return {part:$('marketPart')?.value.trim()||'',vehicle:$('marketVehicle')?.value.trim()||'',region:$('marketRegion')?.value.trim()||'Canada'}}
  function fullQuery(){const q=query();return [q.part,q.vehicle,q.region,'price'].filter(Boolean).join(' ')}
+ const liveState={offers:[],result:null};
+ const fmtPrice=o=>new Intl.NumberFormat('en-CA',{style:'currency',currency:o.currency,maximumFractionDigits:2}).format(o.price);
+ function renderLiveOffers(){
+  const host=$('marketOfferList'),sort=$('marketSort'),result=liveState.result;if(!host||!result)return;
+  const offers=[...liveState.offers],mode=sort?.value||'price';
+  offers.sort((a,b)=>mode==='seller'?a.seller.localeCompare(b.seller):mode==='price-desc'?a.currency.localeCompare(b.currency)||b.price-a.price:a.currency.localeCompare(b.currency)||a.price-b.price);
+  host.innerHTML=offers.length?offers.map((o,index)=>'<article class="diag-result"><div class="dashhead"><div><span class="diag-label">'+(index===0&&mode==='price'?'Lowest listed price · ':'')+safe(o.condition)+'</span><h3>'+safe(o.title)+'</h3><p>'+safe(o.seller)+' · '+safe(o.currency)+'</p></div><strong style="font-size:22px;white-space:nowrap">'+fmtPrice(o)+'</strong></div><div class="diag-meta"><span class="diag-chip">Fitment: '+safe(o.fitment)+'</span></div>'+(o.notes?'<p>'+safe(o.notes)+'</p>':'')+'<div class="market-item-actions"><a class="btn" href="'+safe(o.url)+'" target="_blank" rel="noopener noreferrer">View seller listing ↗</a></div></article>').join(''):'<div class="diag-empty">No source-verified prices were returned. Try the supplier search links below or add vehicle details; TORQWISE will not invent prices.</div>';
+ }
+ async function liveLookup(){
+  const q=query(),m=$('marketMessage'),host=$('marketLiveResults'),submit=$('marketSearchForm')?.querySelector('[type="submit"]');
+  if(!q.part){m.classList.remove('hidden');m.textContent='Enter a part number or description first.';return}
+  m.classList.remove('hidden','success');m.textContent='Identifying the part and checking supplier listings…';if(host)host.classList.add('hidden');if(submit){submit.disabled=true;submit.textContent='Researching prices…'}
+  try{
+   if(typeof window.torqwiseGetSession!=='function')throw new Error('The secure account service is still loading. Refresh the page and sign in.');
+   const session=await window.torqwiseGetSession();if(!session?.access_token)throw new Error('Sign in to use live parts research.');
+   const response=await fetch('/.netlify/functions/parts-lookup',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({part:q.part,vehicle:q.vehicle,region:q.region})});
+   const data=await response.json();if(!response.ok)throw new Error(data.error||'Parts research could not be completed.');
+   liveState.result=data;liveState.offers=Array.isArray(data.offers)?data.offers:[];
+   $('marketLiveTitle').textContent=data.identification||'Part identification & price comparison';
+   $('marketLiveMeta').textContent='Checked '+new Date(data.checkedAt).toLocaleString()+' · Listed prices only; confirm final cost with seller.';
+   $('marketLiveDescription').textContent='Part number: '+(data.partNumber||q.part)+' · '+(liveState.offers.length+' source-linked offers found. '+(data.sorting||''));
+   $('marketLiveNotes').textContent=data.notes||'Verify exact vehicle fitment, shipping, taxes, stock and return policy before ordering.';
+   host.classList.remove('hidden');renderLiveOffers();
+   m.classList.add('success');m.textContent=liveState.offers.length?'Part identified. Supplier offers are sorted by lowest price within each currency. CAD and USD are kept separate.':'Part research completed, but no source-verified price listings were found.';
+  }catch(error){m.classList.remove('success');m.textContent=error?.message||'Parts research failed. Use the supplier links below as a fallback.'}
+  finally{if(submit){submit.disabled=false;submit.textContent='Identify part & compare prices ↓'}}
+ }
+ $('marketSort')?.addEventListener('change',renderLiveOffers);
  const sites={
   shopping:q=>'https://www.google.com/search?tbm=shop&q='+encodeURIComponent(q),
   rockauto:q=>'https://www.google.com/search?q='+encodeURIComponent('site:rockauto.com '+q),
@@ -1288,7 +1321,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.a
   host.innerHTML=items.map(i=>'<div class="market-item"><strong>'+safe(i.part)+'</strong><small>'+safe(i.vehicle||'Vehicle details not entered')+' · Delivery: '+safe(i.region||'Not specified')+'</small><div class="market-item-actions"><button type="button" data-open="'+i.id+'">Compare prices ↗</button><button type="button" class="secondary" data-remove="'+i.id+'">Remove</button></div></div>').join('');
   host.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>{const i=read().find(x=>String(x.id)===b.dataset.open);if(i){$('marketPart').value=i.part;$('marketVehicle').value=i.vehicle;$('marketRegion').value=i.region;search('shopping')}}));
   host.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>write(read().filter(x=>String(x.id)!==b.dataset.remove))))}
- $('marketSearchForm')?.addEventListener('submit',e=>{e.preventDefault();search('shopping')});
+ $('marketSearchForm')?.addEventListener('submit',e=>{e.preventDefault();liveLookup()});
  $('marketSaveButton')?.addEventListener('click',add);
  $('marketAiButton')?.addEventListener('click',()=>{const q=query(),m=$('marketMessage');if(!q.part){m.classList.remove('hidden');m.textContent='Enter a part or job description first.';return}const asset=$('researchAsset'),serial=$('researchSerial'),topic=$('researchTopic'),question=$('researchQuestion');if(asset&&q.vehicle)asset.value=q.vehicle;if(serial&&/^([A-HJ-NPR-Z0-9]){17}$/i.test(q.vehicle))serial.value=q.vehicle;if(topic)topic.value='parts';if(question)question.value='Research this part: '+q.part+'. Vehicle/equipment: '+(q.vehicle||'not yet specified')+'. Delivery area: '+q.region+'. Identify candidate part numbers, confirm fitment using reliable sources, compare OEM and aftermarket choices, and find current supplier options. Clearly label prices, availability, and fitment that remain unverified.';document.getElementById('research-hub')?.scrollIntoView({behavior:'smooth'});const status=document.getElementById('torqAiStatus');if(status){status.textContent='Part request prepared. Review the vehicle details, then ask TORQWISE AI to research it.';status.classList.remove('hidden')}});
  document.querySelectorAll('[data-market]').forEach(b=>b.addEventListener('click',()=>search(b.dataset.market)));
