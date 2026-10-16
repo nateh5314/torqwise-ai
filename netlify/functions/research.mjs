@@ -534,7 +534,6 @@ Use the provided context, technician observations, measurements, codes, prior fi
             instructions: requestInstructions + " Web research timed out. This is a fast recovery response, not a live-verified research report. Give the most useful concise guidance available, clearly label specifications, prices, sources, and fitment that are not verified, and never invent citations, part numbers, or fitment.",
             input: requestInput,
             max_output_tokens: followUp ? 500 : 700,
-            reasoning: { effort: "low" },
             store: false,
           }),
           // Use a faster no-search model and a shorter deadline so recovery does not consume the entire function window.
