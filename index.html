@@ -226,6 +226,34 @@ body[data-app-page="chat"] #torqAiOutput{padding:8px 2px!important}
 body[data-app-page="chat"] .chat-welcome{padding:8px 2px}
 body[data-app-page="chat"] #research-hub:before{content:"";position:fixed;z-index:0;pointer-events:none;right:-65px;bottom:100px;width:300px;height:300px;opacity:.035;background-repeat:no-repeat;background-size:contain;background-position:center;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.7 6.3a5 5 0 0 0-6.4 6.4L3 18a2.1 2.1 0 0 0 3 3l5.3-5.3a5 5 0 0 0 6.4-6.4l-3 3-3-3 3-3z'/%3E%3C/svg%3E")}
 @media(max-width:700px){body[data-app-page="chat"] .app-nav{padding:8px 12px;gap:10px}body[data-app-page="chat"] .app-nav .brand{font-size:17px;letter-spacing:1px}body[data-app-page="chat"] .app-nav .mark{width:30px;height:30px}body[data-app-page="chat"] #research-hub>.wrap{width:calc(100% - 20px)}body[data-app-page="chat"] #torqChatThread{padding:12px 2px 16px;gap:10px}body[data-app-page="chat"] .chat-message.user-message{max-width:92%}body[data-app-page="chat"] .chat-composer{margin-bottom:max(8px,env(safe-area-inset-bottom));padding:9px 10px}body[data-app-page="chat"] .chat-composer-tools button{font-size:12px;padding:8px 10px}}
+
+/* Mobile chat layout correction: no page-level scroll, duplicate title, or footer */
+body[data-app-page="chat"]{height:100vh;height:100dvh;min-height:0;overflow:hidden!important;display:flex;flex-direction:column}
+body[data-app-page="chat"]>footer.footer{display:none!important}
+body[data-app-page="chat"] .chat-page-heading{display:none!important}
+body[data-app-page="chat"] main{flex:1 1 0%;height:0;min-height:0;overflow:hidden!important;display:flex;flex-direction:column}
+body[data-app-page="chat"] main>#research-hub{flex:1 1 0%;height:0;min-height:0;overflow:hidden!important;padding:0!important;margin:0!important}
+body[data-app-page="chat"] #research-hub>.wrap{height:100%;min-height:0;flex:1 1 0%;overflow:hidden;display:flex;flex-direction:column}
+body[data-app-page="chat"] .research-layout{height:100%;min-height:0;flex:1 1 0%;overflow:hidden}
+body[data-app-page="chat"] .research-layout>.card:first-child{height:100%;min-height:0;flex:1 1 0%;overflow:hidden;display:flex;flex-direction:column}
+body[data-app-page="chat"] #torqChatThread{flex:1 1 0%;height:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 8px 16px;scrollbar-gutter:stable}
+body[data-app-page="chat"] .chat-welcome{padding:4px 0}
+body[data-app-page="chat"] .chat-welcome p{margin:4px 0 10px;line-height:1.45}
+body[data-app-page="chat"] .chat-suggestions{gap:7px}
+body[data-app-page="chat"] .chat-suggestions button{padding:9px 12px;font-size:13px}
+body[data-app-page="chat"] .chat-composer{flex:0 0 auto;position:relative;bottom:auto;margin:8px 0 max(8px,env(safe-area-inset-bottom));}
+body[data-app-page="chat"] #torqChatContext:not([open]){display:none!important}
+body[data-app-page="chat"] #torqChatContext[open]{position:absolute;left:10px;right:10px;bottom:calc(100% + 8px);z-index:25;max-height:55%;overflow:auto;padding:12px;border:1px solid #3a3c43;border-radius:16px;background:#17181b;box-shadow:0 10px 35px #0009}
+body[data-app-page="chat"] .research-layout>.card:first-child{position:relative}
+@media(max-width:700px){
+ body[data-app-page="chat"] .app-nav{flex:0 0 auto;min-height:58px}
+ body[data-app-page="chat"] #research-hub>.wrap{width:calc(100% - 20px)}
+ body[data-app-page="chat"] #torqChatThread{padding:10px 2px 12px;gap:10px}
+ body[data-app-page="chat"] .chat-composer{margin:8px 0 max(8px,env(safe-area-inset-bottom));padding:9px 10px}
+ body[data-app-page="chat"] .chat-composer textarea{max-height:96px}
+ body[data-app-page="chat"] .chat-composer-tools .vehicle-details-trigger{max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+
 </style></head>
 <body>
 <div class="topbar chat-topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
