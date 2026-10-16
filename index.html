@@ -974,16 +974,56 @@ async function torqLookupFitment(button){
  }catch(err){result.textContent='Fitment lookup could not complete: '+(err.message||'unknown error');}
  finally{button.disabled=false;button.textContent='Search internal fitment catalog ↗';}
 }
+let torqChatHasActiveConversation=false;
+function torqPrepareNewAnswer(){
+ const previous=document.getElementById('torqAiOutput');
+ if(!previous||!previous.querySelector('h3'))return;
+ previous.removeAttribute('id');previous.style.display='block';previous.classList.add('chat-message','assistant-message');
+ const next=document.createElement('div');next.id='torqAiOutput';next.className='chat-message assistant-message';next.style.display='none';
+ const thread=document.getElementById('torqChatThread');(thread||previous.parentElement).appendChild(next);
+}
 async function torqAskAI(){
- const c=torqGetContext();if(!c.asset&&!c.question){alert('Type a question first. Add vehicle details if they matter.');return;}
+ const c=torqGetContext();
+ if(!c.asset&&!c.question){alert('Type a question first. Add vehicle details if they matter.');return;}
+ const previous=torqLastResearch&&torqLastResearch.answer?torqLastResearch:null;
+ const isFollowUp=torqChatHasActiveConversation&&!!previous;
+ const context=isFollowUp?{
+  ...previous.context,...c,
+  asset:c.asset||previous.context.asset||'',
+  serial:c.serial||previous.context.serial||'',
+  topic:c.topic&&c.topic!=='general'?c.topic:(previous.context.topic||'general'),
+  location:c.location||previous.context.location||'',
+  coordinates:c.coordinates||previous.context.coordinates||'',
+  symptoms:c.symptoms||previous.context.symptoms||'',
+  dtcs:c.dtcs||previous.context.dtcs||'',
+  freezeFrame:c.freezeFrame||previous.context.freezeFrame||'',
+  liveData:c.liveData||previous.context.liveData||'',
+  testsPerformed:c.testsPerformed||previous.context.testsPerformed||'',
+  repairsAttempted:c.repairsAttempted||previous.context.repairsAttempted||''
+ }:c;
+ torqPrepareNewAnswer();
  const btn=document.getElementById('torqAiButton'),status=document.getElementById('torqAiStatus'),host=document.getElementById('torqAiOutput');
- torqAppendChatMessage('user',c.question||('Help me with '+c.asset));
- const loading=torqAppendChatMessage('assistant','TORQWISE is researching current sources…','chat-loading');
+ torqAppendChatMessage('user',c.question||('Help me with '+(c.asset||context.asset)));
+ const loading=torqAppendChatMessage('assistant',isFollowUp?'TORQWISE is thinking through the follow-up…':'TORQWISE is researching current sources…','chat-loading');
  const input=document.getElementById('researchQuestion');if(input)input.value='';
- btn.disabled=true;btn.textContent='Researching…';status.classList.remove('success');status.textContent='Researching your question and checking source material…';host.style.display='none';host.innerHTML='';
- const researchController=new AbortController();const researchTimeout=setTimeout(()=>researchController.abort(),42000);try{const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify({...c,images:torqResearchImages.map(item=>item.data)}),signal:researchController.signal});let data={};try{data=await response.json()}catch(_){}if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));torqSetFollowUpContext(c,data.answer);torqLastResearch.sources=Array.isArray(data.sources)?data.sources:[];try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}loading?.remove();torqRenderAiResult(data);torqSaveAccountHistory({kind:c.topic==='diagnostic'?'diagnostic':c.topic==='parts'?'parts':'research',title:(c.asset||'General research')+' — '+(c.question||c.topic||'Research report'),asset:c.asset,serial:c.serial,topic:c.topic,prompt:c.question,result:data.answer,sources:data.sources||[],metadata:{model:data.model||'',savedFrom:'ai-research',diagnosticEvidence:{symptoms:c.symptoms||'',dtcs:c.dtcs||'',freezeFrame:c.freezeFrame||'',liveData:c.liveData||'',testsPerformed:c.testsPerformed||'',repairsAttempted:c.repairsAttempted||''}}});status.textContent='Research finished. Open the source links and confirm exact applicability before acting.'+(data.isPro?' Pro Technician is active.':Number.isFinite(data.remaining)?' Free research reports remaining this month: '+data.remaining+'.':'');status.classList.add('success');}
- catch(err){loading?.remove();torqAppendChatMessage('assistant',err.name==='AbortError'?'I ran out of time researching that request. Try narrowing the question or splitting it into two parts.':'I could not complete that request: '+(err.message||'unknown error')+'. Please try again in a moment.','chat-error');const message=err.message||'unknown error';status.textContent=(err.name==='AbortError'?'AI research timed out after 42 seconds. Try a narrower question or check the backend deployment.':'AI research could not complete: '+message+'. Your offline VIN lookup and guided diagnostic tools remain available.');if(/sign in to use AI research|session expired/i.test(message)&&typeof window.openAuth==='function'){status.textContent='Sign in to use AI research. Free accounts include 3 AI research reports per month.';window.openAuth('signin')}else if(/used your 3 free (AI )?research reports/i.test(message)){document.getElementById('torqProSubscription')?.scrollIntoView({behavior:'smooth',block:'center'})}else{const check=document.createElement('button');check.type='button';check.className='secondary';check.textContent='Check setup status';check.style.marginTop='10px';check.onclick=async()=>{check.disabled=true;check.textContent='Checking…';try{const r=await fetch('/.netlify/functions/health',{cache:'no-store'});const d=await r.json();const missing=Object.entries(d.environment||{}).filter(([,ok])=>!ok).map(([key])=>({supabaseUrl:'SUPABASE_URL',supabaseAnonKey:'SUPABASE_ANON_KEY',supabaseServiceRoleKey:'SUPABASE_SERVICE_ROLE_KEY',openaiApiKey:'OPENAI_API_KEY'}[key]||key));const problems=[];if(missing.length)problems.push('Missing Netlify variables: '+missing.join(', ')+'.');if(d.checks?.usageTable==='missing_migration'||d.checks?.quotaFunction==='missing_migration')problems.push('Run supabase/research-usage.sql in the connected Supabase SQL Editor.');else if(d.checks?.usageTable!=='ready')problems.push('The research_usage table is not ready or reachable.');status.textContent=problems.length?problems.join(' '):'Required variables and usage table appear ready. Check Supabase Auth settings and Netlify function logs for the exact request error.';}catch{status.textContent='Setup check could not be reached. Check the Netlify deploy and function logs.'}finally{check.disabled=false;check.textContent='Check setup status'}};status.appendChild(document.createTextNode(' '));status.appendChild(check)}}
- finally{clearTimeout(researchTimeout);btn.disabled=false;btn.textContent='Send ↗';}
+ btn.disabled=true;btn.textContent=isFollowUp?'Thinking…':'Researching…';status.classList.remove('success');status.textContent=isFollowUp?'Using the conversation and previous findings to answer your follow-up…':'Researching your question and checking source material…';host.style.display='none';host.innerHTML='';
+ const requestBody=isFollowUp?{...context,question:c.question,followUp:true,previousAnswer:previous.answer,images:torqResearchImages.map(item=>item.data)}:{...context,images:torqResearchImages.map(item=>item.data)};
+ const researchController=new AbortController();const researchTimeout=setTimeout(()=>researchController.abort(),42000);
+ try{
+  const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify(requestBody),signal:researchController.signal});
+  let data={};try{data=await response.json()}catch(_){}
+  if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));
+  torqChatHasActiveConversation=true;torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
+  try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}
+  loading?.remove();torqRenderAiResult(data);
+  torqSaveAccountHistory({kind:context.topic==='diagnostic'?'diagnostic':context.topic==='parts'?'parts':'research',title:(context.asset||'General research')+' — '+(c.question||context.topic||'Research report'),asset:context.asset,serial:context.serial,topic:context.topic,prompt:c.question,result:data.answer,sources:torqLastResearch.sources||[],metadata:{model:data.model||'',savedFrom:isFollowUp?'ai-chat-follow-up':'ai-research',diagnosticEvidence:{symptoms:context.symptoms||'',dtcs:context.dtcs||'',freezeFrame:context.freezeFrame||'',liveData:context.liveData||'',testsPerformed:context.testsPerformed||'',repairsAttempted:context.repairsAttempted||''}}});
+  status.textContent=(isFollowUp?'Follow-up answered using the prior conversation.':'Research finished.')+' Open the source links and confirm exact applicability before acting.'+(data.isPro?' Pro Technician is active.':Number.isFinite(data.remaining)?' Free research reports remaining this month: '+data.remaining+'.':'');status.classList.add('success');
+ }catch(err){
+  loading?.remove();torqAppendChatMessage('assistant',err.name==='AbortError'?'I ran out of time researching that request. Try narrowing the question or splitting it into two parts.':'I could not complete that request: '+(err.message||'unknown error')+'. Please try again in a moment.','chat-error');
+  const message=err.message||'unknown error';status.textContent=(err.name==='AbortError'?'AI research timed out after 42 seconds. Try a narrower question or check the backend deployment.':'AI research could not complete: '+message+'. Your offline VIN lookup and guided diagnostic tools remain available.');
+  if(/sign in to use AI research|session expired/i.test(message)&&typeof window.openAuth==='function'){status.textContent='Sign in to use AI research. Free accounts include 3 AI research reports per month.';window.openAuth('signin')}
+  else if(/used your 3 free (AI )?research reports/i.test(message)){document.getElementById('torqProSubscription')?.scrollIntoView({behavior:'smooth',block:'center'})}
+ }finally{clearTimeout(researchTimeout);btn.disabled=false;btn.textContent='Send ↗';}
 }
 function torqResearch(){
  const c=torqGetContext();if(!c.asset&&!c.question){alert('Enter a vehicle/equipment name or a question first.');return;}
