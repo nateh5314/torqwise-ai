@@ -80,3 +80,7 @@ Use [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) to finish configuration and test 
 - [ ] Account history saves and loads after a fresh sign-in; deletion remains account-scoped.
 - [ ] AI endpoint succeeds with a low-risk question, or clearly reports that it is unavailable.
 - [ ] No API key is visible in the page source or browser requests.
+
+## AI research reliability notes
+
+The current research implementation extracts citations from nested Responses API web-search results, preserves vehicle and diagnostic context across follow-up questions, prioritizes sources returned by the current research run, and requests deeper web-search context for lookup-sensitive technical questions. If the live web-research request times out, it attempts one bounded, faster no-search recovery response; that response must be treated as preliminary and must not claim live source verification. These safeguards are covered by regression tests, but a successful automated test does not replace an authenticated end-to-end test on the deployed site.
