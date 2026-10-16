@@ -245,15 +245,16 @@ function extractSources(response) {
       value.type === "search_result" ||
       value.type === "url_citation"
     )) addSource(value.url, value.title || value.name);
-    if (value.type === "web_search_call") {
-      // Search action source objects may have only {url, title} and no type.
-      // Treat URLs as citations only inside this explicit search-source container.
-      const actionSources = value.action?.sources;
-      if (Array.isArray(actionSources)) {
-        for (const source of actionSources) {
-          if (source && typeof source === "object") addSource(source.url || source.uri, source.title || source.name);
-        }
+    // Some Responses API/proxy payloads preserve search action sources but
+    // normalize or omit the outer type label. Inspect sources only when nested
+    // under an explicit action object; don't treat arbitrary output URLs as citations.
+    const actionSources = value.action?.sources;
+    if (Array.isArray(actionSources)) {
+      for (const source of actionSources) {
+        if (source && typeof source === "object") addSource(source.url || source.uri, source.title || source.name);
       }
+    }
+    if (value.type === "web_search_call") {
       const topLevelSources = value.sources;
       if (Array.isArray(topLevelSources)) {
         for (const source of topLevelSources) {
