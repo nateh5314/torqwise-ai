@@ -272,6 +272,19 @@ export default async (req) => {
   const detectedDtcCodes = [...new Set([question, dtcs, symptoms, freezeFrame, liveData, testsPerformed, repairsAttempted].join(" ").match(/\b[PCBU][0-9A-F]{4}\b/gi) || [])]
     .map(code => code.toUpperCase())
     .slice(0, 20);
+  const commonDtcNotes = {
+    P0300: "Random/multiple cylinder misfire: code alone does not identify the failed part.",
+    P0301: "Cylinder 1 misfire: confirm cylinder numbering for the exact engine.",
+    P0302: "Cylinder 2 misfire: confirm cylinder numbering for the exact engine.",
+    P0303: "Cylinder 3 misfire: confirm cylinder numbering for the exact engine.",
+    P0304: "Cylinder 4 misfire: confirm cylinder numbering for the exact engine.",
+    P0171: "System too lean, Bank 1: evaluate fuel trims and operating conditions before replacing parts.",
+    P0172: "System too rich, Bank 1: evaluate fuel trims and operating conditions before replacing parts.",
+    P0420: "Catalyst efficiency below threshold, Bank 1: verify exhaust integrity and sensor data before condemning the catalyst.",
+    P0442: "EVAP small leak detected: inspect cap/seals and follow the vehicle-specific leak test.",
+    P0455: "EVAP large leak detected: inspect EVAP plumbing and follow the vehicle-specific leak test."
+  };
+  const localDtcEvidence = detectedDtcCodes.filter(code => commonDtcNotes[code]).map(code => ({ code, note: commonDtcNotes[code] }));
   // Heuristic flags prompt caution; they are not a diagnosis or proof of danger.
   const safetyText = [question, symptoms, dtcs, liveData, testsPerformed].join(" ").toLowerCase();
   const safetyFlags = [
@@ -377,6 +390,7 @@ export default async (req) => {
         `Inferred task intent: ${inferredIntent}. Answer the actual user request even if the selected category is imperfect.`,
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
+        ...(localDtcEvidence.length ? [`Curated generic DTC notes (starting points only, not proof of a failed component): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes and status: ${dtcs}`] : []),
@@ -394,6 +408,7 @@ export default async (req) => {
         `Inferred task intent: ${inferredIntent}. Answer the actual user request even if the selected category is imperfect.`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
+        ...(localDtcEvidence.length ? [`Curated generic DTC notes (starting points only, not proof of a failed component): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes (preserve exact codes and status): ${dtcs}`] : []),
