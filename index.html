@@ -871,6 +871,10 @@ async function torqHandleImageSelection(event){
 }
 document.getElementById("torqResearchImages")?.addEventListener("change",torqHandleImageSelection);
 document.getElementById("torqCameraInput")?.addEventListener("change",torqHandleImageSelection);
+let torqResearchFiles=[];
+const TORQ_TEXT_FILE_TYPES={".txt":"text/plain",".md":"text/markdown",".csv":"text/csv",".json":"application/json",".xml":"application/xml",".log":"text/plain"};
+function torqRenderFilePreview(){const host=document.getElementById("torqResearchFilePreview");if(!host)return;host.replaceChildren();torqResearchFiles.forEach((file,index)=>{const chip=document.createElement("div");chip.style.cssText="display:flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid #454850;border-radius:10px;background:#1b1d21;font-size:12px";const label=document.createElement("span");label.textContent="📎 "+(file.name.length>28?file.name.slice(0,25)+"…":file.name);const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="×";remove.setAttribute("aria-label","Remove "+file.name);remove.style.padding="2px 7px";remove.onclick=()=>{torqResearchFiles.splice(index,1);torqRenderFilePreview()};chip.append(label,remove);host.appendChild(chip)});}
+document.getElementById("torqResearchFiles")?.addEventListener("change",async event=>{const input=event.target,selected=Array.from(input.files||[]);if(torqResearchFiles.length+selected.length>2){alert("Attach up to 2 files per message.");input.value="";return}try{for(const file of selected){const ext="."+file.name.split(".").pop().toLowerCase();if(file.size>1.5*1024*1024)throw new Error("Each file must be 1.5 MB or smaller.");if(ext===".pdf"){const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error("Could not read "+file.name));reader.readAsDataURL(file)});torqResearchFiles.push({name:file.name,mime:"application/pdf",data})}else{if(!TORQ_TEXT_FILE_TYPES[ext])throw new Error("Supported files: PDF, TXT, Markdown, CSV, JSON, XML and LOG.");const text=await file.text();if(text.length>120000)throw new Error(file.name+" contains too much text. Keep each text file under 120,000 characters.");torqResearchFiles.push({name:file.name,mime:TORQ_TEXT_FILE_TYPES[ext],text})}}torqRenderFilePreview();const status=document.getElementById("torqAiStatus");if(status)status.textContent=torqResearchFiles.length+" file(s) ready to send with your message."}catch(error){alert(error.message||"Could not prepare the selected file.");}finally{input.value=""}});
 document.body.dataset.appPage='chat';
 function torqToggleAttachMenu(){const menu=document.getElementById("torqAttachMenu"),button=document.getElementById("torqAttachToggle");if(!menu||!button)return;menu.hidden=!menu.hidden;button.setAttribute("aria-expanded",String(!menu.hidden));}
 function torqChooseAttachment(kind){const menu=document.getElementById("torqAttachMenu"),button=document.getElementById("torqAttachToggle");if(menu)menu.hidden=true;if(button)button.setAttribute("aria-expanded","false");const target=document.getElementById(kind==="camera"?"torqCameraInput":kind==="photos"?"torqResearchImages":"torqResearchFiles");target?.click();}
@@ -878,6 +882,7 @@ document.addEventListener("click",event=>{const wrap=document.querySelector(".at
 function torqSetChatPrompt(text){const input=document.getElementById('researchQuestion');if(input){input.value=text;input.focus();}}
 function torqToggleContext(){const details=document.getElementById('torqChatContext');if(details){details.open=!details.open;if(details.open)details.scrollIntoView({behavior:'smooth',block:'nearest'});}}
 function torqAppendChatMessage(role,text,extraClass=''){const thread=document.getElementById('torqChatThread');if(!thread)return null;const node=document.createElement('div');node.className='chat-message '+(role==='user'?'user-message':'assistant-message')+(extraClass?' '+extraClass:'');node.textContent=text;thread.appendChild(node);node.scrollIntoView({behavior:'smooth',block:'nearest'});return node;}
+function torqAppendChatFiles(messageNode,files){if(!messageNode||!Array.isArray(files)||!files.length)return;const list=document.createElement("div");list.style.cssText="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px";files.forEach(file=>{const chip=document.createElement("span");chip.style.cssText="display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #555;border-radius:10px;background:#1d1f23;font-size:12px";chip.textContent="📎 "+file.name;list.appendChild(chip)});messageNode.appendChild(list);}
 function torqAppendChatImages(messageNode,images){
  if(!messageNode||!Array.isArray(images)||!images.length)return;
  const gallery=document.createElement('div');gallery.className='chat-sent-images';
@@ -1027,6 +1032,7 @@ function torqPrepareNewAnswer(){
 }
 async function torqAskAI(){
  const c=torqGetContext();
+ if(!c.question&&(torqResearchImages.length||torqResearchFiles.length))c.question="Please inspect the attached file(s) or workshop image(s) and tell me what matters for this job.";
  if(!c.asset&&!c.question){alert('Type a question first. Add vehicle details if they matter.');return;}
  const previous=torqLastResearch&&torqLastResearch.answer?torqLastResearch:null;
  const isFollowUp=torqChatHasActiveConversation&&!!previous;
@@ -1047,17 +1053,17 @@ async function torqAskAI(){
  torqPrepareNewAnswer();
  const btn=document.getElementById('torqAiButton'),status=document.getElementById('torqAiStatus'),host=document.getElementById('torqAiOutput');
  const userMessage=torqAppendChatMessage('user',c.question||('Help me with '+(c.asset||context.asset)));
- torqAppendChatImages(userMessage,torqResearchImages);
+ torqAppendChatImages(userMessage,torqResearchImages);torqAppendChatFiles(userMessage,torqResearchFiles);
  const loading=torqAppendChatMessage('assistant',isFollowUp?'TORQWISE is thinking through the follow-up…':'TORQWISE is researching current sources…','chat-loading');
  const input=document.getElementById('researchQuestion');if(input)input.value='';
  btn.disabled=true;btn.textContent=isFollowUp?'Thinking…':'Researching…';status.classList.remove('success');status.textContent=isFollowUp?'Using the conversation and previous findings to answer your follow-up…':'Researching your question and checking source material…';host.style.display='none';host.innerHTML='';
- const requestBody=isFollowUp?{...context,question:c.question,followUp:true,previousAnswer:previous.answer,images:torqResearchImages.map(item=>item.data)}:{...context,images:torqResearchImages.map(item=>item.data)};
+ const requestBody=isFollowUp?{...context,question:c.question,followUp:true,previousAnswer:previous.answer,images:torqResearchImages.map(item=>item.data),files:torqResearchFiles.map(item=>({name:item.name,mime:item.mime,data:item.data,text:item.text}))}:{...context,images:torqResearchImages.map(item=>item.data),files:torqResearchFiles.map(item=>({name:item.name,mime:item.mime,data:item.data,text:item.text}))};
  const researchController=new AbortController();const researchTimeout=setTimeout(()=>researchController.abort(),42000);
  try{
   const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify(requestBody),signal:researchController.signal});
   let data={};try{data=await response.json()}catch(_){}
   if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));
-  torqChatHasActiveConversation=true;torqResearchImages=[];torqRenderImagePreview();torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
+  torqChatHasActiveConversation=true;torqResearchImages=[];torqResearchFiles=[];torqRenderImagePreview();torqRenderFilePreview();torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
   try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}
   loading?.remove();torqRenderAiResult(data);
   torqSaveAccountHistory({kind:context.topic==='diagnostic'?'diagnostic':context.topic==='parts'?'parts':'research',title:(context.asset||'General research')+' — '+(c.question||context.topic||'Research report'),asset:context.asset,serial:context.serial,topic:context.topic,prompt:c.question,result:data.answer,sources:torqLastResearch.sources||[],metadata:{model:data.model||'',savedFrom:isFollowUp?'ai-chat-follow-up':'ai-research',diagnosticEvidence:{symptoms:context.symptoms||'',dtcs:context.dtcs||'',freezeFrame:context.freezeFrame||'',liveData:context.liveData||'',testsPerformed:context.testsPerformed||'',repairsAttempted:context.repairsAttempted||''}}});
