@@ -283,6 +283,18 @@ export default async (req) => {
   ].filter(item => item.pattern.test(safetyText)).map(item => item.flag);
   const followUp = body.followUp === true;
   const previousAnswer = clean(body.previousAnswer, 8000);
+  // Vision input: accept a small number of browser-compressed images only.
+  // Never fetch arbitrary URLs supplied by the client; data URLs avoid SSRF.
+  const rawImages = Array.isArray(body.images) ? body.images : [];
+  if (rawImages.length > 4) return json({ error: "Attach up to 4 images per research question." }, 400);
+  const images = [];
+  for (const rawImage of rawImages) {
+    if (typeof rawImage !== "string" || rawImage.length > 5_500_000 ||
+        !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(rawImage)) {
+      return json({ error: "One of the images is invalid or too large. Use JPG, PNG, or WebP images under about 4 MB each." }, 400);
+    }
+    images.push(rawImage);
+  }
   if (followUp && (!question || !previousAnswer)) return json({ error: "A follow-up needs a question and the previous research report." }, 400);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
 
@@ -351,7 +363,13 @@ export default async (req) => {
         ...(repairsAttempted ? [`Repairs or parts already tried: ${repairsAttempted}`] : []),
         ...(fitmentMatches.length ? [`TORQWISE reviewed first-party fitment catalog records (use exact status and restrictions; do not overstate):\n${JSON.stringify(fitmentMatches)}`] : []),
       ].join("\n");
-  const instructions = `You are TORQWISE, a precise automotive and heavy-equipment research assistant. Deliver the most useful answer possible immediately; do not pad the report with generic safety disclaimers or repeat the question.
+  const requestInput = images.length
+    ? [{ role: "user", content: [
+        { type: "input_text", text: input + "\n\nAnalyze the attached workshop images as evidence. Describe only what is visibly supported, identify uncertainty, and relate observations to the vehicle/equipment context. Do not claim a hidden component has failed from appearance alone." },
+        ...images.map(image_url => ({ type: "input_image", image_url, detail: "high" })),
+      ] }]
+    : input;
+  const instructions = `You are TORQWISE, a mechanic-specific conversational AI assistant for automotive, diesel, and heavy-equipment technicians. Work like an experienced diagnostic partner: understand the actual question, interpret supplied images and measurements, carry useful context forward, explain the reasoning in practical shop language, and adapt detail to the user's experience. Give the most useful answer possible immediately; do not pad the report with generic safety disclaimers or repeat the question. When an image is supplied, describe visible evidence first, distinguish observation from inference, identify what cannot be determined from the image, and connect it to the next useful inspection or test. If one missing detail materially changes the diagnosis, ask one focused follow-up rather than dumping a long questionnaire. Do not pretend to have eyes on hidden parts, live scan data, or a vehicle you cannot inspect.
 
 Answer format:
 1. Direct answer / status in the first 1–3 sentences.
@@ -374,7 +392,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
       body: JSON.stringify({
         model: env("OPENAI_MODEL") || "gpt-5-mini",
         instructions: requestInstructions,
-        input,
+        input: requestInput,
         // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
         ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: evidenceTopics.has(topic) ? "medium" : "low" }] } : {}),
         max_output_tokens: followUp ? 1200 : (deepReasoningTopics.has(topic) ? 1900 : 1400),
@@ -396,7 +414,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
           body: JSON.stringify({
             model: env("OPENAI_MODEL") || "gpt-5-mini",
             instructions: requestInstructions + " Web research timed out. Give the best concise evidence-led answer possible from available knowledge, clearly label anything unverified, and never invent citations, part numbers, or fitment.",
-            input,
+            input: requestInput,
             max_output_tokens: followUp ? 900 : 1400,
             store: false,
           }),
@@ -458,7 +476,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
         body: JSON.stringify({
           model: env("OPENAI_MODEL") || "gpt-5-mini",
           instructions: requestInstructions + " The previous request returned an unreadable response. Provide a concise evidence-led answer, clearly label unknowns, and never invent citations, part numbers, or fitment.",
-          input,
+          input: requestInput,
           max_output_tokens: followUp ? 900 : 1400,
           store: false,
         }),
@@ -494,7 +512,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
         body: JSON.stringify({
           model: env("OPENAI_MODEL") || "gpt-5-mini",
           instructions: requestInstructions + " Return a useful, concise answer even if some details cannot be verified. Explicitly label unknowns; do not invent facts or sources.",
-          input,
+          input: requestInput,
           max_output_tokens: 2200,
           store: false,
         }),
