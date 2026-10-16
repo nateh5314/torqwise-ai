@@ -1,3 +1,9 @@
+import dtcDatabase from "../../assets/dtc-database.json" with { type: "json" };
+
+const dtcDatabaseByCode = new Map(
+  (Array.isArray(dtcDatabase) ? dtcDatabase : []).map(record => [String(record.code || "").toUpperCase(), record])
+);
+
 function env(name) {
   // Netlify's runtime env API is the supported path for function-scoped variables.
   // Keep process.env as a compatibility fallback for local development and tests.
@@ -390,6 +396,7 @@ export default async (req) => {
         `Inferred task intent: ${inferredIntent}. Answer the actual user request even if the selected category is imperfect.`,
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
+        ...(localDtcEvidence.length ? [`Bundled generic DTC reference data (generic definitions only; not proof of failure; cite supplied source URLs when relevant and verify OEM-enhanced codes for the exact vehicle): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(localDtcEvidence.length ? [`Curated generic DTC notes (starting points only, not proof of a failed component): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
@@ -408,6 +415,7 @@ export default async (req) => {
         `Inferred task intent: ${inferredIntent}. Answer the actual user request even if the selected category is imperfect.`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
+        ...(localDtcEvidence.length ? [`Bundled generic DTC reference data (generic definitions only; not proof of failure; cite supplied source URLs when relevant and verify OEM-enhanced codes for the exact vehicle): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(localDtcEvidence.length ? [`Curated generic DTC notes (starting points only, not proof of a failed component): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
