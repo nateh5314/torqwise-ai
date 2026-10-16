@@ -254,6 +254,25 @@ body[data-app-page="chat"] .research-layout>.card:first-child{position:relative}
  body[data-app-page="chat"] .chat-composer-tools .vehicle-details-trigger{max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 
+
+/* Keep the chat screen genuinely chat-only: no long form content below the composer */
+body[data-app-page="chat"] #research-hub.section{padding-top:0!important;padding-bottom:0!important;margin:0!important}
+body[data-app-page="chat"] #research-hub>.wrap{padding-top:0!important;padding-bottom:0!important}
+body[data-app-page="chat"] #torqChatContext,
+body[data-app-page="chat"] details.research-result,
+body[data-app-page="chat"] .chat-secondary-actions,
+body[data-app-page="chat"] #torqAiStatus,
+body[data-app-page="chat"] details.research-advanced{display:none!important}
+body[data-app-page="chat"] #torqAiOutput[style*="display: none"]{display:none!important}
+body[data-app-page="chat"] .research-layout>.card:first-child{gap:0!important}
+body[data-app-page="chat"] #torqChatThread{padding-top:12px;padding-bottom:12px}
+body[data-app-page="chat"] .chat-composer{margin-top:8px!important;margin-bottom:max(10px,env(safe-area-inset-bottom))!important}
+body[data-app-page="chat"] .chat-composer .field{margin:0!important}
+body[data-app-page="chat"] .chat-composer-tools .vehicle-details-trigger{display:none!important}
+body[data-app-page="chat"] .chat-composer-tools{gap:8px}
+body[data-app-page="chat"] .chat-composer-tools #torqAiButton{margin-left:auto}
+body[data-app-page="chat"] .chat-image-attachments:empty{display:none}
+
 </style></head>
 <body>
 <div class="topbar chat-topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
