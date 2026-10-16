@@ -254,6 +254,31 @@ body[data-app-page="chat"] .research-layout>.card:first-child{position:relative}
  body[data-app-page="chat"] .chat-composer-tools .vehicle-details-trigger{max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 
+
+/* Strict chat-only screen: hide research-form sections while chat is active */
+body[data-app-page="chat"]{height:100vh;height:100dvh;min-height:0;overflow:hidden!important;display:flex;flex-direction:column}
+body[data-app-page="chat"] main{flex:1 1 0%;height:0;min-height:0;overflow:hidden!important;display:flex;flex-direction:column}
+body[data-app-page="chat"] main>#research-hub{flex:1 1 0%;height:0;min-height:0;overflow:hidden!important;padding:0!important;margin:0!important}
+body[data-app-page="chat"] #research-hub>.wrap{height:100%;min-height:0;flex:1 1 0%;overflow:hidden;display:flex;flex-direction:column;padding-top:0!important;padding-bottom:0!important}
+body[data-app-page="chat"] .chat-page-heading{display:none!important}
+body[data-app-page="chat"] .research-layout{height:100%;min-height:0;flex:1 1 0%;overflow:hidden}
+body[data-app-page="chat"] .research-layout>.card:first-child{height:100%;min-height:0;flex:1 1 0%;overflow:hidden;display:flex;flex-direction:column;padding:0!important;gap:0!important;position:relative}
+body[data-app-page="chat"] #torqChatThread{flex:1 1 0%;height:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 8px 16px;scrollbar-width:thin}
+body[data-app-page="chat"] #torqChatContext,body[data-app-page="chat"] details.research-result,body[data-app-page="chat"] .chat-secondary-actions,body[data-app-page="chat"] #torqAiStatus,body[data-app-page="chat"] details.research-advanced,body[data-app-page="chat"] #torqFitmentLookupPanel{display:none!important}
+body[data-app-page="chat"] .chat-composer{flex:0 0 auto;position:relative;bottom:auto;margin:8px 0 max(10px,env(safe-area-inset-bottom))!important;padding:10px 12px}
+body[data-app-page="chat"] .chat-composer .field{margin:0!important}
+body[data-app-page="chat"] .chat-composer-tools .vehicle-details-trigger,body[data-app-page="chat"] .chat-composer-tools .tiny{display:none!important}
+body[data-app-page="chat"] .chat-composer-tools{gap:8px;justify-content:space-between}
+body[data-app-page="chat"] .chat-composer-tools #torqAiButton{margin-left:auto}
+body[data-app-page="chat"] #torqAiOutput[style*="display: none"]{display:none!important}
+body[data-app-page="chat"] #torqAiOutput:not([style*="display: none"]){display:block;flex:0 0 auto;max-height:38%;overflow-y:auto;margin:0 0 8px!important}
+body[data-app-page="chat"] .chat-welcome{padding:4px 0}
+body[data-app-page="chat"] .chat-welcome p{margin:4px 0 10px;line-height:1.45}
+body[data-app-page="chat"] .chat-suggestions{gap:7px}
+body[data-app-page="chat"] .chat-suggestions button{padding:9px 12px;font-size:13px}
+@media(min-width:701px){body[data-app-page="chat"] .app-nav{padding-left:max(24px,calc((100vw - 1100px)/2));padding-right:max(24px,calc((100vw - 1100px)/2))}body[data-app-page="chat"] #research-hub>.wrap{width:min(900px,calc(100% - 48px));max-width:900px}body[data-app-page="chat"] #torqChatThread{padding:22px 14px}body[data-app-page="chat"] .chat-composer{margin-bottom:18px!important}}
+@media(max-width:700px){body[data-app-page="chat"] .app-nav{flex:0 0 auto;min-height:58px}body[data-app-page="chat"] #research-hub>.wrap{width:calc(100% - 20px)}body[data-app-page="chat"] #torqChatThread{padding:10px 2px 12px;gap:10px}body[data-app-page="chat"] .chat-composer{margin:8px 0 max(8px,env(safe-area-inset-bottom))!important;padding:9px 10px}body[data-app-page="chat"] .chat-composer textarea{max-height:96px}}
+
 </style></head>
 <body>
 <div class="topbar chat-topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
