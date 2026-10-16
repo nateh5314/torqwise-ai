@@ -279,6 +279,14 @@ body[data-app-page="chat"] .chat-suggestions button{padding:9px 12px;font-size:1
 @media(min-width:701px){body[data-app-page="chat"] .app-nav{padding-left:max(24px,calc((100vw - 1100px)/2));padding-right:max(24px,calc((100vw - 1100px)/2))}body[data-app-page="chat"] #research-hub>.wrap{width:min(900px,calc(100% - 48px));max-width:900px}body[data-app-page="chat"] #torqChatThread{padding:22px 14px}body[data-app-page="chat"] .chat-composer{margin-bottom:18px!important}}
 @media(max-width:700px){body[data-app-page="chat"] .app-nav{flex:0 0 auto;min-height:58px}body[data-app-page="chat"] #research-hub>.wrap{width:calc(100% - 20px)}body[data-app-page="chat"] #torqChatThread{padding:10px 2px 12px;gap:10px}body[data-app-page="chat"] .chat-composer{margin:8px 0 max(8px,env(safe-area-inset-bottom))!important;padding:9px 10px}body[data-app-page="chat"] .chat-composer textarea{max-height:96px}}
 
+
+/* Chat polish: remove redundant warning from chat and keep composer at the bottom */
+body[data-app-page="chat"] .chat-spec-notice{display:none!important}
+body[data-app-page="chat"] .research-layout>.card:first-child{padding-bottom:0!important}
+body[data-app-page="chat"] #torqChatThread{padding-bottom:4px!important}
+body[data-app-page="chat"] .chat-composer{margin-top:auto!important;margin-bottom:max(6px,env(safe-area-inset-bottom))!important}
+@media(min-width:701px){body[data-app-page="chat"] .chat-composer{margin-bottom:14px!important}}
+
 </style></head>
 <body>
 <div class="topbar chat-topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
@@ -345,7 +353,7 @@ body[data-app-page="chat"] .chat-suggestions button{padding:9px 12px;font-size:1
     <textarea id="torqFollowUpQuestion" rows="2" placeholder="e.g. How do I verify this bearing fits before ordering?" aria-label="Follow-up question"></textarea>
     <button type="button" class="secondary" id="torqFollowUpButton" style="margin-top:8px" onclick="torqAskFollowUp(this)">Ask follow-up ↗</button>
    </div>
-   </div></details><div class="notice" style="margin-top:12px">Use the exact year, model, engine and serial/VIN when possible. Do not assume a generic specification applies to every variant.</div>
+   </div></details><div class="notice chat-spec-notice" style="margin-top:12px">Use the exact year, model, engine and serial/VIN when possible. Do not assume a generic specification applies to every variant.</div>
    <div id="researchLinks" class="research-results" aria-live="polite"></div>
   </div>
   <div class="card">
