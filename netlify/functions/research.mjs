@@ -290,7 +290,26 @@ export default async (req) => {
     P0442: "EVAP small leak detected: inspect cap/seals and follow the vehicle-specific leak test.",
     P0455: "EVAP large leak detected: inspect EVAP plumbing and follow the vehicle-specific leak test."
   };
-  const localDtcEvidence = detectedDtcCodes.filter(code => commonDtcNotes[code]).map(code => ({ code, note: commonDtcNotes[code] }));
+  const localDtcEvidence = detectedDtcCodes
+    .map(code => {
+      const record = dtcDatabaseByCode.get(code);
+      const isGenericRecord = record?.is_generic === true;
+      const sources = Array.isArray(record?.sources)
+        ? record.sources.filter(source => typeof source === "string" && /^https?:\/\//i.test(source)).slice(0, 4)
+        : [];
+      if (!isGenericRecord && !commonDtcNotes[code]) return null;
+      return {
+        code,
+        ...(record?.title?.en ? { title: String(record.title.en).slice(0, 180) } : {}),
+        ...(record?.description?.en ? { description: String(record.description.en).slice(0, 500) } : {}),
+        ...(Array.isArray(record?.common_causes) ? { commonCauses: record.common_causes.slice(0, 5).map(item => typeof item === "string" ? item : item?.label?.en).filter(Boolean) } : {}),
+        ...(Array.isArray(record?.symptoms) ? { symptoms: record.symptoms.slice(0, 5).map(item => typeof item === "string" ? item : item?.en).filter(Boolean) } : {}),
+        ...(sources.length ? { sources } : {}),
+        ...(commonDtcNotes[code] ? { note: commonDtcNotes[code] } : {})
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 5);
   // Heuristic flags prompt caution; they are not a diagnosis or proof of danger.
   const safetyText = [question, symptoms, dtcs, liveData, testsPerformed].join(" ").toLowerCase();
   const safetyFlags = [
