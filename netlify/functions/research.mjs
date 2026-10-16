@@ -315,11 +315,21 @@ export default async (req) => {
     return json({ error: "Could not verify your AI research allowance. Check the Supabase subscriptions and research-usage migrations and the Supabase logs." }, 503);
   }
   if (access.error) return json({ error: access.error, remaining: access.remaining ?? null }, access.status);
-  // Technical lookups need current evidence by default; allow an explicit environment override.
+  // Infer intent from the actual request so the assistant works as a general shop partner,
+  // not just a diagnostic form. Fresh commercial and technical facts need source-backed search.
+  const requestText = [asset, serial, question, symptoms, dtcs, freezeFrame, liveData, testsPerformed, repairsAttempted].join(" ").toLowerCase();
+  const intentPatterns = [
+    { intent: "parts sourcing and purchasing", pattern: /\b(cheapest|lowest price|best price|price compare|buy|where (?:can i|to) (?:get|buy|find)|supplier|retailer|in stock|availability|available now|fastest|quickest|deliver(?:y|ed)?|shipping|ship to|order|part number|oem number|aftermarket|cross.?reference|tire|tyre|what size)\b/ },
+    { intent: "installation or service procedure", pattern: /\b(install|installation|remove and replace|replacement procedure|how to fit|mount(?:ing)?|setup|set up|vehicle lift|two.?post lift|four.?post lift|alignment|service procedure)\b/ },
+    { intent: "technical specification or component location", pattern: /\b(torque spec|torque specification|torque value|fluid capacity|oil capacity|fluid type|specification|specs|dimensions|measurement|pressure spec|wiring diagram|pinout|fuse location|where is the|location of|what type|fitment|compatible|recall|service bulletin|tsb|service manual)\b/ },
+    { intent: "diagnosis and troubleshooting", pattern: /\b(diagnos|troubleshoot|fault|code p[0-9a-f]{4}|dtc|misfire|no.?start|won.t start|leak|noise|overheat|symptom|test result|live data)\b/ },
+  ];
+  const inferredIntent = intentPatterns.find(item => item.pattern.test(requestText))?.intent || "general question and shop assistance";
   const webSearchSetting = env("TORQWISE_ENABLE_WEB_SEARCH").toLowerCase();
   const evidenceTopics = new Set(["parts", "service", "diagram", "spec", "bulletin"]);
+  const needsCurrentEvidence = /\b(cheapest|lowest price|best price|buy|supplier|retailer|in stock|availability|available now|fastest|quickest|deliver(?:y|ed)?|shipping|ship to|price|part number|oem number|tire|tyre|install|installation|torque spec|torque specification|fluid capacity|specification|wiring diagram|pinout|fuse location|where is the|location of|fitment|compatible|recall|service bulletin|tsb|service manual|manual)\b/.test(requestText);
   const useWebSearch = webSearchSetting === "true" ||
-    (!["false", "0", "off"].includes(webSearchSetting) && evidenceTopics.has(topic));
+    (!["false", "0", "off"].includes(webSearchSetting) && (evidenceTopics.has(topic) || needsCurrentEvidence));
   const deepReasoningTopics = new Set(["diagnostic", "parts", "service", "diagram", "spec", "bulletin"]);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
@@ -337,6 +347,7 @@ export default async (req) => {
         `Asset / vehicle / equipment: ${asset || "Not provided"}`,
         `VIN / serial / PIN: ${serial || "Not provided"}`,
         `Research category: ${topicNames[topic] || topicNames.general}`,
+        `Inferred task intent: ${inferredIntent}. Answer the actual user request even if the selected category is imperfect.`,
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
@@ -351,7 +362,8 @@ export default async (req) => {
     : [
         `Asset / vehicle / equipment: ${asset || "Not provided"}`,
         `VIN / serial / PIN: ${serial || "Not provided"}`,
-        `Research category: ${topicNames[topic] || topicNames.general}`,
+        `Research category selected: ${topicNames[topic] || topicNames.general}`,
+        `Inferred task intent: ${inferredIntent}. Answer the actual user request even if the selected category is imperfect.`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
@@ -371,12 +383,14 @@ export default async (req) => {
     : input;
   const instructions = `You are TORQWISE, a mechanic-specific conversational AI assistant for automotive, diesel, and heavy-equipment technicians. Work like an experienced diagnostic partner: understand the actual question, interpret supplied images and measurements, carry useful context forward, explain the reasoning in practical shop language, and adapt detail to the user's experience. Give the most useful answer possible immediately; do not pad the report with generic safety disclaimers or repeat the question. When an image is supplied, describe visible evidence first, distinguish observation from inference, identify what cannot be determined from the image, and connect it to the next useful inspection or test. If one missing detail materially changes the diagnosis, ask one focused follow-up rather than dumping a long questionnaire. Do not pretend to have eyes on hidden parts, live scan data, or a vehicle you cannot inspect.
 
-Answer format:
-1. Direct answer / status in the first 1–3 sentences.
-2. Best-supported findings specific to the supplied vehicle, equipment, code, symptom, or part.
-3. Ranked possibilities or candidate parts, with a short reason and confidence for each.
-4. The single best next action or test, including what a normal vs abnormal result means.
-5. Exact unresolved details only when they materially affect the answer.
+Answer style:
+- Start with the direct answer. Sound like a sharp, practical human shop partner: natural, clear, and confident where evidence supports it. Avoid rigid templates when they do not fit.
+- For parts sourcing, compare exact matching options, prefer Canadian suppliers for a Canadian buyer, show seller, exact item/part number, price/currency, source link, and available stock/delivery evidence. Identify the lowest listed price and the fastest credible option separately. Never claim cheapest/fastest without enough evidence. Separate item price from shipping/tax and say when stock or delivery cannot be confirmed. Ask for postal code or vehicle details only when they materially affect fitment, pickup, or delivery.
+- For technical specs, provide exact values and units only when reliable application-specific evidence supports them. State the relevant engine, transmission, model, year, location, temperature or other conditions when applicable. If the application is ambiguous, ask one focused question.
+- For installation questions, give practical ordered steps, required tools/equipment, model-specific checks, key hazards, and source/manual links when available. Never invent safety-critical lift anchor, concrete, torque or capacity requirements.
+- For diagnosis, explain what the evidence means, rank plausible causes, and recommend the single most informative next test with normal/abnormal outcomes.
+- For images, describe visible evidence before inference. For general questions, answer conversationally without forcing a diagnostic checklist.
+- Make useful progress with available information. Ask only for missing details that materially change the answer.
 
 Use the provided context, technician observations, measurements, codes, prior findings, and first-party fitment records. Interpret supplied data directly and update hypotheses rather than restarting with generic checklists. Distinguish confirmed facts, likely explanations, and unknowns. Never invent part numbers, OEM specifications, torque values, wiring details, service bulletins, citations, or source links. For an unfamiliar part number, preserve the exact query, normalize spacing/hyphens/case for alternate searches, identify the component from credible catalogs, then search supplier listings; an internal-catalog miss is not evidence that the part is unknown. Compare distinct offers by condition, fitment evidence, currency and total cost when available; mark unavailable fields honestly and sort cheapest first only within comparable groups. Do not claim live web research or source verification unless actual source results are present. When source results are returned, connect key claims to the relevant source and prefer manufacturer/OEM or primary technical sources. If sources conflict, explain the conflict instead of silently choosing one. For prices, state the listed currency and avoid claiming a delivered total unless shipping and taxes are included. For fitment, state VERIFIED MATCH only with exact credible application evidence; use HIGH-CONFIDENCE CROSS-REFERENCE only when independent credible catalog evidence agrees; otherwise state NOT YET VERIFIED. Still give useful known guidance and the most specific next step rather than only asking for a VIN. Never recommend replacing a component without evidence supporting its failure. Preserve exact DTC status and freeze-frame; test before replacing parts. Flag critical hazards concisely. For repair and parts questions, be decisive about what is supported, but transparent about uncertainty. This is research support, not a confirmed diagnosis.`;
 
@@ -395,8 +409,8 @@ Use the provided context, technician observations, measurements, codes, prior fi
         input: requestInput,
         // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
         ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: evidenceTopics.has(topic) ? "medium" : "low" }] } : {}),
-        max_output_tokens: followUp ? 1200 : (deepReasoningTopics.has(topic) ? 1900 : 1400),
-        reasoning: { effort: deepReasoningTopics.has(topic) ? "medium" : "low" },
+        max_output_tokens: followUp ? 1200 : (deepReasoningTopics.has(topic) || inferredIntent !== "general question and shop assistance" ? 1900 : 1600),
+        reasoning: { effort: deepReasoningTopics.has(topic) || inferredIntent !== "general question and shop assistance" ? "medium" : "low" },
         store: false,
       }),
       // Allow technical web research more time, while preserving room for a fallback.
