@@ -12,6 +12,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Install dependencies for the DTC database builder
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Build bundled DTC database required by research tests
+        run: npm run build:dtc
       - name: Run API regression tests
         run: node --test tests/*.test.mjs
       - name: Check Netlify function syntax

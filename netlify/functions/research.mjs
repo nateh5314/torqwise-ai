@@ -222,31 +222,58 @@ function extractSources(response) {
   const sources = new Map();
   const addSource = (candidateUrl, candidateTitle) => {
     if (typeof candidateUrl !== "string") return;
-    const url = candidateUrl.trim();
-    if (!/^https?:\/\//i.test(url)) return;
     let parsed;
-    try { parsed = new URL(url); } catch { return; }
+    try { parsed = new URL(candidateUrl.trim()); } catch { return; }
     if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) return;
+    const url = parsed.href;
     const title = typeof candidateTitle === "string" && candidateTitle.trim()
       ? candidateTitle.trim().slice(0, 240)
-      : url;
+      : parsed.hostname;
     if (!sources.has(url)) sources.set(url, { url, title });
   };
-  for (const item of Array.isArray(response.output) ? response.output : []) {
-    if (item.type === "message" && Array.isArray(item.content)) {
-      for (const part of item.content) {
-        for (const annotation of Array.isArray(part.annotations) ? part.annotations : []) {
-          if (annotation.type === "url_citation") addSource(annotation.url, annotation.title);
+  const visit = (value, depth = 0) => {
+    if (!value || typeof value !== "object" || depth > 8) return;
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, depth + 1);
+      return;
+    }
+    // Responses API citations may be attached to message annotations, while
+    // search results can appear under action.sources or a top-level sources list.
+    if (value.type === "url_citation") addSource(value.url, value.title);
+    if (typeof value.url === "string" && (
+      value.type === "web_search_result" ||
+      value.type === "search_result" ||
+      value.type === "url_citation"
+    )) addSource(value.url, value.title || value.name);
+    // Some Responses API/proxy payloads preserve search action sources but
+    // normalize or omit the outer type label. Inspect sources only when nested
+    // under an explicit action object; don't treat arbitrary output URLs as citations.
+    const actionSources = value.action?.sources;
+    if (Array.isArray(actionSources)) {
+      for (const source of actionSources) {
+        if (source && typeof source === "object") addSource(source.url || source.uri, source.title || source.name);
+      }
+    }
+    if (value.type === "web_search_call") {
+      const topLevelSources = value.sources;
+      if (Array.isArray(topLevelSources)) {
+        for (const source of topLevelSources) {
+          if (source && typeof source === "object") addSource(source.url || source.uri, source.title || source.name);
         }
       }
+      visit(value.results, depth + 1);
     }
-    if (item.type === "web_search_call") {
-      const found = item.action?.sources || item.sources || [];
-      for (const source of Array.isArray(found) ? found : []) {
-        addSource(source?.url || source?.uri, source?.title);
+    for (const [key, child] of Object.entries(value)) {
+      if (["url", "uri"].includes(key) && typeof child === "string") {
+        if (value.type === "web_search_result" || value.type === "search_result") {
+          addSource(child, value.title || value.name);
+        }
+      } else if (child && typeof child === "object") {
+        visit(child, depth + 1);
       }
     }
-  }
+  };
+  visit(response);
   return [...sources.values()].slice(0, 12);
 }
 
@@ -416,7 +443,6 @@ export default async (req) => {
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
         ...(localDtcEvidence.length ? [`Bundled generic DTC reference data (generic definitions only; not proof of failure; cite supplied source URLs when relevant and verify OEM-enhanced codes for the exact vehicle): ${JSON.stringify(localDtcEvidence)}`] : []),
-        ...(localDtcEvidence.length ? [`Curated generic DTC notes (starting points only, not proof of a failed component): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes and status: ${dtcs}`] : []),
@@ -435,7 +461,6 @@ export default async (req) => {
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
         ...(localDtcEvidence.length ? [`Bundled generic DTC reference data (generic definitions only; not proof of failure; cite supplied source URLs when relevant and verify OEM-enhanced codes for the exact vehicle): ${JSON.stringify(localDtcEvidence)}`] : []),
-        ...(localDtcEvidence.length ? [`Curated generic DTC notes (starting points only, not proof of a failed component): ${JSON.stringify(localDtcEvidence)}`] : []),
         ...(safetyFlags.length ? [`Potential safety-critical language detected (heuristic only, not a diagnosis): ${safetyFlags.join(", ")}. Address immediate safety first; stop operation if continued use could cause harm, avoid hazardous testing, and use qualified assistance or the applicable OEM safety procedure.${safetyFlags.some(flag => ["braking", "steering or vehicle control", "tire or wheel failure"].includes(flag)) ? " If the report involves loss of braking, steering control, or a wheel/tire that may fail, do not road-test or drive the vehicle; secure the area and arrange qualified inspection or recovery." : ""}${safetyFlags.includes("battery thermal runaway or damaged traction battery") ? " If an EV or lithium-ion traction battery is smoking, venting, swelling, or heating abnormally, do not charge, restart, touch, or attempt to open it; move people away and contact emergency services if there is active smoke, fire, or immediate danger. Follow the manufacturer emergency response procedure." : ""}`] : []),
         ...(symptoms ? [`Technician-observed symptoms: ${symptoms}`] : []),
         ...(dtcs ? [`Diagnostic trouble codes (preserve exact codes and status): ${dtcs}`] : []),
@@ -474,7 +499,7 @@ Answer style:
 Use the provided context, technician observations, measurements, codes, prior findings, and first-party fitment records. Interpret supplied data directly and update hypotheses rather than restarting with generic checklists. Distinguish confirmed facts, likely explanations, and unknowns. Never invent part numbers, OEM specifications, torque values, wiring details, service bulletins, citations, or source links. For an unfamiliar part number, preserve the exact query, normalize spacing/hyphens/case for alternate searches, identify the component from credible catalogs, then search supplier listings; an internal-catalog miss is not evidence that the part is unknown. Compare distinct offers by condition, fitment evidence, currency and total cost when available; mark unavailable fields honestly and sort cheapest first only within comparable groups. Do not claim live web research or source verification unless actual source results are present. When source results are returned, connect key claims to the relevant source and prefer manufacturer/OEM or primary technical sources. If sources conflict, explain the conflict instead of silently choosing one. For prices, state the listed currency and avoid claiming a delivered total unless shipping and taxes are included. For fitment, state VERIFIED MATCH only with exact credible application evidence; use HIGH-CONFIDENCE CROSS-REFERENCE only when independent credible catalog evidence agrees; otherwise state NOT YET VERIFIED. Still give useful known guidance and the most specific next step rather than only asking for a VIN. Never recommend replacing a component without evidence supporting its failure. Preserve exact DTC status and freeze-frame; test before replacing parts. Flag critical hazards concisely. For repair and parts questions, be decisive about what is supported, but transparent about uncertainty. This is research support, not a confirmed diagnosis.`;
 
   const requestInstructions = followUp
-    ? "You are TORQWISE replying in an ongoing mechanic chat. Keep the same concise style: answer the new question in 1–3 short sentences by default. Use the previous conversation as context, not proof. If one essential detail is missing, ask one brief question and stop. Interpret supplied test results directly. Only provide a ranked differential or detailed test steps when the user asks or the situation requires it. Correct unsupported prior claims and never invent specs, fitment, procedures, or sources."
+    ? instructions + " This is a follow-up in an ongoing mechanic conversation. Use the previous report and all supplied vehicle, symptom, code, measurement, and repair context as conversation history, not as verified proof. Do not ask again for details already supplied. Treat new test results and observations as new evidence, then re-evaluate the new question against that context, perform web research when current or application-specific facts are needed, and answer the new question directly. Ask only one brief question if a missing detail materially changes the answer. Correct unsupported prior claims and never invent specifications, fitment, procedures, prices, or citations. Keep the response concise unless the user asks for depth."
     : instructions + " For parts questions, never infer fitment from a part number alone. Identify what source supports each claimed application, distinguish seller cross-reference listings from OEM-confirmed fitment, and explicitly say when reliable fitment evidence is unavailable. Keep the final answer short; research internally as needed, but do not dump the research process or long source commentary into the chat.";
   let upstream;
   let payload;
@@ -487,7 +512,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
         instructions: requestInstructions,
         input: requestInput,
         // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
-        ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: evidenceTopics.has(topic) ? "medium" : "low" }] } : {}),
+        ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: (evidenceTopics.has(topic) || needsCurrentEvidence || containsDtc) ? "medium" : "low" }] } : {}),
         max_output_tokens: followUp ? 700 : (deepReasoningTopics.has(topic) ? 1200 : (inferredIntent !== "general question and shop assistance" ? 1000 : 700)),
         reasoning: { effort: deepReasoningTopics.has(topic) || inferredIntent !== "general question and shop assistance" ? "medium" : "low" },
         store: false,
@@ -505,14 +530,14 @@ Use the provided context, technician observations, measurements, codes, prior fi
           method: "POST",
           headers: { "authorization": `Bearer ${env("OPENAI_API_KEY")}`, "content-type": "application/json" },
           body: JSON.stringify({
-            model: env("OPENAI_MODEL") || "gpt-5-mini",
-            instructions: requestInstructions + " Web research timed out. Give the best concise evidence-led answer possible from available knowledge, clearly label anything unverified, and never invent citations, part numbers, or fitment.",
+            model: env("TORQWISE_FALLBACK_MODEL") || "gpt-4.1-mini",
+            instructions: requestInstructions + " Web research timed out. This is a fast recovery response, not a live-verified research report. Give the most useful concise guidance available, clearly label specifications, prices, sources, and fitment that are not verified, and never invent citations, part numbers, or fitment.",
             input: requestInput,
-            max_output_tokens: followUp ? 900 : 1400,
+            max_output_tokens: followUp ? 500 : 700,
             store: false,
           }),
-          // A concise no-search fallback should finish within the remaining function budget.
-          signal: AbortSignal.timeout(8000),
+          // Use a faster no-search model and a shorter deadline so recovery does not consume the entire function window.
+          signal: AbortSignal.timeout(6000),
         });
         let retryPayload = {};
         try { retryPayload = await retry.json(); } catch {}
@@ -631,13 +656,16 @@ Use the provided context, technician observations, measurements, codes, prior fi
     return json({ error: "The AI service could not produce a text answer after one retry. Your question was not answered; please try again shortly or narrow the request." }, 502);
   }
   const responseSources = new Map();
-  for (const source of [
-    ...extractSources(payload),
-    ...localDtcEvidence.flatMap(item => (item.sources || []).map(url => ({
-      url,
-      title: `Generic DTC reference: ${item.code}`
-    })))
-  ]) {
+  const verifiedResearchSources = extractSources(payload);
+  // Prefer sources returned by this research run. Generic bundled DTC references
+  // are fallback-only so they do not bury relevant citations in a live web report.
+  const fallbackDtcSources = verifiedResearchSources.length
+    ? []
+    : localDtcEvidence.flatMap(item => (item.sources || []).map(url => ({
+        url,
+        title: `Generic DTC reference: ${item.code}`
+      })));
+  for (const source of [...verifiedResearchSources, ...fallbackDtcSources]) {
     if (source?.url && !responseSources.has(source.url)) responseSources.set(source.url, source);
   }
   return json({ answer, sources: [...responseSources.values()].slice(0, 12), fitmentMatches, model: payload.model || env("OPENAI_MODEL") || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });

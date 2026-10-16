@@ -32,8 +32,9 @@ function configure({ userResponse = response({ id: "user-123" }), reservation = 
   };
   return calls;
 }
-function request({ token = "valid-token", body = { asset: "2018 pickup", question: "P0300" }, method = "POST" } = {}) {
+function request({ token = "valid-token", body = { asset: "2018 pickup", question: "P0300" }, method = "POST", clientIp } = {}) {
   const headers = {};
+  if (clientIp) headers["x-nf-client-connection-ip"] = clientIp;
   if (token) headers.authorization = "Bearer " + token;
   if (body !== null && body !== undefined) headers["content-type"] = "application/json";
   return new Request("https://torqwise.example/.netlify/functions/research", {
@@ -291,6 +292,8 @@ test("returns only valid HTTP(S) citation links with bounded titles", async () =
     { url: "https://example.com/other", title: "T".repeat(240) },
     { url: "https://example.com/search-source", title: "Search source" }
   ]);
+  assert.ok(!data.sources.some(source => source.title.startsWith("Generic DTC reference:")),
+    "live citations should not be diluted by generic bundled DTC references");
   assert.ok(calls.some(c => c.url === "https://api.openai.com/v1/responses"));
 });
 
@@ -540,8 +543,33 @@ test("returns a concise fallback answer when the initial web-research request ti
     const data = await result.json();
     assert.match(data.answer, /exact part fitment remains unverified/i);
     assert.equal(aiCalls, 2);
+    const fallbackCall = calls.filter(c => c.url === "https://api.openai.com/v1/responses")[1];
+    const fallbackPayload = JSON.parse(fallbackCall.options.body);
+    assert.equal(fallbackPayload.model, "gpt-4.1-mini");
+    assert.equal(fallbackPayload.max_output_tokens, 700);
+    assert.equal(fallbackCall.options.signal instanceof AbortSignal, true);
     assert.ok(!calls.some(c => c.url === base + "/rest/v1/rpc/release_research_usage"));
   } finally {
     globalThis.fetch = configuredFetch;
   }
+});
+
+test("uses deeper live web-search context for lookup-sensitive questions even in the general category", async () => {
+  const calls = configure();
+  const result = await handler(request({
+    body: {
+      asset: "2021 Chevrolet Silverado 1500 5.3L",
+      topic: "general",
+      question: "What is the front axle nut torque specification?"
+    },
+    clientIp: "198.51.100.222"
+  }));
+  assert.equal(result.status, 200);
+  const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+  assert.ok(aiCall, "AI provider should be called");
+  const payload = JSON.parse(aiCall.options.body);
+  assert.ok(payload.tools?.some(tool => tool.type === "web_search"),
+    "lookup-sensitive specifications should trigger live web research");
+  assert.equal(payload.tools.find(tool => tool.type === "web_search").search_context_size, "medium",
+    "technical specifications should request medium research context even when topic is general");
 });
