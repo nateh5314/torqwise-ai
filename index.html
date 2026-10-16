@@ -161,6 +161,37 @@ body[data-app-page="chat"] #research-hub{padding:26px 0 42px;min-height:calc(100
 .chat-context{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#151619}.chat-context summary{cursor:pointer;font-weight:750;font-size:13px}.chat-context .field input{min-height:44px}.chat-image-attachments{margin-top:8px}.chat-image-attachments>p{margin:0}.chat-secondary-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .location-row{display:flex;align-items:stretch;gap:8px}.location-row input{flex:1;min-width:0}.location-row button{flex:0 0 auto;font-size:12px;padding:9px 11px}
 @media(max-width:700px){.app-nav{position:sticky;padding:10px 0;gap:8px}.app-nav .navlinks{order:0;flex:1 1 100%;justify-content:space-between;gap:3px}.app-nav .navlinks a{font-size:12px;padding:8px 9px}.app-nav #headerAccountAction{position:absolute;right:0;top:9px;padding:8px 10px;font-size:11px}.app-nav .brand{font-size:15px}.app-nav .brand small{font-size:8px;letter-spacing:1.5px}.chat-composer{bottom:0;padding:9px;border-radius:13px}.chat-composer-tools .tiny{display:none}.chat-composer-tools{justify-content:space-between}.chat-composer-tools button{font-size:12px;padding:9px}.chat-message.user-message{max-width:96%}.location-row{flex-direction:column}.location-row button{width:100%}}
+/* Chat-first, text-message interface */
+body[data-app-page="chat"] .chat-hero{display:none}
+body[data-app-page="chat"] #research-hub{padding:14px 0 24px;min-height:calc(100vh - 72px)}
+#research-hub>.wrap{max-width:820px}
+.chat-page-heading{max-width:820px;margin:0 auto 8px}
+.chat-page-heading h2{font-size:22px;margin:4px 0}
+.chat-page-heading .sub{font-size:13px;color:#aeb1b8;margin:0}
+#research-hub .research-layout{display:block}
+#research-hub .research-layout>.card:first-child{padding:0;background:transparent;border:0;box-shadow:none}
+#research-hub .research-layout>.card:nth-child(2){display:none}
+.chat-thread{display:flex;flex-direction:column;gap:14px;min-height:calc(100dvh - 300px);padding:10px 0 18px}
+.chat-welcome,.chat-message{display:flex;align-items:flex-start;gap:10px;max-width:100%;line-height:1.6}
+.chat-avatar{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:50%;background:var(--red);font-weight:900}
+.chat-message{padding:12px 14px;border:1px solid #30333a;border-radius:18px;background:#191b1f;white-space:pre-wrap;overflow-wrap:anywhere}
+.chat-message.user-message{display:flex;flex-direction:column;align-self:flex-end;max-width:min(88%,720px);background:#292b30;border-color:#3b3e45;border-bottom-right-radius:6px}
+.chat-message.assistant-message{display:block;white-space:normal;background:transparent;border:0;padding:8px 2px;border-radius:0}
+.chat-composer{position:sticky;bottom:0;z-index:5;padding:10px 12px;background:rgba(27,28,31,.97);border:1px solid #454850;border-radius:24px;box-shadow:0 8px 30px #0005;backdrop-filter:blur(16px)}
+.chat-composer textarea{min-height:28px;max-height:180px;resize:vertical;background:transparent;border:0;font-size:16px;padding:4px 2px;line-height:1.5}
+.chat-composer textarea:focus{outline:none}
+.chat-composer-tools{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.chat-composer-tools .tiny{flex:1 1 auto;text-align:center;font-size:10px}
+.chat-composer-tools button{padding:8px 12px}
+.attach-menu-wrap{position:relative;flex:0 0 auto}
+.attach-trigger{width:36px;height:36px;border-radius:50%;font-size:24px;line-height:1;padding:0!important;display:grid;place-items:center}
+.attach-menu{position:absolute;left:0;bottom:44px;z-index:20;min-width:170px;padding:6px;border:1px solid #42454c;border-radius:14px;background:#202226;box-shadow:0 12px 36px #0009}
+.attach-menu[hidden]{display:none}
+.attach-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;text-align:left;background:transparent;border:0;border-radius:9px;color:#f4f4f5}
+.attach-menu button:hover,.attach-menu button:focus{background:#33363c}
+.vehicle-details-trigger{font-size:12px}
+.chat-image-attachments{margin-top:4px}
+@media(max-width:700px){body[data-app-page="chat"] #research-hub{padding-top:10px}.chat-composer{padding:9px 10px;border-radius:22px}.chat-composer-tools .tiny{display:none}.chat-composer-tools{justify-content:space-between}.chat-composer-tools button{font-size:12px;padding:8px}.chat-message.user-message{max-width:96%}.chat-thread{min-height:calc(100dvh - 270px)}}
 </style></head>
 <body>
 <div class="topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
@@ -171,16 +202,16 @@ body[data-app-page="chat"] #research-hub{padding:26px 0 42px;min-height:calc(100
 
 
 <section class="section" id="research-hub"><div class="wrap">
- <div class="chat-page-heading"><div class="eyebrow">AI CHAT</div><h2>TORQWISE assistant</h2><p class="sub">Ask naturally, like you would ask a knowledgeable mechanic. Vehicle details and photos are optional unless they affect the answer.</p></div>
+ <div class="chat-page-heading"><h2>TORQWISE</h2><p class="sub">Your shop partner. Ask anything.</p></div>
  <div class="research-layout">
   <div class="card">
-   <div class="diag-label">Search context</div>
+   
    <div id="torqChatThread" class="chat-thread" aria-live="polite">
     <div class="chat-welcome"><div class="chat-avatar">T</div><div><strong>TORQWISE</strong><p>I'm ready. Ask me about a repair, a part, a specification, a supplier, or anything else you need in the shop.</p><div class="chat-suggestions"><button type="button" class="secondary" onclick="torqSetChatPrompt('Find the cheapest available part and the fastest Canadian delivery option.')">Find a part</button><button type="button" class="secondary" onclick="torqSetChatPrompt('Help me diagnose this fault. Ask for the key details you need.')">Diagnose a fault</button><button type="button" class="secondary" onclick="torqSetChatPrompt('Find the correct service specification and source for my vehicle.')">Check a spec</button></div></div></div>
    </div>
    <div class="chat-composer">
-    <div class="field"><label for="researchQuestion" class="sr-only">Message TORQWISE</label><textarea id="researchQuestion" rows="3" placeholder="Message TORQWISE… Ask anything about vehicles, equipment, parts, repairs or specifications." aria-label="Message TORQWISE"></textarea></div>
-    <div class="chat-composer-tools"><button type="button" class="secondary" onclick="document.getElementById('torqResearchImages').click()">＋ Add photos</button><button type="button" class="secondary" onclick="torqToggleContext()">Vehicle details</button><span class="tiny">Verify safety-critical information before acting.</span><button type="button" id="torqAiButton" onclick="torqAskAI()">Send ↗</button></div>
+    <div class="field"><label for="researchQuestion" class="sr-only">Ask TORQWISE anything</label><textarea id="researchQuestion" rows="1" placeholder="Ask TORQWISE anything…" aria-label="Ask TORQWISE anything"></textarea></div>
+    <div class="chat-composer-tools"><div class="attach-menu-wrap"><button type="button" class="attach-trigger secondary" id="torqAttachToggle" aria-label="Add attachment" aria-expanded="false" aria-controls="torqAttachMenu" onclick="torqToggleAttachMenu()">＋</button><div class="attach-menu" id="torqAttachMenu" role="menu" aria-label="Add to message" hidden><button type="button" role="menuitem" onclick="torqChooseAttachment('camera')">📷 Camera</button><button type="button" role="menuitem" onclick="torqChooseAttachment('photos')">🖼️ Photos</button><button type="button" role="menuitem" onclick="torqChooseAttachment('files')">📎 Files</button></div></div><button type="button" class="secondary vehicle-details-trigger" onclick="torqToggleContext()">Vehicle details</button><span class="tiny">Check critical specs before repairs.</span><button type="button" id="torqAiButton" onclick="torqAskAI()" aria-label="Send message">↑</button></div>
    </div>
    <details id="torqChatContext" class="chat-context"><summary>Vehicle, equipment and diagnostic details (optional)</summary>
     <div class="formgrid" style="margin-top:12px">
@@ -190,7 +221,7 @@ body[data-app-page="chat"] #research-hub{padding:26px 0 42px;min-height:calc(100
      <div class="field"><label for="torqChatLocation">Location for nearby searches (optional)</label><div class="location-row"><input id="torqChatLocation" placeholder="City, province or use GPS"><button class="secondary" id="torqChatUseLocation" type="button" onclick="torqUseCurrentLocation('torqChatLocation','torqChatLocationStatus')">Use my current location</button></div><small id="torqChatLocationStatus" role="status">Canadian city, province and postal code supported. Location is shared only when you choose it.</small></div>
     </div>
    </details>
-   <div class="field chat-image-attachments"><input id="torqResearchImages" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-label="Attach up to four workshop photos" hidden><p class="tiny">Attach up to 4 workshop photos or scan-tool screenshots.</p><div id="torqResearchImagePreview" class="formbuttons" style="gap:8px;flex-wrap:wrap;margin-top:8px" aria-live="polite"></div></div>
+   <div class="field chat-image-attachments"><input id="torqCameraInput" type="file" accept="image/*" capture="environment" aria-label="Take a workshop photo" hidden><input id="torqResearchImages" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-label="Choose workshop photos" hidden><input id="torqResearchFiles" type="file" accept=".pdf,.txt,.md,.csv,.json,.xml,.log" multiple aria-label="Attach files" hidden><div id="torqResearchImagePreview" class="formbuttons" style="gap:8px;flex-wrap:wrap;margin-top:8px" aria-live="polite"></div><div id="torqResearchFilePreview" class="formbuttons" style="gap:8px;flex-wrap:wrap;margin-top:8px" aria-live="polite"></div></div>
    <details class="research-result" style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">Add test results and diagnostic details (optional)</summary><p class="tiny">Already scanned or tested it? Put the evidence here so TORQWISE can narrow the possibilities instead of starting with a generic checklist. Include units and mark codes current, pending, or history.</p>
     <div class="field" style="margin-top:8px"><label for="researchSymptoms">Observed symptoms / when they occur</label><textarea id="researchSymptoms" rows="2" placeholder="Cold or hot, idle or load, intermittent, noises, warning lights…"></textarea></div>
     <div class="field" style="margin-top:8px"><label for="researchDtcs">Fault codes and status</label><textarea id="researchDtcs" rows="2" placeholder="P0302 current; P0171 pending…"></textarea></div>
@@ -830,18 +861,28 @@ function torqRenderImagePreview(){
  });
  if(!torqResearchImages.length){const label=document.createElement("span");label.className="tiny";label.textContent="No images attached.";host.appendChild(label)}
 }
-document.getElementById("torqResearchImages")?.addEventListener("change",async event=>{
+async function torqHandleImageSelection(event){
  const files=Array.from(event.target.files||[]);
  if(torqResearchImages.length+files.length>4){alert("Attach up to 4 images per question.");event.target.value="";return}
  const status=document.getElementById("torqAiStatus");const input=event.target;input.disabled=true;
  try{for(const file of files){const image=await torqCompressImage(file);torqResearchImages.push(image)}torqRenderImagePreview();if(status)status.textContent=torqResearchImages.length+" workshop image(s) ready. Ask TORQWISE to analyze them with your question."}
  catch(error){alert(error.message||"Could not prepare the selected images.");}
  finally{input.disabled=false;input.value=""}
-});
+}
+document.getElementById("torqResearchImages")?.addEventListener("change",torqHandleImageSelection);
+document.getElementById("torqCameraInput")?.addEventListener("change",torqHandleImageSelection);
+let torqResearchFiles=[];
+const TORQ_TEXT_FILE_TYPES={".txt":"text/plain",".md":"text/markdown",".csv":"text/csv",".json":"application/json",".xml":"application/xml",".log":"text/plain"};
+function torqRenderFilePreview(){const host=document.getElementById("torqResearchFilePreview");if(!host)return;host.replaceChildren();torqResearchFiles.forEach((file,index)=>{const chip=document.createElement("div");chip.style.cssText="display:flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid #454850;border-radius:10px;background:#1b1d21;font-size:12px";const label=document.createElement("span");label.textContent="📎 "+(file.name.length>28?file.name.slice(0,25)+"…":file.name);const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="×";remove.setAttribute("aria-label","Remove "+file.name);remove.style.padding="2px 7px";remove.onclick=()=>{torqResearchFiles.splice(index,1);torqRenderFilePreview()};chip.append(label,remove);host.appendChild(chip)});}
+document.getElementById("torqResearchFiles")?.addEventListener("change",async event=>{const input=event.target,selected=Array.from(input.files||[]);if(torqResearchFiles.length+selected.length>2){alert("Attach up to 2 files per message.");input.value="";return}try{for(const file of selected){const ext="."+file.name.split(".").pop().toLowerCase();if(file.size>1.5*1024*1024)throw new Error("Each file must be 1.5 MB or smaller.");if(ext===".pdf"){const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error("Could not read "+file.name));reader.readAsDataURL(file)});torqResearchFiles.push({name:file.name,mime:"application/pdf",data})}else{if(!TORQ_TEXT_FILE_TYPES[ext])throw new Error("Supported files: PDF, TXT, Markdown, CSV, JSON, XML and LOG.");const text=await file.text();if(text.length>120000)throw new Error(file.name+" contains too much text. Keep each text file under 120,000 characters.");torqResearchFiles.push({name:file.name,mime:TORQ_TEXT_FILE_TYPES[ext],text})}}torqRenderFilePreview();const status=document.getElementById("torqAiStatus");if(status)status.textContent=torqResearchFiles.length+" file(s) ready to send with your message."}catch(error){alert(error.message||"Could not prepare the selected file.");}finally{input.value=""}});
 document.body.dataset.appPage='chat';
+function torqToggleAttachMenu(){const menu=document.getElementById("torqAttachMenu"),button=document.getElementById("torqAttachToggle");if(!menu||!button)return;menu.hidden=!menu.hidden;button.setAttribute("aria-expanded",String(!menu.hidden));}
+function torqChooseAttachment(kind){const menu=document.getElementById("torqAttachMenu"),button=document.getElementById("torqAttachToggle");if(menu)menu.hidden=true;if(button)button.setAttribute("aria-expanded","false");const target=document.getElementById(kind==="camera"?"torqCameraInput":kind==="photos"?"torqResearchImages":"torqResearchFiles");target?.click();}
+document.addEventListener("click",event=>{const wrap=document.querySelector(".attach-menu-wrap");if(wrap&&!wrap.contains(event.target)){const menu=document.getElementById("torqAttachMenu"),button=document.getElementById("torqAttachToggle");if(menu)menu.hidden=true;if(button)button.setAttribute("aria-expanded","false");}});
 function torqSetChatPrompt(text){const input=document.getElementById('researchQuestion');if(input){input.value=text;input.focus();}}
 function torqToggleContext(){const details=document.getElementById('torqChatContext');if(details){details.open=!details.open;if(details.open)details.scrollIntoView({behavior:'smooth',block:'nearest'});}}
 function torqAppendChatMessage(role,text,extraClass=''){const thread=document.getElementById('torqChatThread');if(!thread)return null;const node=document.createElement('div');node.className='chat-message '+(role==='user'?'user-message':'assistant-message')+(extraClass?' '+extraClass:'');node.textContent=text;thread.appendChild(node);node.scrollIntoView({behavior:'smooth',block:'nearest'});return node;}
+function torqAppendChatFiles(messageNode,files){if(!messageNode||!Array.isArray(files)||!files.length)return;const list=document.createElement("div");list.style.cssText="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px";files.forEach(file=>{const chip=document.createElement("span");chip.style.cssText="display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #555;border-radius:10px;background:#1d1f23;font-size:12px";chip.textContent="📎 "+file.name;list.appendChild(chip)});messageNode.appendChild(list);}
 function torqAppendChatImages(messageNode,images){
  if(!messageNode||!Array.isArray(images)||!images.length)return;
  const gallery=document.createElement('div');gallery.className='chat-sent-images';
@@ -991,6 +1032,7 @@ function torqPrepareNewAnswer(){
 }
 async function torqAskAI(){
  const c=torqGetContext();
+ if(!c.question&&(torqResearchImages.length||torqResearchFiles.length))c.question="Please inspect the attached file(s) or workshop image(s) and tell me what matters for this job.";
  if(!c.asset&&!c.question){alert('Type a question first. Add vehicle details if they matter.');return;}
  const previous=torqLastResearch&&torqLastResearch.answer?torqLastResearch:null;
  const isFollowUp=torqChatHasActiveConversation&&!!previous;
@@ -1011,17 +1053,17 @@ async function torqAskAI(){
  torqPrepareNewAnswer();
  const btn=document.getElementById('torqAiButton'),status=document.getElementById('torqAiStatus'),host=document.getElementById('torqAiOutput');
  const userMessage=torqAppendChatMessage('user',c.question||('Help me with '+(c.asset||context.asset)));
- torqAppendChatImages(userMessage,torqResearchImages);
+ torqAppendChatImages(userMessage,torqResearchImages);torqAppendChatFiles(userMessage,torqResearchFiles);
  const loading=torqAppendChatMessage('assistant',isFollowUp?'TORQWISE is thinking through the follow-up…':'TORQWISE is researching current sources…','chat-loading');
  const input=document.getElementById('researchQuestion');if(input)input.value='';
  btn.disabled=true;btn.textContent=isFollowUp?'Thinking…':'Researching…';status.classList.remove('success');status.textContent=isFollowUp?'Using the conversation and previous findings to answer your follow-up…':'Researching your question and checking source material…';host.style.display='none';host.innerHTML='';
- const requestBody=isFollowUp?{...context,question:c.question,followUp:true,previousAnswer:previous.answer,images:torqResearchImages.map(item=>item.data)}:{...context,images:torqResearchImages.map(item=>item.data)};
+ const requestBody=isFollowUp?{...context,question:c.question,followUp:true,previousAnswer:previous.answer,images:torqResearchImages.map(item=>item.data),files:torqResearchFiles.map(item=>({name:item.name,mime:item.mime,data:item.data,text:item.text}))}:{...context,images:torqResearchImages.map(item=>item.data),files:torqResearchFiles.map(item=>({name:item.name,mime:item.mime,data:item.data,text:item.text}))};
  const researchController=new AbortController();const researchTimeout=setTimeout(()=>researchController.abort(),42000);
  try{
   const response=await fetch('/.netlify/functions/research',{method:'POST',headers:{'Content-Type':'application/json',...(window.__torqwiseGetToken?await window.__torqwiseGetToken():{})},body:JSON.stringify(requestBody),signal:researchController.signal});
   let data={};try{data=await response.json()}catch(_){}
   if(!response.ok)throw new Error(data.error||('Request failed (HTTP '+response.status+').'));
-  torqChatHasActiveConversation=true;torqResearchImages=[];torqRenderImagePreview();torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
+  torqChatHasActiveConversation=true;torqResearchImages=[];torqResearchFiles=[];torqRenderImagePreview();torqRenderFilePreview();torqSetFollowUpContext(context,data.answer);torqLastResearch.sources=Array.isArray(data.sources)&&data.sources.length?data.sources:(isFollowUp?(previous.sources||[]):[]);
   try{localStorage.setItem('torqwise_last_research_v1',JSON.stringify(torqLastResearch));}catch(_){}
   loading?.remove();torqRenderAiResult(data);
   torqSaveAccountHistory({kind:context.topic==='diagnostic'?'diagnostic':context.topic==='parts'?'parts':'research',title:(context.asset||'General research')+' — '+(c.question||context.topic||'Research report'),asset:context.asset,serial:context.serial,topic:context.topic,prompt:c.question,result:data.answer,sources:torqLastResearch.sources||[],metadata:{model:data.model||'',savedFrom:isFollowUp?'ai-chat-follow-up':'ai-research',diagnosticEvidence:{symptoms:context.symptoms||'',dtcs:context.dtcs||'',freezeFrame:context.freezeFrame||'',liveData:context.liveData||'',testsPerformed:context.testsPerformed||'',repairsAttempted:context.repairsAttempted||''}}});
