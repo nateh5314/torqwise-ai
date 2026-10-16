@@ -148,20 +148,14 @@
 </style></head>
 <body>
 <div class="topbar"><div class="wrap topline"><span>INDEPENDENT AUTOMOTIVE RESEARCH · CANADA</span><span>Clear research. Smarter decisions.</span></div></div>
-<header class="wrap nav"><a class="brand" href="#home"><span class="mark">T</span><span>TORQWISE<small>AUTOMOTIVE RESEARCH</small></span></a><nav class="navlinks"><a href="#account" aria-label="My Account">My Account</a><a href="#research-hub">Research</a><a href="#diagnostics">Diagnostics</a><a href="#vin-lookup">VIN lookup</a><a href="#parts-market">Parts</a><a href="#services">Services</a><a href="#request">Request research</a></nav><button id="headerAccountAction" onclick="openAuth('signin')">Sign in / Create account</button></header>
+<header class="wrap nav app-nav"><a class="brand" href="#home"><span class="mark">T</span><span>TORQWISE<small>MECHANIC AI · CANADA</small></span></a><nav class="navlinks" aria-label="Main navigation"><a href="#home" data-app-page="chat">AI Chat</a><a href="#parts-market" data-app-page="parts">Parts</a><a href="#diagnostics" data-app-page="diagnostics">Diagnostics</a><a href="#account" data-app-page="account">My Account</a></nav><button id="headerAccountAction" onclick="openAuth('signin')">Sign in</button></header>
 <main>
-<section class="hero" id="home"><div class="wrap"><div class="eyebrow">Your next repair starts with better information</div><h1>Find the fault.<br><span>Find the right fix.</span></h1><p>TORQWISE helps you investigate vehicle and equipment problems, look up VINs, research parts and fitment, and compare repair options — all in one practical workspace built for drivers and technicians.</p><div class="heroactions"><a class="btn" href="#research-hub">Start your research <span>→</span></a><a class="btn secondary" href="#diagnostics">Explore diagnostics</a></div><div class="trust"><span>Step-by-step diagnostic guidance</span><span>Parts and fitment research</span><span>Sources you can check</span><span>For drivers and shops</span></div></div></section>
+<section class="hero chat-hero" id="home"><div class="wrap"><div class="eyebrow">Your mechanic AI · Built for the shop</div><h1>What are we<br><span>working on?</span></h1><p>Ask about a fault, a specification, a part, an installation, or anything else in the shop. Add photos when they help.</p><div class="chat-launch-actions"><span>Canada-first parts research</span><span>Vehicle and equipment support</span><span>Source-backed answers</span></div></div></section>
 
-<section class="quick-start" aria-label="Choose a starting point">
- <div class="wrap quick-start-grid">
-  <a class="quick-start-card" href="#diagnostics"><span class="quick-start-icon" aria-hidden="true">⌁</span><span><strong>Diagnose a problem</strong><small>Fault codes, symptoms and next tests</small></span><span class="quick-start-arrow" aria-hidden="true">→</span></a>
-  <a class="quick-start-card" href="#vin-lookup"><span class="quick-start-icon" aria-hidden="true">⌕</span><span><strong>Look up a VIN</strong><small>Start with vehicle identification</small></span><span class="quick-start-arrow" aria-hidden="true">→</span></a>
-  <a class="quick-start-card" href="#parts-market"><span class="quick-start-icon" aria-hidden="true">⚙</span><span><strong>Research a part</strong><small>Explore fitment and supplier options</small></span><span class="quick-start-arrow" aria-hidden="true">→</span></a>
- </div>
-</section>
+
 
 <section class="section" id="research-hub"><div class="wrap">
- <div class="sectionhead"><div><div class="eyebrow">Universal research workspace</div><h2>One search to start the job.</h2><p class="sub">Describe a vehicle, machine, symptom, code or part. TORQWISE organizes research shortcuts and lets you save job context in this browser. External search opens source websites in a new tab; it does not mean every result is verified.</p></div></div>
+ <div class="chat-page-heading"><div class="eyebrow">AI CHAT</div><h2>TORQWISE assistant</h2><p class="sub">Ask naturally, like you would ask a knowledgeable mechanic. Vehicle details and photos are optional unless they affect the answer.</p></div>
  <div class="research-layout">
   <div class="card">
    <div class="diag-label">Search context</div>
@@ -256,7 +250,7 @@
    <form id="marketSearchForm">
     <div class="field"><label for="marketPart">Part or job description</label><input id="marketPart" required maxlength="180" placeholder="e.g. front wheel bearing, 2018 F-150 5.0L"></div>
     <div class="field" style="margin-top:12px"><label for="marketVehicle">Vehicle / equipment details</label><input id="marketVehicle" maxlength="180" placeholder="Year, make, model, engine, VIN or serial"></div>
-    <div class="field" style="margin-top:12px"><label for="marketRegion">Delivery area</label><input id="marketRegion" maxlength="100" value="Newfoundland and Labrador, Canada" placeholder="City, province or postal code"></div>
+    <div class="field" style="margin-top:12px"><label for="marketRegion">Delivery area</label><div class="location-row"><input id="marketRegion" maxlength="100" value="Newfoundland and Labrador, Canada" placeholder="City, province or postal code"><button class="secondary" id="marketUseLocation" type="button" onclick="torqUseCurrentLocation('marketRegion','marketLocationStatus')">Use current location</button></div><small id="marketLocationStatus" role="status">Canadian cities, provinces and postal codes are supported.</small></div>
     <div class="formbuttons"><button type="submit">Compare supplier searches ↗</button><button type="button" class="secondary" id="marketSaveButton">Add to shortlist</button><button type="button" class="secondary" id="marketAiButton">Research this part with AI</button></div>
    </form>
    <div id="marketMessage" class="notice hidden" role="status"></div>
