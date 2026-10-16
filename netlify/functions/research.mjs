@@ -289,8 +289,7 @@ export default async (req) => {
   ].filter(item => item.pattern.test(safetyText)).map(item => item.flag);
   const followUp = body.followUp === true;
   const previousAnswer = clean(body.previousAnswer, 8000);
-  // Vision input: accept a small number of browser-compressed images only.
-  // Never fetch arbitrary URLs supplied by the client; data URLs avoid SSRF.
+  // Vision and document inputs use bounded data URLs; never fetch client-supplied URLs.
   const rawImages = Array.isArray(body.images) ? body.images : [];
   if (rawImages.length > 4) return json({ error: "Attach up to 4 images per research question." }, 400);
   const images = [];
@@ -300,6 +299,26 @@ export default async (req) => {
       return json({ error: "One of the images is invalid or too large. Use JPG, PNG, or WebP images under about 4 MB each." }, 400);
     }
     images.push(rawImage);
+  }
+  const rawFiles = Array.isArray(body.files) ? body.files : [];
+  if (rawFiles.length > 2) return json({ error: "Attach up to 2 files per research question." }, 400);
+  const allowedMime = new Set(["application/pdf", "text/plain", "text/markdown", "text/csv", "application/json", "application/xml"]);
+  const files = []; let totalFileBytes = 0;
+  for (const rawFile of rawFiles) {
+    if (!rawFile || typeof rawFile.name !== "string" || typeof rawFile.mime !== "string" || !allowedMime.has(rawFile.mime)) return json({ error: "One of the attached files has an unsupported type." }, 400);
+    const name = clean(rawFile.name, 160);
+    if (rawFile.mime === "application/pdf") {
+      if (!name.toLowerCase().endsWith(".pdf") || typeof rawFile.data !== "string") return json({ error: "The PDF attachment is invalid." }, 400);
+      const prefix = "data:application/pdf;base64,";
+      if (!rawFile.data.startsWith(prefix) || !/^[A-Za-z0-9+/=]+$/.test(rawFile.data.slice(prefix.length)) || rawFile.data.length > 2_100_000) return json({ error: "Each PDF must be valid and under about 1.5 MB." }, 400);
+      totalFileBytes += rawFile.data.length;
+      files.push({ name, mime: rawFile.mime, data: rawFile.data });
+    } else {
+      if (typeof rawFile.text !== "string" || rawFile.text.length > 120000) return json({ error: "A text attachment is invalid or too large." }, 400);
+      totalFileBytes += rawFile.text.length;
+      files.push({ name, mime: rawFile.mime, text: rawFile.text });
+    }
+    if (totalFileBytes > 3_800_000) return json({ error: "The attached files are too large to send together. Remove a file and try again." }, 400);
   }
   if (followUp && (!question || !previousAnswer)) return json({ error: "A follow-up needs a question and the previous research report." }, 400);
   if (!asset && !question) return json({ error: "Enter a vehicle/equipment name or a question." }, 400);
@@ -383,12 +402,14 @@ export default async (req) => {
         ...(repairsAttempted ? [`Repairs or parts already tried: ${repairsAttempted}`] : []),
         ...(fitmentMatches.length ? [`TORQWISE reviewed first-party fitment catalog records (use exact status and restrictions; do not overstate):\n${JSON.stringify(fitmentMatches)}`] : []),
       ].join("\n");
-  const requestInput = images.length
+  const fileText = files.filter(file => file.text).map(file => `Attached text file: ${file.name}\n${file.text}`).join("\n\n");
+  const requestInput = images.length || files.some(file => file.data)
     ? [{ role: "user", content: [
-        { type: "input_text", text: input + "\n\nAnalyze the attached workshop images as evidence. Describe only what is visibly supported, identify uncertainty, and relate observations to the vehicle/equipment context. Do not claim a hidden component has failed from appearance alone." },
+        { type: "input_text", text: input + (fileText ? "\n\n" + fileText : "") + (images.length ? "\n\nAnalyze the attached workshop images as evidence. Describe only what is visibly supported, identify uncertainty, and relate observations to the vehicle/equipment context. Do not claim a hidden component has failed from appearance alone." : "") + (files.length ? "\n\nReview the attached file(s) as user-provided evidence. Identify relevant specifications, codes, procedures, measurements, tables, or diagrams. Refer to the filename when discussing its contents and state when a detail is not present or legible." : "") },
         ...images.map(image_url => ({ type: "input_image", image_url, detail: "high" })),
+        ...files.filter(file => file.data).map(file => ({ type: "input_file", filename: file.name, file_data: file.data })),
       ] }]
-    : input;
+    : (fileText ? input + "\n\n" + fileText : input);
   const instructions = `You are TORQWISE, a mechanic-specific conversational AI assistant for automotive, diesel, and heavy-equipment technicians. Work like an experienced diagnostic partner: understand the actual question, interpret supplied images and measurements, carry useful context forward, explain the reasoning in practical shop language, and adapt detail to the user's experience. Give the most useful answer possible immediately; do not pad the report with generic safety disclaimers or repeat the question. When an image is supplied, describe visible evidence first, distinguish observation from inference, identify what cannot be determined from the image, and connect it to the next useful inspection or test. If one missing detail materially changes the diagnosis, ask one focused follow-up rather than dumping a long questionnaire. Do not pretend to have eyes on hidden parts, live scan data, or a vehicle you cannot inspect.
 
 Answer style:
