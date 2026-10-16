@@ -32,8 +32,9 @@ function configure({ userResponse = response({ id: "user-123" }), reservation = 
   };
   return calls;
 }
-function request({ token = "valid-token", body = { asset: "2018 pickup", question: "P0300" }, method = "POST" } = {}) {
+function request({ token = "valid-token", body = { asset: "2018 pickup", question: "P0300" }, method = "POST", clientIp } = {}) {
   const headers = {};
+  if (clientIp) headers["x-nf-client-connection-ip"] = clientIp;
   if (token) headers.authorization = "Bearer " + token;
   if (body !== null && body !== undefined) headers["content-type"] = "application/json";
   return new Request("https://torqwise.example/.netlify/functions/research", {
@@ -555,7 +556,8 @@ test("uses deeper live web-search context for lookup-sensitive questions even in
       asset: "2021 Chevrolet Silverado 1500 5.3L",
       topic: "general",
       question: "What is the front axle nut torque specification?"
-    }
+    },
+    clientIp: "198.51.100.222"
   }));
   assert.equal(result.status, 200);
   const aiCall = calls.find(c => c.url === "https://api.openai.com/v1/responses");
