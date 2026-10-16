@@ -41,6 +41,7 @@ function parseOffers(text, sources) {
   if (start < 0 || end <= start) throw new Error("unstructured response");
   const data = JSON.parse(text.slice(start, end + 1));
   const allowed = new Set(sources.map(source => source.url));
+  const seenOffers = new Set();
   const offers = (Array.isArray(data.offers) ? data.offers : []).flatMap(offer => {
     const url = typeof offer.url === "string" ? offer.url.trim() : "";
     let parsed;
@@ -48,6 +49,9 @@ function parseOffers(text, sources) {
     if (!allowed.has(url) || !["http:", "https:"].includes(parsed.protocol)) return [];
     const price = Number(offer.price), currency = String(offer.currency || "").toUpperCase();
     if (!Number.isFinite(price) || price < 0 || !["CAD", "USD"].includes(currency)) return [];
+    const identity = [parsed.hostname.toLowerCase(), url.replace(/#.*$/, "").replace(/\/$/, ""), price.toFixed(2), currency].join("|");
+    if (seenOffers.has(identity)) return [];
+    seenOffers.add(identity);
     return [{
       seller: clean(offer.seller, 100) || parsed.hostname,
       title: clean(offer.title, 220) || "Part listing",
