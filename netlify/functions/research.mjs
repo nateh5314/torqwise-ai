@@ -392,7 +392,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
       body: JSON.stringify({
         model: env("OPENAI_MODEL") || "gpt-5-mini",
         instructions: requestInstructions,
-        input,
+        input: requestInput,
         // Keep the synchronous Netlify request within its execution window. A separate web-search tool call was repeatedly exceeding the hosting timeout before any useful answer could be returned. The model must still clearly label unverified fitment/specifications and never invent citations.
         ...(useWebSearch ? { tools: [{ type: "web_search", search_context_size: evidenceTopics.has(topic) ? "medium" : "low" }] } : {}),
         max_output_tokens: followUp ? 1200 : (deepReasoningTopics.has(topic) ? 1900 : 1400),
@@ -414,7 +414,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
           body: JSON.stringify({
             model: env("OPENAI_MODEL") || "gpt-5-mini",
             instructions: requestInstructions + " Web research timed out. Give the best concise evidence-led answer possible from available knowledge, clearly label anything unverified, and never invent citations, part numbers, or fitment.",
-            input,
+            input: requestInput,
             max_output_tokens: followUp ? 900 : 1400,
             store: false,
           }),
@@ -476,7 +476,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
         body: JSON.stringify({
           model: env("OPENAI_MODEL") || "gpt-5-mini",
           instructions: requestInstructions + " The previous request returned an unreadable response. Provide a concise evidence-led answer, clearly label unknowns, and never invent citations, part numbers, or fitment.",
-          input,
+          input: requestInput,
           max_output_tokens: followUp ? 900 : 1400,
           store: false,
         }),
@@ -512,7 +512,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
         body: JSON.stringify({
           model: env("OPENAI_MODEL") || "gpt-5-mini",
           instructions: requestInstructions + " Return a useful, concise answer even if some details cannot be verified. Explicitly label unknowns; do not invent facts or sources.",
-          input,
+          input: requestInput,
           max_output_tokens: 2200,
           store: false,
         }),
