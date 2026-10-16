@@ -122,6 +122,11 @@ export default async function handler(req) {
     result.checkedAt = new Date().toISOString();
     result.sorting = "Lowest listed price first within each currency. CAD and USD are kept separate; shipping/tax may not be included.";
     result.normalizedPartNumber = canonical;
+    result.searchLinks = [
+      { label: "Google exact part-number search", url: "https://www.google.com/search?q=" + encodeURIComponent('"' + part + '" automotive part price') },
+      { label: "Google normalized-number search", url: "https://www.google.com/search?q=" + encodeURIComponent('"' + canonical + '" part price') },
+      { label: "Bing exact part-number search", url: "https://www.bing.com/search?q=" + encodeURIComponent('"' + part + '" automotive part price') }
+    ];
     return json(result);
   } catch (error) {
     console.error("Parts lookup response could not be parsed:", error?.message || "unknown");
