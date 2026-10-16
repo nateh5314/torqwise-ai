@@ -486,7 +486,7 @@ Answer style:
 Use the provided context, technician observations, measurements, codes, prior findings, and first-party fitment records. Interpret supplied data directly and update hypotheses rather than restarting with generic checklists. Distinguish confirmed facts, likely explanations, and unknowns. Never invent part numbers, OEM specifications, torque values, wiring details, service bulletins, citations, or source links. For an unfamiliar part number, preserve the exact query, normalize spacing/hyphens/case for alternate searches, identify the component from credible catalogs, then search supplier listings; an internal-catalog miss is not evidence that the part is unknown. Compare distinct offers by condition, fitment evidence, currency and total cost when available; mark unavailable fields honestly and sort cheapest first only within comparable groups. Do not claim live web research or source verification unless actual source results are present. When source results are returned, connect key claims to the relevant source and prefer manufacturer/OEM or primary technical sources. If sources conflict, explain the conflict instead of silently choosing one. For prices, state the listed currency and avoid claiming a delivered total unless shipping and taxes are included. For fitment, state VERIFIED MATCH only with exact credible application evidence; use HIGH-CONFIDENCE CROSS-REFERENCE only when independent credible catalog evidence agrees; otherwise state NOT YET VERIFIED. Still give useful known guidance and the most specific next step rather than only asking for a VIN. Never recommend replacing a component without evidence supporting its failure. Preserve exact DTC status and freeze-frame; test before replacing parts. Flag critical hazards concisely. For repair and parts questions, be decisive about what is supported, but transparent about uncertainty. This is research support, not a confirmed diagnosis.`;
 
   const requestInstructions = followUp
-    ? instructions + " This is a follow-up in an ongoing mechanic conversation. Use the previous report and all supplied vehicle, symptom, code, measurement, and repair context as conversation history, not as verified proof. Do not ask again for details already supplied. Re-evaluate the new question against that context, perform web research when current or application-specific facts are needed, and answer the new question directly. Ask only one brief question if a missing detail materially changes the answer. Correct unsupported prior claims and never invent specifications, fitment, procedures, prices, or citations. Keep the response concise unless the user asks for depth."
+    ? instructions + " This is a follow-up in an ongoing mechanic conversation. Use the previous report and all supplied vehicle, symptom, code, measurement, and repair context as conversation history, not as verified proof. Do not ask again for details already supplied. Treat new test results and observations as new evidence, then re-evaluate the new question against that context, perform web research when current or application-specific facts are needed, and answer the new question directly. Ask only one brief question if a missing detail materially changes the answer. Correct unsupported prior claims and never invent specifications, fitment, procedures, prices, or citations. Keep the response concise unless the user asks for depth."
     : instructions + " For parts questions, never infer fitment from a part number alone. Identify what source supports each claimed application, distinguish seller cross-reference listings from OEM-confirmed fitment, and explicitly say when reliable fitment evidence is unavailable. Keep the final answer short; research internally as needed, but do not dump the research process or long source commentary into the chat.";
   let upstream;
   let payload;
@@ -643,13 +643,16 @@ Use the provided context, technician observations, measurements, codes, prior fi
     return json({ error: "The AI service could not produce a text answer after one retry. Your question was not answered; please try again shortly or narrow the request." }, 502);
   }
   const responseSources = new Map();
-  for (const source of [
-    ...extractSources(payload),
-    ...localDtcEvidence.flatMap(item => (item.sources || []).map(url => ({
-      url,
-      title: `Generic DTC reference: ${item.code}`
-    })))
-  ]) {
+  const verifiedResearchSources = extractSources(payload);
+  // Prefer sources returned by this research run. Generic bundled DTC references
+  // are fallback-only so they do not bury relevant citations in a live web report.
+  const fallbackDtcSources = verifiedResearchSources.length
+    ? []
+    : localDtcEvidence.flatMap(item => (item.sources || []).map(url => ({
+        url,
+        title: `Generic DTC reference: ${item.code}`
+      })));
+  for (const source of [...verifiedResearchSources, ...fallbackDtcSources]) {
     if (source?.url && !responseSources.has(source.url)) responseSources.set(source.url, source);
   }
   return json({ answer, sources: [...responseSources.values()].slice(0, 12), fitmentMatches, model: payload.model || env("OPENAI_MODEL") || "gpt-5-mini", isPro: access.isPro, followUp, remaining: access.isPro ? null : access.remaining });
