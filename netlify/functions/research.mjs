@@ -483,7 +483,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
         try { if (!followUp) await releaseResearchUsage(access.userId, access.usageId); } catch (releaseError) { console.error("Research quota release failed:", releaseError?.message || "unknown"); }
         return json({ error: retry.status === 429
           ? "The AI service is rate-limited or out of available API credit. Check API billing and usage."
-          : "TORQWISE could not get a readable answer from the AI service after retrying. Check OpenAI API usage and the Netlify research function logs." }, retry.status === 429 ? 429 : 502);
+          : "TORQWISE received an unreadable response and could not get a readable answer from the AI service after retrying. Check OpenAI API usage and the Netlify research function logs." }, retry.status === 429 ? 429 : 502);
       }
     } catch (retryError) {
       console.error("TORQWISE non-JSON fallback failed:", retryError?.name || "network error");
