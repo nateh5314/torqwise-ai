@@ -308,10 +308,12 @@ export default async (req) => {
   const webSearchSetting = env("TORQWISE_ENABLE_WEB_SEARCH").toLowerCase();
   const evidenceTopics = new Set(["parts", "service", "diagram", "spec", "bulletin"]);
   // Detect sourcing intent across automotive and heavy-equipment categories, not a
-  // hard-coded list of component names. Part identifiers vary widely by OEM and brand,
-  // so the user's intent and wording—not a narrow parts vocabulary—drives live research.
-  const sourcingRequest = /\\b(part(?:s)?(?:\\s*(?:number|no\\.?|#|code|id))?|oem number|manufacturer number|interchange|cross.?reference|supersed(?:e|ed|es|ing)|fitment|application lookup|catalog lookup|in stock|local availability|where (?:can i|to) (?:buy|get|find|source)|who sells|price check|compare (?:prices|suppliers)|cheapest|supplier|retailer|pickup|delivery|part number lookup)\\b/i
-    .test([question, asset, symptoms, repairsAttempted].join(" "));
+  // hard-coded list of component names. Also recognize a standalone part-like identifier
+  // (while excluding standard 4-digit DTCs) so users can paste a code without a full sentence.
+  const sourcingText = [question, asset, symptoms, repairsAttempted].join(" ");
+  const hasPartLikeIdentifier = /\\b(?!(?:P|B|C|U)\\d{4}\\b)(?:[A-Z]{1,8}[-/]\\d{2,}[A-Z0-9-]*|\\d{1,5}-\\d{3,}(?:-\\d{1,6})+|[A-Z]{2,}\\d{3,}[A-Z0-9-]*)\\b/i.test(question);
+  const sourcingRequest = /\\b(part(?:s)?(?:\\s*(?:number|no\\.?|#|code|id))?|oem number|manufacturer number|manufacturer code|interchange|cross.?reference|supersed(?:e|ed|es|ing)|fitment|application lookup|catalog lookup|in stock|local availability|where (?:can i|to) (?:buy|get|find|source)|who sells|price check|compare (?:prices|suppliers)|cheapest|supplier|retailer|pickup|delivery|part number lookup)\\b/i.test(sourcingText)
+    || hasPartLikeIdentifier;
   const useWebSearch = webSearchSetting === "true" ||
     (!["false", "0", "off"].includes(webSearchSetting) && (evidenceTopics.has(topic) || sourcingRequest));
   const deepReasoningTopics = new Set(["diagnostic", "parts", "service", "diagram", "spec", "bulletin"]);
