@@ -307,9 +307,10 @@ export default async (req) => {
   // Technical lookups need current evidence by default; allow an explicit environment override.
   const webSearchSetting = env("TORQWISE_ENABLE_WEB_SEARCH").toLowerCase();
   const evidenceTopics = new Set(["parts", "service", "diagram", "spec", "bulletin"]);
-  // Free-form parts requests must trigger current supplier research even if
-  // the user submitted them from general chat rather than the dedicated parts tab.
-  const sourcingRequest = /\b(brake pads?|brake shoes?|brake rotors?|calipers?|wheel bearings?|spark plugs?|oil filters?|air filters?|fuel filters?|alternators?|starters?|water pumps?|part number|parts? (?:price|availability|fitment|cross.?reference)|in stock|local availability|where (?:can i|to) (?:buy|get|find)|cheapest|supplier|retailer|pickup|delivery)\b/i
+  // Detect sourcing intent across automotive and heavy-equipment categories, not a
+  // hard-coded list of component names. Part identifiers vary widely by OEM and brand,
+  // so the user's intent and wording—not a narrow parts vocabulary—drives live research.
+  const sourcingRequest = /\\b(part(?:s)?(?:\\s*(?:number|no\\.?|#|code|id))?|oem number|manufacturer number|interchange|cross.?reference|supersed(?:e|ed|es|ing)|fitment|application lookup|catalog lookup|in stock|local availability|where (?:can i|to) (?:buy|get|find|source)|who sells|price check|compare (?:prices|suppliers)|cheapest|supplier|retailer|pickup|delivery|part number lookup)\\b/i
     .test([question, asset, symptoms, repairsAttempted].join(" "));
   const useWebSearch = webSearchSetting === "true" ||
     (!["false", "0", "off"].includes(webSearchSetting) && (evidenceTopics.has(topic) || sourcingRequest));
