@@ -547,6 +547,31 @@ test("returns a concise fallback answer when the initial web-research request ti
 });
 
 
+test("enables live research for varied OEM and aftermarket sourcing language", async (t) => {
+  const examples = [
+    { question: "Find interchange and superseded numbers for 8-97123-456-0", topic: "general" },
+    { question: "Who sells a hydraulic pump with manufacturer code XZ-440? Compare suppliers.", topic: "general" },
+    { question: "Check application and catalog fitment for ACDELCO 18A1234", topic: "general" },
+    { question: "Compare prices for a wheel hub assembly and find local pickup options", topic: "general" },
+  ];
+  for (const example of examples) {
+    await t.test(example.question, async () => {
+      const calls = configure();
+      const result = await handler(request({ body: {
+        asset: "Unknown vehicle/equipment",
+        location: "Corner Brook, Newfoundland and Labrador, Canada",
+        ...example
+      }}));
+      assert.equal(result.status, 200);
+      const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+      assert.ok(upstream, "should call AI research");
+      const payload = JSON.parse(upstream.options.body);
+      assert.ok(payload.tools?.some(tool => tool.type === "web_search"), "parts sourcing should trigger live search from general chat");
+      assert.ok(payload.input.includes("Corner Brook"), "location context should be preserved");
+    });
+  }
+});
+
 test("enables live web research for a part-number query submitted from general chat", async () => {
   const calls = configure();
   const result = await handler(request({ body: {
