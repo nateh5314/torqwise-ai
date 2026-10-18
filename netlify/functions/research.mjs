@@ -324,7 +324,9 @@ export default async (req) => {
     general: "general technical research",
   };
   // Detect exact part-number-shaped tokens in every chat category, not just the dedicated Parts tab.
-  const partCandidate = question.match(/\b[A-Z]{1,8}[- ]?\d{3,}[A-Z0-9-]*\b/i)?.[0] || "";
+  const partCandidate = (topic === "parts" || sourcingRequest)
+    ? (question.match(/\b[A-Z]{1,8}[- ]?\d{3,}[A-Z0-9-]*\b/i)?.[0] || "")
+    : "";
   const fitmentMatches = partCandidate ? await lookupReviewedFitment(partCandidate) : [];
   const input = followUp
     ? [
