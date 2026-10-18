@@ -346,6 +346,7 @@ export default async (req) => {
     : [
         `Asset / vehicle / equipment: ${asset || "Not provided"}`,
         `VIN / serial / PIN: ${serial || "Not provided"}`,
+        `Research location for local suppliers and availability: ${location || "Not specified"}`,
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Question / symptoms / code / part: ${question || "Please provide an initial research overview based on the available context."}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
