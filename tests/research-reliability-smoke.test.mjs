@@ -87,6 +87,6 @@ test("returns a safe error and releases quota when the provider response is unre
   const calls = setup({ provider: new Response("not-json", { status: 200, headers: { "content-type": "text/plain" } }) });
   const response = await handler(request());
   assert.equal(response.status, 502);
-  assert.match((await response.json()).error, /unreadable response/i);
+  assert.match((await response.json()).error, /readable answer.*after retrying/i);
   assert.ok(calls.some(call => call.url === base + "/rest/v1/rpc/release_research_usage"));
 });
