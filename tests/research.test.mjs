@@ -585,4 +585,7 @@ test("enables live web research for a part-number query submitted from general c
   assert.ok(payload.tools?.some(tool => tool.type === "web_search"), "free-form part-number requests should enable live web search");
   assert.ok(payload.input.includes("BRF-1959"), "the exact part number must be preserved in the research input");
   assert.ok(payload.input.includes("Corner Brook"), "the supplied local area must be preserved in the research input");
+  assert.match(payload.instructions, /natural, direct language/i, "answers should sound conversational rather than templated");
+  assert.match(payload.instructions, /do not ask the user to repeat information already present/i, "the assistant should preserve context");
+  assert.match(payload.instructions, /Ask at most one focused clarification/i, "clarifications should be minimal");
 });
