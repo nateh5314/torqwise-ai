@@ -306,8 +306,12 @@ export default async (req) => {
   // Technical lookups need current evidence by default; allow an explicit environment override.
   const webSearchSetting = env("TORQWISE_ENABLE_WEB_SEARCH").toLowerCase();
   const evidenceTopics = new Set(["parts", "service", "diagram", "spec", "bulletin"]);
+  // Free-form parts requests must trigger current supplier research even if
+  // the user submitted them from general chat rather than the dedicated parts tab.
+  const sourcingRequest = /\b(brake pads?|brake shoes?|brake rotors?|calipers?|wheel bearings?|spark plugs?|oil filters?|air filters?|fuel filters?|alternators?|starters?|water pumps?|part number|parts? (?:price|availability|fitment|cross.?reference)|in stock|local availability|where (?:can i|to) (?:buy|get|find)|cheapest|supplier|retailer|pickup|delivery)\b/i
+    .test([question, asset, symptoms, repairsAttempted].join(" "));
   const useWebSearch = webSearchSetting === "true" ||
-    (!["false", "0", "off"].includes(webSearchSetting) && evidenceTopics.has(topic));
+    (!["false", "0", "off"].includes(webSearchSetting) && (evidenceTopics.has(topic) || sourcingRequest));
   const deepReasoningTopics = new Set(["diagnostic", "parts", "service", "diagram", "spec", "bulletin"]);
   const topicNames = {
     diagnostic: "diagnostic troubleshooting and test sequence",
