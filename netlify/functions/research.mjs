@@ -381,7 +381,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
         reasoning: { effort: deepReasoningTopics.has(topic) ? "medium" : "low" },
         store: false,
       }),
-      signal: AbortSignal.timeout(18000),
+      signal: AbortSignal.timeout(13000),
     });
   } catch (err) {
     console.error("TORQWISE OpenAI request failed:", err?.name || "network error");
@@ -399,7 +399,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
             max_output_tokens: followUp ? 900 : 1400,
             store: false,
           }),
-          signal: AbortSignal.timeout(12000),
+          signal: AbortSignal.timeout(6000),
         });
         let retryPayload = {};
         try { retryPayload = await retry.json(); } catch {}
@@ -496,7 +496,7 @@ Use the provided context, technician observations, measurements, codes, prior fi
           max_output_tokens: 2200,
           store: false,
         }),
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(6000),
       });
       let retryPayload = {};
       try { retryPayload = await retry.json(); } catch {}
