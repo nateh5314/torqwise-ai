@@ -572,6 +572,30 @@ test("enables live research for varied OEM and aftermarket sourcing language", a
   }
 });
 
+test("recognizes a pasted standalone part identifier but does not misclassify a lone DTC", async (t) => {
+  await t.test("standalone part number triggers research", async () => {
+    const calls = configure();
+    const result = await handler(request({ body: {
+      asset: "", topic: "general", question: "BRF-1959"
+    }}));
+    assert.equal(result.status, 200);
+    const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+    const payload = JSON.parse(upstream.options.body);
+    assert.ok(payload.tools?.some(tool => tool.type === "web_search"), "a pasted part identifier should trigger lookup without extra wording");
+    assert.ok(payload.input.includes("BRF-1959"));
+  });
+  await t.test("standalone DTC does not trigger parts sourcing", async () => {
+    const calls = configure();
+    const result = await handler(request({ body: {
+      asset: "2018 Ford F-150", topic: "general", question: "P0300"
+    }}));
+    assert.equal(result.status, 200);
+    const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+    const payload = JSON.parse(upstream.options.body);
+    assert.ok(!payload.tools?.some(tool => tool.type === "web_search"), "a DTC token alone must not be mistaken for a part number");
+  });
+});
+
 test("enables live web research for a part-number query submitted from general chat", async () => {
   const calls = configure();
   const result = await handler(request({ body: {
