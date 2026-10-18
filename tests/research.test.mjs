@@ -545,3 +545,19 @@ test("returns a concise fallback answer when the initial web-research request ti
     globalThis.fetch = configuredFetch;
   }
 });
+
+
+test("enables live web research for a part-number query submitted from general chat", async () => {
+  const calls = configure();
+  const result = await handler(request({ body: {
+    asset: "", topic: "general", location: "Corner Brook, Newfoundland and Labrador, Canada",
+    question: "Where to buy BRF-1959? Check Canadian sellers and show source links."
+  }}));
+  assert.equal(result.status, 200);
+  const upstream = calls.find(c => c.url === "https://api.openai.com/v1/responses");
+  assert.ok(upstream, "should call the AI research endpoint");
+  const payload = JSON.parse(upstream.options.body);
+  assert.ok(payload.tools?.some(tool => tool.type === "web_search"), "free-form part-number requests should enable live web search");
+  assert.ok(payload.input.includes("BRF-1959"), "the exact part number must be preserved in the research input");
+  assert.ok(payload.input.includes("Corner Brook"), "the supplied local area must be preserved in the research input");
+});
