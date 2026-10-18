@@ -254,6 +254,7 @@ export default async (req) => {
   }
   const asset = clean(body.asset, 240);
   const serial = clean(body.serial, 100);
+  const location = clean(body.location, 180);
   const topic = clean(body.topic, 40) || "general";
   const question = clean(body.question, MAX_FIELD);
   const symptoms = clean(body.symptoms, 1200);
@@ -329,6 +330,7 @@ export default async (req) => {
     ? [
         `Asset / vehicle / equipment: ${asset || "Not provided"}`,
         `VIN / serial / PIN: ${serial || "Not provided"}`,
+        `Research location for local suppliers and availability: ${location || "Not specified"}`,
         `Research category: ${topicNames[topic] || topicNames.general}`,
         `Previous TORQWISE report (context only; may contain unverified claims):\n${previousAnswer}`,
         ...(detectedDtcCodes.length ? [`DTC tokens detected in the supplied text (code-shaped tokens only; status not inferred): ${detectedDtcCodes.join(", ")}. Analyze relationships across codes rather than treating each in isolation.`] : []),
